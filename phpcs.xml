@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<ruleset name="WP Security & API Firewall">
+	<description>PHPCS rules for WP Security & API Firewall plugin</description>
+
+	<file>./inc</file>
+	<file>./bromate-security-api-firewall.php</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/build/*</exclude-pattern>
+
+	<rule ref="WordPress">
+		<exclude name="WordPress.Files.FileName"/>
+
+		<exclude name="Squiz.Commenting.FileComment"/>
+		<exclude name="Squiz.Commenting.ClassComment"/>
+		<exclude name="Squiz.Commenting.FunctionComment"/>
+		<exclude name="Squiz.Commenting.VariableComment"/>
+		
+		<!-- 
+		<exclude name="Squiz.Commenting.InlineComment"/>
+		<exclude name="Squiz.PHP.CommentedOutCode"/> 
+		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+		-->
+
+	</rule>
+
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="bromate_security_api_firewall_edit_options" />
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="Generic.Arrays.DisallowShortArraySyntax.Found">
+		<severity>0</severity>
+	</rule>
+
+	<config name="testVersion" value="7.4-"/>
+
+</ruleset>

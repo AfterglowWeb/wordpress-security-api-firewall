@@ -1,0 +1,70 @@
+deptrac:
+  paths:
+    - ./inc
+
+  exclude_files:
+    - '#.*TestPolicy\\.php$#'
+
+  layers:
+    - name: Admin
+      collectors:
+        - type: className
+          value: '^Bromate\\SecurityApiFirewall\\Admin\\.*'
+
+    - name: Api
+      collectors:
+        - type: className
+          value: '^Bromate\\SecurityApiFirewall\\Api\\.*'
+
+    - name: Core
+      collectors:
+        - type: className
+          value: '^Bromate\\SecurityApiFirewall\\Core\\.*'
+
+    - name: Security
+      collectors:
+        - type: className
+          value: '^Bromate\\SecurityApiFirewall\\Security\\.*'
+
+    - name: Logs
+      collectors:
+        - type: className
+          value: '^Bromate\\SecurityApiFirewall\\Logs\\.*'
+
+  ruleset:
+    Admin:
+      - AdminPage
+      - Documentation
+
+    Api:
+      - LoginBootsrap
+      - PublicRequestBootstrap
+      - RestRequestBootstrap
+
+    Core:
+      - Settings
+      - Schema
+      - Bootstrap
+
+    Security:
+      - Authentication
+      - Firewall
+      - Routes
+      - Login
+      - WordPress
+
+    Logs:
+     - FirewallLogger
+     - LogEntryAjaxController
+     - LogRepository
+
+  formatters:
+    graphviz:
+      groups:
+        Admin:
+          - Admin
+        Runtime:
+          - Api
+          - FirewallLogger
+        Features:
+          - Security

@@ -1,0 +1,32 @@
+/* ── Banner ────────────────────────────────────────────────────── */
+:root {
+  --vp-layout-top-height: 36px;
+}
+
+.vp-custom-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--vp-layout-top-height);
+  z-index: var(--vp-z-index-layout-top, 40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1565c0;
+  color: #fff;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.vp-custom-banner p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.vp-custom-banner a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+}

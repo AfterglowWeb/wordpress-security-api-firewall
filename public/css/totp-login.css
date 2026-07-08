@@ -1,0 +1,43 @@
+/* TOTP Login Styles */
+#bromate-totp-field {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #dcdcde;
+}
+
+#bromate-totp-field .bromate-totp-info {
+    background: #f0f6fc;
+    border-left: 4px solid #72aee6;
+    padding: 12px 16px;
+    margin: 0 0 20px 0;
+    color: #1d2327;
+    font-size: 13px;
+    border-radius: 2px;
+}
+
+#bromate-totp-field label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+#bromate-totp-code {
+    letter-spacing: 4px;
+    font-size: 20px;
+    text-align: center;
+    width: 100%;
+    padding: 8px;
+}
+
+#bromate-totp-field .forgetmenot {
+    margin-top: 12px;
+}
+
+.bromate-totp-error {
+    color: #d63638;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #fcf0f1;
+    border-radius: 2px;
+}
+
