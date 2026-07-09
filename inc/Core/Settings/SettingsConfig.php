@@ -452,114 +452,114 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'wordpress_application_only_mode'        => array(
+			'redirect_front_enabled' => array(
 				'label'             => esc_html__( 'Application-only mode', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Redirect front-end pages and use WordPress primarily as a REST API backend.', 'bromate-security-api-firewall' ),
-				'default_value'     => false,
-				'type'              => 'boolean',
+				'default_value'     => '',
+				'type'              => false,
 				'sanitize_callback' => 'rest_sanitize_boolean',
-				'group'             => 'wordpress_mode',
+				'group'             => 'wordpress',
 			),
 
-			'wordpress_redirect_front_preset_option' => array(
+			'redirect_front_options' => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_key',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_redirect_templates_user_url'  => array(
+			'redirect_front_user_url'  => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_url',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_disable_xmlrpc'               => array(
+			'disable_xmlrpc'               => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_disable_comments'             => array(
+			'disable_comments'             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_disable_pingbacks'            => array(
+			'disable_pingbacks'            => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_disable_atom_rss'             => array(
+			'disable_atom_rss'             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_disable_sitemap'              => array(
+			'disable_sitemap'              => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_enforce_wpconfig_permissions' => array(
+			'disable_emoji_scripts'         => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_secure_uploads_dir'           => array(
+			'disable_theme_editor'           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_secure_http_headers'          => array(
+			'harden_wpconfig_file_permissions' => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_compression_http_headers'     => array(
+			'harden_uploads_dir_permissions'           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_wp_http_headers'              => array(
+			'http_headers_secure'          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_remove_emoji_scripts'         => array(
+			'http_headers_compression'     => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_max_upload_weight'            => array(
+			'max_upload_weight'            => array(
 				'default_value'     => 1024, // KB.
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'wordpress',
 			),
 
-			'wordpress_max_upload_weight_enabled'    => array(
+			'max_upload_weight_enabled'    => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -586,12 +586,12 @@ final class SettingsConfig {
 			),
 
 			'login-hardening' => array(
-				'label' => __( 'Login Protection', 'bromate-security-api-firewall' ),
+				'label' => __( 'Login Security', 'bromate-security-api-firewall' ),
 				'icon'  => 'shield',
 			),
 
 			'wordpress'       => array(
-				'label' => __( 'Extra Protection', 'bromate-security-api-firewall' ),
+				'label' => __( 'Global Security', 'bromate-security-api-firewall' ),
 				'icon'  => 'wordpress',
 			),
 

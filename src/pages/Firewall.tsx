@@ -35,6 +35,8 @@ import { SettingsAPI } from '@services/settings';
 import ConfirmDialog from '@components/ConfirmDialog';
 import CountryBlockPanel from '@features/firewall/CountryBlockPanel';
 import BlockedCountriesSummary from '@features/firewall/BlockedCountriesSummary';
+import { __ } from '@wordpress/i18n';
+import SaveButton from '@components/SaveButton';
 
 interface LineResult {
   value: string;
@@ -349,21 +351,33 @@ export default function Firewall(): JSX.Element {
 
   const [settings, setSettings] = useState<RateLimitSettings>({
     rate_limit_enabled: false,
-    rate_limit_max: 30,
+    rate_limit_max: 120,
     rate_limit_time: 60,
-    rate_limit_block_duration: 300,
+    rate_limit_block_duration: 60,
     rate_limit_blacklist_threshold: 5,
     rate_limit_emergency_token_hash: '',
-    rate_limit_countries: [],
+    rate_limit_countries: []
   });
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsLoading, setLoadingSettings] = useState(true);
+  const [loadedSettings, setLoadedSettings] = useState({});
+
+  const isDirty = useMemo(
+    () => JSON.stringify(settings) !== JSON.stringify(loadedSettings),
+    [settings, loadedSettings]
+  );
+
+  const handleSave = useCallback(async () => {
+    await SettingsAPI.updateOptions(settings);
+    setLoadedSettings(settings);
+  }, [settings]);
 
   useEffect(() => {
     SettingsAPI.readOptions()
       .then((opts) => {
         setSettings((prev) => ({ ...prev, ...opts }));
+        setLoadedSettings(opts);
       })
-      .finally(() => setSettingsLoading(false));
+      .finally(() => setLoadingSettings(false));
   }, []);
 
   const [countriesView, setCountriesView] = useState(false);
@@ -553,53 +567,71 @@ export default function Firewall(): JSX.Element {
     },
   ], [wpUsers]);
 
+
   return (
     <Stack spacing={3}>
       {!countriesView && (
-        <Paper sx={{ p: 2 }} elevation={0}>
-          <Stack flexDirection="column" gap={2}>
-            <FormControlLabel
-              label="Enable Firewall"
-              control={
-                <Switch
-                  checked={settings.rate_limit_enabled}
-                  onChange={(e) => updateSetting('rate_limit_enabled', e.target.checked)}
-                />
-              }
+        <>
+         <Stack direction="row" justifyContent="flex-end">
+          <SaveButton
+            onSave={handleSave}
+            disabled={!isDirty}
+            messages={{
+              confirmTitle: __('Save firewall settings', 'bromate-security-api-firewall'),
+              confirmContent: __('Apply these rate limiting and firewall changes now?', 'bromate-security-api-firewall'),
+              confirmLabel: __('Save', 'bromate-security-api-firewall'),
+              successMessage: __('Firewall settings saved successfully.', 'bromate-security-api-firewall'),
+              errorMessage: __('Failed to save firewall settings.', 'bromate-security-api-firewall'),
+              saveLabel: __('Save', 'bromate-security-api-firewall'),
+              savingLabel: __('Saving…', 'bromate-security-api-firewall'),
+            }}
             />
+          </Stack>
+          <Paper sx={{ p: 2 }} elevation={0}>
+            <Stack flexDirection="column" gap={2}>
+              <FormControlLabel
+                label="Enable Firewall"
+                control={
+                  <Switch
+                    checked={settings.rate_limit_enabled}
+                    onChange={(e) => updateSetting('rate_limit_enabled', e.target.checked)}
+                  />
+                }
+              />
 
-            <Stack>
-              <Typography variant="h6" mb={2}>Rate Limiting</Typography>
-              <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
-                <TextField
-                  label="Maximum requests"
-                  type="number"
-                  value={settings.rate_limit_max}
-                  onChange={(e) => updateSetting('rate_limit_max', Number(e.target.value))}
-                />
-                <TextField
-                  label="Time window (seconds)"
-                  type="number"
-                  value={settings.rate_limit_time}
-                  onChange={(e) => updateSetting('rate_limit_time', Number(e.target.value))}
-                />
-                <TextField
-                  label="Block duration (seconds)"
-                  type="number"
-                  value={settings.rate_limit_block_duration}
-                  onChange={(e) => updateSetting('rate_limit_block_duration', Number(e.target.value))}
-                />
-                <TextField
-                  label="Blacklist threshold"
-                  type="number"
-                  value={settings.rate_limit_blacklist_threshold}
-                  onChange={(e) => updateSetting('rate_limit_blacklist_threshold', Number(e.target.value))}
-                  helperText="Violations before auto-ban"
-                />
+              <Stack>
+                <Typography variant="h6" mb={2}>Rate Limiting</Typography>
+                <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
+                  <TextField
+                    label="Maximum requests"
+                    type="number"
+                    value={settings.rate_limit_max}
+                    onChange={(e) => updateSetting('rate_limit_max', Number(e.target.value))}
+                  />
+                  <TextField
+                    label="Time window (seconds)"
+                    type="number"
+                    value={settings.rate_limit_time}
+                    onChange={(e) => updateSetting('rate_limit_time', Number(e.target.value))}
+                  />
+                  <TextField
+                    label="Block duration (seconds)"
+                    type="number"
+                    value={settings.rate_limit_block_duration}
+                    onChange={(e) => updateSetting('rate_limit_block_duration', Number(e.target.value))}
+                  />
+                  <TextField
+                    label="Blacklist threshold"
+                    type="number"
+                    value={settings.rate_limit_blacklist_threshold}
+                    onChange={(e) => updateSetting('rate_limit_blacklist_threshold', Number(e.target.value))}
+                    helperText="Violations before auto-ban"
+                  />
+                </Stack>
               </Stack>
             </Stack>
-          </Stack>
-        </Paper>
+          </Paper>
+        </>
       )}
 
       <Paper sx={{ p: 2 }} elevation={0}>

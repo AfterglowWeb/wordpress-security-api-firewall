@@ -16,13 +16,13 @@ class HttpHeaders {
 	}
 
 	private function __construct() {
-		if ( SettingsRepository::read_option( 'secure_http_headers' ) ) {
+		if ( SettingsRepository::read_option( 'http_headers_secure' ) ) {
 			add_filter( 'rest_pre_serve_request', array( $this, 'add_security_headers' ), 10, 0 );
 			if ( SettingsRepository::read_option( 'wp_http_headers' ) ) {
 				add_filter( 'send_headers', array( $this, 'add_security_headers' ), 10, 0 );
 			}
 		}
-		if ( SettingsRepository::read_option( 'compression_http_headers' ) ) {
+		if ( SettingsRepository::read_option( 'http_headers_compression' ) ) {
 			add_filter( 'rest_pre_serve_request', array( $this, 'add_compression_headers' ), 10, 0 );
 			if ( SettingsRepository::read_option( 'wp_http_headers' ) ) {
 				add_action( 'send_headers', array( $this, 'add_compression_headers' ), 10, 0 );

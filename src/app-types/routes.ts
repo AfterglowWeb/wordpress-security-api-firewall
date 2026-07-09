@@ -27,12 +27,17 @@ export type RouteNode = {
   children?:   RouteNode[];
 };
 
+export type RedirectFrontOptions = '404' | 'login' | 'custom';
+
 export type RoutesSettings = {
   routes_policy_enabled:               boolean;
   routes_policy_default_hidden_routes: boolean;
   routes_policy_hidden_methods:        string[];
   routes_policy_hidden_wp_objects:     string[];
   routes_policy_hidden_response_code:  '401' | '403' | '404';
+  redirect_front_enabled: boolean;
+	redirect_front_options: RedirectFrontOptions;
+	redirect_front_user_url: string;
 };
 
 export type RoutesPolicyTreeProps = {

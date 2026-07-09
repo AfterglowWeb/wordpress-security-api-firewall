@@ -14,6 +14,9 @@ class RoutesPolicyRepository {
 		'routes_policy_hidden_methods'        => array(),
 		'routes_policy_hidden_wp_objects'     => array(),
 		'routes_policy_hidden_response_code'  => '404',
+		'redirect_front_enabled'              => false,
+		'redirect_front_options'              => '404',
+		'redirect_front_user_url'             => '',
 	);
 
 	public static function get_instance() {

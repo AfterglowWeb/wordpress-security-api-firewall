@@ -16,12 +16,12 @@ class DisableEmojiScripts {
 	}
 
 	private function __construct() {
-		if ( true === SettingsRepository::read_option( 'remove_emoji_scripts' ) ) {
-			add_action( 'init', array( $this, 'remove_emoji_scripts' ) );
+		if ( true === SettingsRepository::read_option( 'disable_emoji_scripts' ) ) {
+			add_action( 'init', array( $this, 'disable_emoji_scripts' ) );
 		}
 	}
 
-	public static function remove_emoji_scripts(): void {
+	public static function disable_emoji_scripts(): void {
 		remove_action( 'wp_print_styles', 'print_emoji_styles' );
 		remove_action( 'wp_enqueue_scripts', 'wp_enqueue_emoji_styles' );
 		remove_action( 'enqueue_embed_scripts', 'wp_enqueue_emoji_styles' );

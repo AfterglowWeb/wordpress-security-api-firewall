@@ -12,8 +12,6 @@ import { LogAPI, type LogEntry, type LogSeverity } from '@services/log';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import ConfirmDialog from '@components/ConfirmDialog';
 
-// ── Severity chip ──────────────────────────────────────────────────────────
-
 const SEVERITY_COLOR: Record<LogSeverity, 'default' | 'info' | 'warning' | 'error'> = {
   debug:    'default',
   info:     'info',
@@ -33,8 +31,6 @@ function SeverityChip({ value }: { value: LogSeverity }) {
     />
   );
 }
-
-// ── Toolbar ────────────────────────────────────────────────────────────────
 
 interface LogsToolbarProps {
   onDeleteSelected?: (rows: Map<GridRowId, LogEntry>) => void;

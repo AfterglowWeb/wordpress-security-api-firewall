@@ -17,7 +17,6 @@ import {
   Snackbar,
   Box,
   FormControl,
-  Tooltip,
   RadioGroup,
   Radio,
   Divider,
@@ -28,6 +27,7 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import ConfirmDialog from '@components/ConfirmDialog';
+import SaveButton from '@components/SaveButton';
 
 interface LoginSettings {
   login_rate_limit_enabled: boolean;
@@ -102,7 +102,6 @@ export default function LoginHardening(): JSX.Element {
   const [settings, setSettings] = useState<LoginSettings>(DEFAULT_SETTINGS);
   const [loadedSettings, setLoadedSettings] = useState<LoginSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -144,8 +143,6 @@ export default function LoginHardening(): JSX.Element {
       const status = await UserSessionsAPI.getSaltRotationStatus();
       setRotationStatus(status);
     } catch (err) {
-      // Non bloquant : l'affichage du statut est secondaire, on ne casse
-      // pas la page si cet appel échoue.
       setRotationStatus(null);
     }
   }, []);
@@ -165,30 +162,9 @@ export default function LoginHardening(): JSX.Element {
   };
 
   const handleSave = useCallback(async () => {
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
       await SettingsAPI.updateOptions(settings);
       setLoadedSettings(settings);
-      setSuccess(__('Settings saved successfully.', 'bromate-security-api-firewall'));
-    } catch (err) {
-      setError(__('Failed to save settings.', 'bromate-security-api-firewall'));
-    } finally {
-      setSaving(false);
-    }
   }, [settings]);
-
-  const handleSaveConfirm = useCallback(() => {
-    openDialog({
-      type: DIALOG_TYPES.CONFIRM,
-      title: __('Save login settings', 'bromate-security-api-firewall'),
-      content: __('Apply these login hardening changes now?', 'bromate-security-api-firewall'),
-      confirmLabel: __('Save', 'bromate-security-api-firewall'),
-      onConfirm: handleSave,
-    });
-  }, [openDialog, handleSave]);
 
   const handleRotateSaltsNow = useCallback(async () => {
     setRotatingNow(true);
@@ -266,17 +242,21 @@ export default function LoginHardening(): JSX.Element {
     <Stack spacing={3} p={0}>
 
       <Stack direction="row" justifyContent="flex-end">
-        <Button
-          variant="contained"
-          disableElevation
-          onClick={handleSaveConfirm}
-          disabled={saving || !isDirty}
-        >
-          {saving ? __('Saving...', 'bromate-security-api-firewall') : __('Save', 'bromate-security-api-firewall')}
-        </Button>
+      <SaveButton
+        onSave={handleSave}
+        disabled={!isDirty}
+        messages={{
+          confirmTitle: __('Save login hardening settings', 'bromate-security-api-firewall'),
+          confirmContent: __('Apply these login hardening changes now?', 'bromate-security-api-firewall'),
+          confirmLabel: __('Save', 'bromate-security-api-firewall'),
+          successMessage: __('Login hardening settings saved successfully.', 'bromate-security-api-firewall'),
+          errorMessage: __('Failed to save login hardening settings.', 'bromate-security-api-firewall'),
+          saveLabel: __('Save', 'bromate-security-api-firewall'),
+          savingLabel: __('Saving…', 'bromate-security-api-firewall'),
+        }}
+        />
       </Stack>
 
-      {/* Rate Limiting Section */}
       <Paper sx={{ p: 2 }} elevation={0}>
         <Stack flexDirection="column" gap={2}>
 

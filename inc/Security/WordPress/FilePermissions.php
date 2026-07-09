@@ -22,7 +22,7 @@ class FilePermissions {
 		add_action( 'wp_ajax_protect_uploads_dir', array( $this, 'ajax_protect_uploads_dir' ) );
 		add_action( 'wp_ajax_get_file_status', array( $this, 'ajax_get_file_status' ) );
 
-		if ( SettingsRepository::read_option( 'enforce_wpconfig_permissions' ) ) {
+		if ( SettingsRepository::read_option( 'harden_wpconfig_file_permissions' ) ) {
 			$permissions = $this->read_wp_config_permissions();
 			if ( $permissions && '440' !== $permissions ) {
 				$this->change_wp_config_permissions();
@@ -69,7 +69,7 @@ class FilePermissions {
 		$success = FileUtils::change_file_permissions( ABSPATH . 'wp-config.php', 0440 );
 
 		if ( $success ) {
-			SettingsRepository::update_option( 'enforce_wpconfig_permissions', true );
+			SettingsRepository::update_option( 'harden_wpconfig_file_permissions', true );
 		}
 		return $success;
 	}
@@ -151,7 +151,7 @@ class FilePermissions {
 			return;
 		}
 
-		SettingsRepository::update_option( 'secure_uploads_dir', true );
+		SettingsRepository::update_option( 'harden_uploads_dir_permissions', true );
 
 		wp_send_json_success( array( 'message' => implode( "\n", $results ) ) );
 	}

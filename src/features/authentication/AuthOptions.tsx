@@ -45,8 +45,8 @@ export default function AuthOptions({
           onSave={handleSave}
           disabled={!isDirty}
           messages={{
-            confirmTitle: __('Save login settings', 'bromate-security-api-firewall'),
-            confirmContent: __('Apply these login hardening changes now?', 'bromate-security-api-firewall'),
+            confirmTitle: __('Save authentication settings', 'bromate-security-api-firewall'),
+            confirmContent: __('Apply these REST API authentication settings now?', 'bromate-security-api-firewall'),
             confirmLabel: __('Save', 'bromate-security-api-firewall'),
             successMessage: __('Settings saved successfully.', 'bromate-security-api-firewall'),
             errorMessage: __('Failed to save settings.', 'bromate-security-api-firewall'),

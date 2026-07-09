@@ -11,11 +11,10 @@ import type { RoutesSettings, RouteNode } from '@app-types/routes';
 
 import GlobalRoutesPolicy from '@features/routes/GlobalRoutesPolicy';
 import RoutesPolicyTree from '@features/routes/RoutesPolicyTree';
+import RedirectFront from '@features/routes/RedirectFront';
 
 import { RoutesAPI } from '@services/routes';
 import { useDialog, DIALOG_TYPES } from '../contexts/DialogContext';
-
-const TEXT_DOMAIN = 'bromate-security-api-firewall';
 
 export default function Routes(): JSX.Element {
 	const { openDialog, updateDialog } = useDialog();
@@ -33,6 +32,9 @@ export default function Routes(): JSX.Element {
 		routes_policy_hidden_methods:        [],
 		routes_policy_hidden_wp_objects:     [],
 		routes_policy_hidden_response_code:  '404',
+		redirect_front_enabled: false,
+		redirect_front_options: '404',
+		redirect_front_user_url: '',
 	});
 
 	const update = useCallback(
@@ -68,8 +70,8 @@ export default function Routes(): JSX.Element {
 
 		openDialog({
 			type: DIALOG_TYPES.LOADING,
-			title: __('Saving…', TEXT_DOMAIN),
-			content: __('Please wait while your settings are saved.', TEXT_DOMAIN),
+			title: __('Saving…', 'bromate-security-api-firewall'),
+			content: __('Please wait while your settings are saved.', 'bromate-security-api-firewall'),
 		});
 
 		try {
@@ -77,17 +79,17 @@ export default function Routes(): JSX.Element {
 			setHasChanges(false);
 			updateDialog({
 				type: DIALOG_TYPES.SUCCESS,
-				title: __('Success', TEXT_DOMAIN),
-				content: __('Your route policy settings were saved successfully.', TEXT_DOMAIN),
-				confirmLabel: __('OK', TEXT_DOMAIN),
+				title: __('Success', 'bromate-security-api-firewall'),
+				content: __('Your route policy settings were saved successfully.', 'bromate-security-api-firewall'),
+				confirmLabel: __('OK', 'bromate-security-api-firewall'),
 			});
 		} catch (e) {
 			setSaveError('Failed to save changes. Please try again.');
 			updateDialog({
 				type: DIALOG_TYPES.ERROR,
-				title: __('Error', TEXT_DOMAIN),
-				content: __('Failed to save your settings. Please try again.', TEXT_DOMAIN),
-				confirmLabel: __('OK', TEXT_DOMAIN),
+				title: __('Error', 'bromate-security-api-firewall'),
+				content: __('Failed to save your settings. Please try again.', 'bromate-security-api-firewall'),
+				confirmLabel: __('OK', 'bromate-security-api-firewall'),
 			});
 		} finally {
 			setSaving(false);
@@ -112,7 +114,7 @@ export default function Routes(): JSX.Element {
 					disabled={!hasChanges || saving}
 					onClick={handleSave}
 				>
-					{saving ? __('Saving…', TEXT_DOMAIN) : __('Save', TEXT_DOMAIN)}
+					{saving ? __('Saving…', 'bromate-security-api-firewall') : __('Save', 'bromate-security-api-firewall')}
 				</Button>
 			</Stack>
 
@@ -128,8 +130,17 @@ export default function Routes(): JSX.Element {
 				/>
 			</Paper>
 			<Alert severity="info">
-				{__('Route Policy Tree settings take priority over global settings.', TEXT_DOMAIN)}
+				{__('Route Policy Tree settings take priority over global settings.', 'bromate-security-api-firewall')}
 			</Alert>
+
+			<Paper sx={{p:2}} elevation={0}>
+				<RedirectFront
+					enabled={settings.redirect_front_enabled}
+					options={settings.redirect_front_options}
+					userUrl={settings.redirect_front_user_url}
+					onChange={update}
+				/>
+			</Paper>
 		</Stack>
 	);
 }

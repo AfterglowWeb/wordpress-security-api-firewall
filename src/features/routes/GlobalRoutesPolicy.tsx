@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
+import Divider from '@mui/material/Divider';
 
 import ObjectTypeSelect from '@components/ObjectTypeSelect';
 import type { RoutesSettings } from '@app-types/routes';
@@ -61,22 +62,27 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
 
   return (
     <Stack spacing={3}>
-      <FormControlLabel
-        control={
-          <Switch
-            size="small"
+
+      <Stack flexDirection="row" gap={1} alignItems="center">
+				<FormControlLabel
+					label={__('Enable', 'bromate-security-api-firewall')}
+					control={
+					<Switch
             checked={settings.routes_policy_enabled ?? false}
             onChange={(e) => onChange('routes_policy_enabled', e.target.checked)}
-          />
-        }
-        label={__('Enable Routes Policy', 'bromate-security-api-firewall')}
-      />
-
+					/>
+					}
+					sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
+				/>
+				<Divider orientation="vertical" variant="middle" flexItem />
+				<Stack>
+				<Typography variant="h6">{__('REST API Control', 'bromate-security-api-firewall')}</Typography>
+				</Stack>
+			</Stack>
 
       <FormControlLabel
         control={
           <Switch
-            size="small"
             checked={securityDefaultsApplied}
             onChange={toggleSecurityDefaults}
           />
