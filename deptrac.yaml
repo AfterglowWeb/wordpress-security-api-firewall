@@ -49,6 +49,7 @@ deptrac:
     Security:
       - Authentication
       - Firewall
+      - IpEntry
       - Routes
       - Login
       - WordPress

@@ -3,7 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Ip\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 use WP_Error;
 use WP_User;
 

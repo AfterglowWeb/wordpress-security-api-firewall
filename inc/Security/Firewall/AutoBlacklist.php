@@ -1,10 +1,6 @@
-<?php namespace Bromate\SecurityApiFirewall\Security\RateLimit;
+<?php namespace Bromate\SecurityApiFirewall\Security\Firewall;
 
 defined( 'ABSPATH' ) || exit;
-
-use Bromate\SecurityApiFirewall\Security\Ip\ClientIpResolver;
-use Bromate\SecurityApiFirewall\Security\Ip\IpEntryRepository;
-use WP_Error;
 
 class AutoBlacklist {
 

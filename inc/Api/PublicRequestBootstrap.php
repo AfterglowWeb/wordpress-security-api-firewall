@@ -2,8 +2,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use Bromate\SecurityApiFirewall\Security\RateLimit\RateLimiter;
-use Bromate\SecurityApiFirewall\Security\Ip\IpAccessControl;
+use Bromate\SecurityApiFirewall\Security\Firewall\RateLimiter;
+use Bromate\SecurityApiFirewall\Security\Firewall\IpAccessControl;
 
 final class PublicRequestBootstrap {
 

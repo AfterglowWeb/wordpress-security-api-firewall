@@ -1,7 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
-use Bromate\SecurityApiFirewall\Security\Ip\CidrMatcher;
-use Bromate\SecurityApiFirewall\Security\Ip\GeoIpApi;
+use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
+use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\Security\Login\TOTPController;
 

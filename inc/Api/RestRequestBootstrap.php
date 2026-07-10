@@ -3,8 +3,8 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Security\Authentication\AuthenticationManager;
-use Bromate\SecurityApiFirewall\Security\RateLimit\RateLimiter;
-use Bromate\SecurityApiFirewall\Security\Ip\IpAccessControl;
+use Bromate\SecurityApiFirewall\Security\Firewall\RateLimiter;
+use Bromate\SecurityApiFirewall\Security\Firewall\IpAccessControl;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesResolver;
 use WP_Error;
 use WP_REST_Request;
