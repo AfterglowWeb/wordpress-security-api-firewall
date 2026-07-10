@@ -35,13 +35,12 @@ class SaltRotation {
 
 		add_action( 'wp_ajax_bromate_security_api_firewall_salt_rotation_status', array( self::class, 'ajax_salt_rotation_status' ) );
 		add_action( 'wp_ajax_bromate_security_api_firewall_rotate_salt_now', array( self::class, 'ajax_rotate_salt_now' ) );
-
 	}
 
 	public static function register_custom_schedules( array $schedules ): array {
-		
-		if ( empty( SettingsRepository::read_option('salt_rotation_enabled') ) ) {
-			return $schedules; 
+
+		if ( empty( SettingsRepository::read_option( 'salt_rotation_enabled' ) ) ) {
+			return $schedules;
 		}
 
 		if ( ! isset( $schedules[ self::SCHEDULE_WEEKLY ] ) ) {
@@ -60,16 +59,16 @@ class SaltRotation {
 	}
 
 	public static function sync_schedule(): void {
-				
-		if ( empty( SettingsRepository::read_option('salt_rotation_enabled') ) ) {
+
+		if ( empty( SettingsRepository::read_option( 'salt_rotation_enabled' ) ) ) {
 			self::unschedule();
-			return; 
+			return;
 		}
 
 		$recurrence = self::sanitize_recurrence(
 			$settings['salt_rotation_recurrence'] ?? 'week'
 		);
-		$time = self::sanitize_time(
+		$time       = self::sanitize_time(
 			$settings['salt_rotation_time'] ?? '03:00'
 		);
 
@@ -90,8 +89,8 @@ class SaltRotation {
 	}
 
 	public static function filter_salt( $salt, $scheme ) {
-		
-		if ( empty( SettingsRepository::read_option('salt_rotation_enabled') ) ) {
+
+		if ( empty( SettingsRepository::read_option( 'salt_rotation_enabled' ) ) ) {
 			return $salt;
 		}
 
@@ -106,8 +105,8 @@ class SaltRotation {
 	}
 
 	public static function rotate_salt_now(): void {
-		
-		if ( empty( SettingsRepository::read_option('salt_rotation_enabled') ) ) {
+
+		if ( empty( SettingsRepository::read_option( 'salt_rotation_enabled' ) ) ) {
 			return;
 		}
 
@@ -117,15 +116,14 @@ class SaltRotation {
 		}
 		update_option( self::OPTION_KEY, $new, false );
 		update_option( self::LAST_ROTATION_KEY, current_time( 'mysql' ), false );
-
 	}
 
 	public static function ajax_salt_rotation_status(): void {
-		
+
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
 		}
-		
+
 		wp_send_json_success(
 			array(
 				'last_rotation' => self::get_last_rotation(),
@@ -136,7 +134,7 @@ class SaltRotation {
 	}
 
 	public static function ajax_rotate_salt_now(): void {
-		
+
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
 		}
@@ -154,8 +152,8 @@ class SaltRotation {
 	private static function schedule( string $recurrence, string $time ): void {
 		self::unschedule();
 
-		$tz  = wp_timezone();
-		$now = new DateTime( 'now', $tz );
+		$tz            = wp_timezone();
+		$now           = new DateTime( 'now', $tz );
 		list( $h, $m ) = array_map( 'intval', explode( ':', $time ) );
 
 		$next = new DateTime( 'now', $tz );

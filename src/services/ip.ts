@@ -4,6 +4,19 @@ export type ListType = 'blacklist' | 'whitelist';
 export type EntryType = 'ip' | 'cidr';
 export type EntryOrigin = 'manual' | 'auth_user_ip' | 'public_rate_limit' | 'login_rate_limit' | 'country';
 
+export interface LineResult {
+  value: string;
+  error: string;
+}
+
+export interface AddEntryForm {
+  value: string;
+  list_type: ListType;
+  user_id: number | null;
+  referrer: string;
+  expires_at: string | null;
+}
+
 export interface IpEntry {
   id: number;
   ip: string;

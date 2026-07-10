@@ -330,21 +330,21 @@ final class TOTPLoginService {
 	public function on_login_failed( string $username ): void {
 
 		$session_id = $this->get_session_id();
-		
+
 		$pending = get_transient( 'bromate_totp_pending_' . $session_id );
 		if ( ! $pending || ! isset( $pending['user_id'] ) ) {
 			return;
 		}
 
 		$user_id = (int) $pending['user_id'];
-		$user = get_user_by( 'id', $user_id );
-		
+		$user    = get_user_by( 'id', $user_id );
+
 		if ( ! $user || $user->user_login !== $username ) {
 			return;
 		}
 
 		$attempts_key = 'bromate_totp_attempts_' . $session_id;
-		$attempts = (int) get_transient( $attempts_key );
+		$attempts     = (int) get_transient( $attempts_key );
 		++$attempts;
 		set_transient( $attempts_key, $attempts, self::TRANSIENT_EXPIRY );
 
@@ -357,17 +357,19 @@ final class TOTPLoginService {
 		if ( ! is_array( $failed_log ) ) {
 			$failed_log = array();
 		}
-		
+
+		$http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+
 		$failed_log[] = array(
-			'time' => time(),
-			'ip'   => ClientIpResolver::get_client_ip(),
-			'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+			'time'       => time(),
+			'ip'         => ClientIpResolver::get_client_ip(),
+			'user_agent' => $http_user_agent,
 		);
-		
+
 		if ( count( $failed_log ) > 10 ) {
 			$failed_log = array_slice( $failed_log, -10 );
 		}
-		
+
 		update_user_meta( $user_id, '_bromate_totp_failed_attempts', $failed_log );
 	}
 

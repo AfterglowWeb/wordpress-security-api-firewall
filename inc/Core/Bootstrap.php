@@ -35,7 +35,6 @@ final class Bootstrap {
 			IpEntryAjaxController::register();
 			Documentation::register();
 		}
-
 	}
 
 	public static function activate(): void {

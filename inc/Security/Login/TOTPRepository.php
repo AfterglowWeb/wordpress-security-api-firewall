@@ -7,19 +7,19 @@ use Exception;
 
 final class TOTPRepository {
 
-	private const PENDING_META_KEY      = '_bromate_totp_secret_pending';
-	private const PENDING_TIME_META_KEY = '_bromate_totp_secret_pending_time';
-	private const SECRET_META_KEY       = '_bromate_totp_secret';
-	private const USER_ENROLLED_META_KEY      = '_bromate_security_api_firewall_totp_user_enrolled';
-	private const ENABLED_TIME_META_KEY = '_bromate_security_api_firewall_totp_user_is_enrolled_time';
-	private const BACKUP_CODES_META_KEY = '_bromate_backup_codes';
-	private const DIGITS_META_KEY       = '_bromate_totp_digits';
-	private const PERIOD_META_KEY       = '_bromate_totp_period';
-	private const ALGORITHM_META_KEY    = '_bromate_totp_algorithm';
+	private const PENDING_META_KEY       = '_bromate_totp_secret_pending';
+	private const PENDING_TIME_META_KEY  = '_bromate_totp_secret_pending_time';
+	private const SECRET_META_KEY        = '_bromate_totp_secret';
+	private const USER_ENROLLED_META_KEY = '_bromate_security_api_firewall_totp_user_enrolled';
+	private const ENABLED_TIME_META_KEY  = '_bromate_security_api_firewall_totp_user_is_enrolled_time';
+	private const BACKUP_CODES_META_KEY  = '_bromate_backup_codes';
+	private const DIGITS_META_KEY        = '_bromate_totp_digits';
+	private const PERIOD_META_KEY        = '_bromate_totp_period';
+	private const ALGORITHM_META_KEY     = '_bromate_totp_algorithm';
 
-	private const TOTP_DIGITS    = 6;
-	private const TOKEN_EXPIRY_DAYS    = 30;
-	private const TOTP_ALGORITHM = 'SHA1';
+	private const TOTP_DIGITS       = 6;
+	private const TOKEN_EXPIRY_DAYS = 30;
+	private const TOTP_ALGORITHM    = 'SHA1';
 
 	private Google2FA $google2fa;
 
@@ -226,10 +226,10 @@ final class TOTPRepository {
 		delete_user_meta( $user_id, self::SECRET_META_KEY );
 		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
 		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
-    }
+	}
 
-    public function revoke_all_trusted_devices_everywhere(): void {
-        global $wpdb;
+	public function revoke_all_trusted_devices_everywhere(): void {
+		global $wpdb;
 		$current_user_id = get_current_user_id();
 
 		$wpdb->query(
@@ -245,5 +245,5 @@ final class TOTPRepository {
 				self::ENABLED_TIME_META_KEY
 			)
 		);
-    }
+	}
 }

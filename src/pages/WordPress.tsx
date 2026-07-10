@@ -141,7 +141,6 @@ export default function WordPress() {
 					<FormControlLabel
 						control={
 							<Switch
-								size="small"
 								checked={!!form.disable_xmlrpc}
 								name="disable_xmlrpc"
 								onChange={setField}
@@ -155,7 +154,6 @@ export default function WordPress() {
 					<FormControlLabel
 						control={
 							<Switch
-								size="small"
 								checked={!!form.disable_comments}
 								name="disable_comments"
 								onChange={setField}
@@ -169,7 +167,6 @@ export default function WordPress() {
 					<FormControlLabel
 						control={
 							<Switch
-								size="small"
 								checked={!!form.disable_pingbacks}
 								name="disable_pingbacks"
 								onChange={setField}
@@ -183,7 +180,6 @@ export default function WordPress() {
 					<FormControlLabel
 						control={
 							<Switch
-								size="small"
 								checked={!!form.disable_rss}
 								name="disable_rss"
 								onChange={setField}
@@ -197,7 +193,6 @@ export default function WordPress() {
 					<FormControlLabel
 						control={
 							<Switch
-								size="small"
 								checked={!!form.disable_sitemap}
 								name="disable_sitemap"
 								onChange={setField}
@@ -211,37 +206,35 @@ export default function WordPress() {
 
 			<Paper sx={{p:2}} elevation={0}>
 				<Stack flexDirection={"column"} gap={2} maxWidth={650}>
-				<Typography variant="h6" mb={2}>
-					{__('HTTP Headers', 'security-api-firewall')}
-				</Typography>
+					<Typography variant="h6">
+						{__('HTTP Headers', 'security-api-firewall')}
+					</Typography>
 
-				<FormControl>
-					<FormControlLabel
-						control={
-							<Switch
-								size="small"
-								checked={!!form.http_headers_secure}
-								name="http_headers_secure"
-								onChange={setField}
-							/>
-						}
-						label={__('Enforce Secure HTTP Headers', 'security-api-firewall')}
-					/>
-				</FormControl>
+					<FormControl>
+						<FormControlLabel
+							control={
+								<Switch
+									checked={!!form.http_headers_secure}
+									name="http_headers_secure"
+									onChange={setField}
+								/>
+							}
+							label={__('Enforce Secure HTTP Headers', 'security-api-firewall')}
+						/>
+					</FormControl>
 
-				<FormControl>
-					<FormControlLabel
-						control={
-							<Switch
-								size="small"
-								checked={!!form.http_headers_compression}
-								name="http_headers_compression"
-								onChange={setField}
-							/>
-						}
-						label={__('Enforce Compression HTTP Headers', 'security-api-firewall')}
-					/>
-				</FormControl>
+					<FormControl>
+						<FormControlLabel
+							control={
+								<Switch
+									checked={!!form.http_headers_compression}
+									name="http_headers_compression"
+									onChange={setField}
+								/>
+							}
+							label={__('Enforce Compression HTTP Headers', 'security-api-firewall')}
+						/>
+					</FormControl>
 
 				</Stack>
 			</Paper>

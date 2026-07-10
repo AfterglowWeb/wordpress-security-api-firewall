@@ -11,13 +11,18 @@ use WP_User;
 class SessionManager {
 
 	public static function register(): void {
-		add_action('wp_login', static function ( $user_login, WP_User $user ) {
-			$max = SettingsRepository::read_option('max_concurrent_sessions');
-			if( empty( $max ) ) {
-				return;
-			}
-			self::enforce_session_limit( $user->ID, $max );
-		}, 10, 2);
+		add_action(
+			'wp_login',
+			static function ( $user_login, WP_User $user ) {
+				$max = SettingsRepository::read_option( 'max_concurrent_sessions' );
+				if ( empty( $max ) ) {
+					return;
+				}
+				self::enforce_session_limit( $user->ID, $max );
+			},
+			10,
+			2
+		);
 
 		add_action( 'wp_ajax_bromate_security_api_firewall_revoke_users_sessions', array( self::class, 'ajax_revoke_users_sessions' ) );
 		add_action( 'wp_ajax_bromate_security_api_firewall_revoke_user_sessions', array( self::class, 'ajax_revoke_user_sessions' ) );
@@ -26,7 +31,7 @@ class SessionManager {
 	}
 
 	public static function ajax_revoke_users_sessions(): void {
-		
+
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
 		}
@@ -43,29 +48,29 @@ class SessionManager {
 	}
 
 	public static function ajax_revoke_user_sessions(): void {
-		
+
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
 		}
 
-		if( !isset( $_POST['user_id'] ) ) {
+		if ( ! isset( $_POST['user_id'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing argument' ), 403 );
 		}
 
-		$user_id = absint( wp_unslash( $_POST['user_id'] ) ) ;
+		$user_id = absint( wp_unslash( $_POST['user_id'] ) );
 
-		self::revoke_user_sessions($user_id);
+		self::revoke_user_sessions( $user_id );
 
 		wp_send_json_success(
 			array(
-				'message'  => __( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ),
+				'message' => __( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ),
 			),
 			200
 		);
 	}
 
 	public static function ajax_get_users_sessions(): void {
-		
+
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
 		}
@@ -79,16 +84,16 @@ class SessionManager {
 	}
 
 	public static function ajax_get_user_sessions(): void {
-		
+
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
 		}
 
-		if( !isset( $_POST['user_id'] ) ) {
+		if ( ! isset( $_POST['user_id'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing argument' ), 403 );
 		}
 
-		$user_id = absint( wp_unslash( $_POST['user_id'] ) ) ;
+		$user_id = absint( wp_unslash( $_POST['user_id'] ) );
 
 		wp_send_json_success(
 			array(
@@ -125,15 +130,15 @@ class SessionManager {
 
 	private static function get_users_sessions(): int {
 
-		$user_ids = get_users( array( 'fields' => 'ID' ) );
+		$user_ids       = get_users( array( 'fields' => 'ID' ) );
 		$users_sessions = 0;
 
 		foreach ( $user_ids as $user_id ) {
-			$user_id  = (int) $user_id;
+			$user_id       = (int) $user_id;
 			$user_sessions = WP_Session_Tokens::get_instance( $user_id )->get_all();
 
 			$users_sessions[] = array(
-				'user_id' => $user_id,
+				'user_id'       => $user_id,
 				'user_sessions' => $user_sessions,
 			);
 		}
@@ -163,11 +168,11 @@ class SessionManager {
 	}
 
 	private static function is_current_session( string $verifier ): bool {
-		if ( empty( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) {
+		if ( ! isset( $_COOKIE[ LOGGED_IN_COOKIE ] ) || empty( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) {
 			return false;
 		}
-		$parts             = explode( '|', $_COOKIE[ LOGGED_IN_COOKIE ] );
-		$current_verifier  = $parts[2] ?? '';
+		$parts            = explode( '|', sanitize_text_field( wp_unslash( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) );
+		$current_verifier = $parts[2] ?? '';
 		return hash_equals( $verifier, $current_verifier );
 	}
 
@@ -194,5 +199,4 @@ class SessionManager {
 
 		return $affected;
 	}
-
 }
