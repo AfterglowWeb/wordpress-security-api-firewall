@@ -10,9 +10,9 @@ class SameSiteCookies {
 	private function __construct() {}
 
 	public static function register(): void {
-		
-		if ( empty( SettingsRepository::read_option('cookie_hardening_samesite_enabled') ) ) {
-			return; 
+
+		if ( empty( SettingsRepository::read_option( 'cookie_hardening_samesite_enabled' ) ) ) {
+			return;
 		}
 
 		add_action( 'init', array( self::class, 'register_cookie_headers' ), 0 );
@@ -34,7 +34,7 @@ class SameSiteCookies {
 			defined( 'LOGGED_IN_COOKIE' ) ? LOGGED_IN_COOKIE : 'wordpress_logged_in_',
 			'wordpress_test_cookie',
 		);
-		$samesite = SettingsRepository::read_option('cookie_hardening_samesite_mode');
+		$samesite        = SettingsRepository::read_option( 'cookie_hardening_samesite_mode' );
 
 		foreach ( $headers as $header ) {
 			if ( stripos( $header, 'Set-Cookie:' ) === 0 ) {
@@ -64,11 +64,10 @@ class SameSiteCookies {
 				continue;
 			}
 
-			$raw = trim( $raw );
+			$raw     = trim( $raw );
 			$rewrote = preg_replace( '/;\s*SameSite=[^;]*/i', '; SameSite=' . $samesite, $raw );
 
 			header( 'Set-Cookie: ' . $rewrote, false );
 		}
 	}
-
 }

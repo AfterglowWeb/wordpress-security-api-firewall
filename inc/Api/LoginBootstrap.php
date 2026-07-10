@@ -14,19 +14,17 @@ use Bromate\SecurityApiFirewall\Security\Login\SaltRotation;
 
 final class LoginBootstrap {
 
-    public static function register(): void {
+	public static function register(): void {
 
-        LoginRateLimiter::get_instance();
-        Recaptcha::get_instance();
-        TOTPLoginService::register();
-        SaltRotation::register();
-        SameSiteCookies::register();
-        SessionManager::register();
+		LoginRateLimiter::get_instance();
+		Recaptcha::get_instance();
+		TOTPLoginService::register();
+		SaltRotation::register();
+		SameSiteCookies::register();
+		SessionManager::register();
 
-        if ( is_admin() ) {
-            TOTPController::register();
-        }
-    }
-
-
+		if ( is_admin() ) {
+			TOTPController::register();
+		}
+	}
 }

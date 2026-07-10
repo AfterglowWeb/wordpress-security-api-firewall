@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="WP Security & API Firewall">
-	<description>PHPCS rules for WP Security & API Firewall plugin</description>
+<ruleset name="WP Security and API Firewall">
+	<description>PHPCS rules for WP Security and API Firewall plugin</description>
 
 	<file>./inc</file>
 	<file>./bromate-security-api-firewall.php</file>

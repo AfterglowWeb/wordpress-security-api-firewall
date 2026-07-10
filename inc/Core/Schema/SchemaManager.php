@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class SchemaManager {
 
-	const SCHEMA_VERSION = '1.7.1';
+	const SCHEMA_VERSION = '1.7.2';
 	const OPTION_KEY     = 'bromate_firewall_schema_version';
 
 	public static function install(): void {

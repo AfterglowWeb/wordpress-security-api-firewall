@@ -83,6 +83,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
       <FormControlLabel
         control={
           <Switch
+            size="small"
             checked={securityDefaultsApplied}
             onChange={toggleSecurityDefaults}
           />
@@ -92,7 +93,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
 
 
       <Stack spacing={2} maxWidth={350}>
-        <Typography variant="h6">{__('Block WordPress Objects', 'bromate-security-api-firewall')}</Typography>
+        <Typography variant="body1">{__('Block WordPress Objects', 'bromate-security-api-firewall')}</Typography>
         <ObjectTypeSelect
           label={__('Select types', 'bromate-security-api-firewall')}
           value={settings.routes_policy_hidden_wp_objects ?? []}
@@ -101,7 +102,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
       </Stack>
 
       <Stack spacing={2}>
-        <Typography variant="h6">{__('Block Methods', 'bromate-security-api-firewall')}</Typography>
+        <Typography variant="body1">{__('Block Methods', 'bromate-security-api-firewall')}</Typography>
         <Stack direction="row" gap={1} flexWrap="wrap">
           {HTTP_METHODS.map((method) => (
             <FormControlLabel
@@ -120,7 +121,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
       </Stack>
 
       <Stack spacing={2}>
-        <Typography variant="h6">{__('Blocked Response', 'bromate-security-api-firewall')}</Typography>
+        <Typography variant="body1">{__('Blocked Response', 'bromate-security-api-firewall')}</Typography>
         <FormControl size="small" sx={{ maxWidth: 200 }}>
           <InputLabel>{__('Code', 'bromate-security-api-firewall')}</InputLabel>
           <Select

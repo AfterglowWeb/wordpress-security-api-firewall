@@ -5,16 +5,16 @@ defined( 'ABSPATH' ) || exit;
 
 class ClientIpResolver {
 
-	private const IP_HEADERS = [
-		'HTTP_CF_CONNECTING_IP',      // Cloudflare
-		'HTTP_X_REAL_IP',              // Nginx/Apache
-		'HTTP_X_FORWARDED_FOR',        // Standard proxy header
-		'HTTP_X_CLUSTER_CLIENT_IP',    // Cluster environments
-		'HTTP_X_FORWARDED',            // Alternative forward header
-		'HTTP_FORWARDED_FOR',          // Alternative forward header
-		'HTTP_FORWARDED',              // Alternative forward header
-		'REMOTE_ADDR',                 // Fallback
-	];
+	private const IP_HEADERS = array(
+		'HTTP_CF_CONNECTING_IP',       // Cloudflare.
+		'HTTP_X_REAL_IP',              // Nginx/Apache.
+		'HTTP_X_FORWARDED_FOR',        // Standard proxy header.
+		'HTTP_X_CLUSTER_CLIENT_IP',    // Cluster environments.
+		'HTTP_X_FORWARDED',            // Alternative forward header.
+		'HTTP_FORWARDED_FOR',          // Alternative forward header.
+		'HTTP_FORWARDED',              // Alternative forward header.
+		'REMOTE_ADDR',                 // Fallback.
+	);
 
 	private static ?string $cached_ip = null;
 
@@ -24,9 +24,9 @@ class ClientIpResolver {
 		}
 
 		$ip = self::resolve_ip_from_headers( $skip_validation );
-		
+
 		self::$cached_ip = $ip;
-		
+
 		return $ip;
 	}
 
@@ -39,7 +39,7 @@ class ClientIpResolver {
 			}
 
 			$raw_ip = $headers[ $header ];
-			
+
 			if ( strpos( $raw_ip, ',' ) !== false ) {
 				$ips = array_map( 'trim', explode( ',', $raw_ip ) );
 				foreach ( $ips as $ip ) {
@@ -61,7 +61,7 @@ class ClientIpResolver {
 
 	private static function validate_ip( string $ip ) {
 		$ip = trim( $ip );
-		
+
 		if ( empty( $ip ) ) {
 			return false;
 		}
@@ -70,8 +70,8 @@ class ClientIpResolver {
 	}
 
 	private static function get_headers(): array {
-		$headers = [];
-		
+		$headers = array();
+
 		foreach ( self::IP_HEADERS as $header ) {
 			if ( isset( $_SERVER[ $header ] ) ) {
 				$value = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
@@ -80,7 +80,7 @@ class ClientIpResolver {
 				}
 			}
 		}
-		
+
 		if ( function_exists( 'getallheaders' ) ) {
 			$all_headers = getallheaders();
 			if ( is_array( $all_headers ) ) {
@@ -88,7 +88,7 @@ class ClientIpResolver {
 					$key = str_replace( 'HTTP_', '', $header );
 					$key = str_replace( '_', '-', $key );
 					$key = strtolower( $key );
-					
+
 					foreach ( $all_headers as $name => $value ) {
 						if ( strtolower( $name ) === $key && ! empty( $value ) ) {
 							$headers[ $header ] = sanitize_text_field( wp_unslash( $value ) );
@@ -98,8 +98,7 @@ class ClientIpResolver {
 				}
 			}
 		}
-		
+
 		return $headers;
 	}
-
 }

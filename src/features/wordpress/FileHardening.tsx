@@ -95,7 +95,7 @@ function FileActionSwitch({
 	return (
 		<FormControl>
 			<FormControlLabel
-				control={<Switch size="small" checked={checked} onChange={handleChange} disabled={busy} />}
+				control={<Switch checked={checked} onChange={handleChange} disabled={busy} />}
 				label={label}
 			/>
 			{helperText && <FormHelperText>{helperText}</FormHelperText>}
@@ -118,12 +118,6 @@ function FileActionSwitch({
 			{showDefault && isProtected === true && (
 				<Alert severity="success" sx={{ mt: 1, fontSize: '0.75rem' }}>
 					{protectedMessage || __('Currently protected.', 'security-api-firewall')}
-				</Alert>
-			)}
-
-			{showDefault && isProtected !== true && (
-				<Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
-					{confirmMessage}
 				</Alert>
 			)}
 		</FormControl>
@@ -167,49 +161,16 @@ export default function FileHardening() {
 		<Paper sx={{ p: 2 }} elevation={0}>
 			<Stack flexDirection="column" gap={2} maxWidth={650}>
 				<Typography variant="h6">{__('Files', 'security-api-firewall')}</Typography>
-
-				<Box>
-					<Typography variant="subtitle1" fontWeight={400} gutterBottom>
-						{__('Disable theme file editor', 'security-api-firewall')}
-					</Typography>
-					<FormHelperText sx={{ mt: 0, mb: 1 }}>
-						{__(
-							'Add the following constant to your wp-config.php to disable the theme editor in WordPress admin.',
-							'security-api-firewall'
-						)}
-					</FormHelperText>
-					<Box sx={{ position: 'relative', bgcolor: 'grey.900', borderRadius: 1, p: 1.5, mb: 1 }}>
-						<Box sx={{ position: 'absolute', top: 4, right: 4 }}>
-							<CopyButton toCopy="define('DISALLOW_FILE_EDIT', true);" sx={{ color: 'grey.400' }} />
-						</Box>
-						<Typography
-							component="pre"
-							variant="caption"
-							sx={{ m: 0, color: 'grey.100', fontFamily: 'monospace', whiteSpace: 'pre', display: 'block' }}
-						>
-							{"define('DISALLOW_FILE_EDIT', true);"}
-						</Typography>
-					</Box>
-					{disableThemeEditor ? (
-						<Alert severity="success" sx={{ fontSize: '0.75rem' }}>
-							{__('DISALLOW_FILE_EDIT is defined and active.', 'security-api-firewall')}
-						</Alert>
-					) : (
-						<Alert severity="warning" sx={{ fontSize: '0.75rem' }}>
-							{__('Constant not detected — editor is currently accessible.', 'security-api-firewall')}
-						</Alert>
-					)}
-				</Box>
-
+				
 				<FileActionSwitch
 					checked={wpconfigHardened}
-					label={__('Secure wp-config.php file', 'security-api-firewall')}
-					helperText={__('Set wp-config.php file permissions to 440.', 'security-api-firewall')}
+					label={__('Protect wp-config.php file', 'security-api-firewall')}
 					ajaxAction="update_file_permissions"
-					confirmMessage={__(
-						'This will set wp-config.php to read-only (chmod 440). Make sure your server user owns the file before proceeding.',
+					helperText={__(
+						'Set wp-config.php file permissions to 440. Server user must owns the file to proceed.',
 						'security-api-firewall'
 					)}
+					confirmMessage={__('Change wp-config.php file permissions?', 'security-api-firewall' )}
 					pendingMessage={__('Updating file permissions…', 'security-api-firewall')}
 					isProtected={fileStatus?.wpconfig_secure ?? null}
 					protectedMessage={
@@ -223,15 +184,15 @@ export default function FileHardening() {
 				<FileActionSwitch
 					checked={uploadsHardened}
 					label={__('Protect Uploads Directory', 'security-api-firewall')}
-					helperText={__('Protect the uploads directory from file execution and directory listing.', 'security-api-firewall')}
 					ajaxAction="protect_uploads_dir"
-					confirmMessage={__(
-						'This will write security rules (.htaccess / web.config) into the uploads directory to block PHP execution and directory listing.',
+					helperText={__(
+						'Write security rules (.htaccess / web.config) into the uploads directory to block PHP execution and directory listing.',
 						'security-api-firewall'
 					)}
+					confirmMessage={__('Protect uploads directory?', 'security-api-firewall' )}
 					pendingMessage={__('Writing protection rules…', 'security-api-firewall')}
 					isProtected={fileStatus?.uploads_protected ?? null}
-					protectedMessage={__('Protected — .htaccess and web.config rules are in place.', 'security-api-firewall')}
+					protectedMessage={__('Protected — Rules are in place.', 'security-api-firewall')}
 					onApplied={setUploadsHardened}
 				/>
 
@@ -254,6 +215,42 @@ export default function FileHardening() {
 						</Box>
 					</Box>
 				)}
+
+				<Stack flexDirection="column" gap={2}>
+					<Stack spacing={0}>
+					<Typography variant="body1">
+						{__('Disable theme file editor', 'security-api-firewall')}
+					</Typography>
+					<FormHelperText>
+						{__(
+							'Add the following constant to your wp-config.php to disable the theme editor in WordPress admin.',
+							'security-api-firewall'
+						)}
+					</FormHelperText>
+					</Stack>
+					<Box sx={{ position: 'relative', bgcolor: 'grey.900', borderRadius: 1, p: 1.5 }}>
+						<Box sx={{ position: 'absolute', top: 4, right: 4 }}>
+							<CopyButton toCopy="define('DISALLOW_FILE_EDIT', true);" sx={{ color: 'grey.400' }} />
+						</Box>
+						<Typography
+							component="pre"
+							variant="caption"
+							sx={{ m: 0, color: 'grey.100', fontFamily: 'monospace', whiteSpace: 'pre', display: 'block' }}
+						>
+							{"define('DISALLOW_FILE_EDIT', true);"}
+						</Typography>
+					</Box>
+					{disableThemeEditor ? (
+						<Alert severity="success" sx={{ fontSize: '0.75rem' }}>
+							{__('DISALLOW_FILE_EDIT is defined and active.', 'security-api-firewall')}
+						</Alert>
+					) : (
+						<Alert severity="warning" sx={{ fontSize: '0.75rem' }}>
+							{__('Constant not detected — editor is currently accessible.', 'security-api-firewall')}
+						</Alert>
+					)}
+				</Stack>
+
 			</Stack>
 		</Paper>
 	);

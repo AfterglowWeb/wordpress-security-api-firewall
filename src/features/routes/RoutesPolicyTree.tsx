@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from '@wordpress/element';
-import { RoutePolicyTreeContext, useRoutePolicyTreeContext } from '@contexts/RoutePolicyTreeContext';
+import { __ } from '@wordpress/i18n';
+import { RoutePolicyTreeContext } from '@contexts/RoutePolicyTreeContext';
 import { resolveInheritance } from '@app-utils/routeInheritance';
 import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
@@ -202,11 +203,11 @@ export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, o
 
 	return (
 		<Stack spacing={2}>
-			<Typography variant="h6">Route Policy Tree</Typography>
+			<Typography variant="h6">{__('REST API Tree','bromate-security-api-firewall')}</Typography>
 			<Stack flexDirection="row" gap={2}>
 				<Chip size="small" label={`${customCount} custom rules`} />
 				<Stack flex={1} />
-				<Button startIcon={<RefreshIcon />}>Refresh</Button>
+				<Button startIcon={<RefreshIcon />}>{__('Refresh','bromate-security-api-firewall')}</Button>
 			</Stack>
 			<RoutePolicyTreeContext.Provider value={{ toggleSetting, getNode }}>
 				<RichTreeView<RouteNode>
