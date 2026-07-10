@@ -169,6 +169,7 @@ export default function Dashboard(): JSX.Element {
 							<Box mt={2}>
 								<Chip
 									size="small"
+									variant="outlined"
 									label={module.enabled ? 'Enabled' : 'Disabled'}
 									color={module.enabled ? 'success' : 'default'}
 								/>

@@ -13,6 +13,10 @@ final class RestRequestBootstrap {
 
 	public static function register(): void {
 
+		if(is_admin()) {
+			return;
+		}
+
 		add_action(
 			'rest_pre_serve_request',
 			array( self::class, 'remove_cache_headers' ),
