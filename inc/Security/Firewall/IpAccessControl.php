@@ -1,5 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Security\Firewall;
 
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Firewall\AutoBlacklist;
 use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
@@ -10,6 +11,10 @@ use WP_Error;
 class IpAccessControl {
 
 	public static function inspect() {
+
+		if ( empty( SettingsRepository::read_option('firewall_enabled') ) ) {
+			return true;
+		}
 
 		$ip = ClientIpResolver::get_client_ip();
 

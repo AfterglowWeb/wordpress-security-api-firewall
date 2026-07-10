@@ -40,11 +40,9 @@ class RedirectTemplates {
 				if ( is_front_page() ) {
 					break;
 				}
-
-				$frontpage_id = get_option( 'page_on_front' );
-				if ( $frontpage_id ) {
-					wp_safe_redirect( get_the_permalink( $frontpage_id ) );
-				}
+		
+				wp_safe_redirect( get_bloginfo('url') );
+				
 				break;
 			case 'custom':
 					wp_safe_redirect( $redirect_front_user_url );
@@ -56,7 +54,7 @@ class RedirectTemplates {
 				global $wp_query;
 				$wp_query->set_404();
 				add_filter( 'pre_handle_404', '__return_true' );
-				wp_die( '404 - Page Not Found', '404 Not Found', array( 'response' => 404 ) );
+				die ( '404 - Page Not Found' );
 				break;
 		}
 
