@@ -1,6 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
-use Bromate\SecurityApiFirewall\Security\Ip\IpEntryRepository;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
 use WP_User;
 
 class SettingsRepository {

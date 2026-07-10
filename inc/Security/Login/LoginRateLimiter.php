@@ -3,9 +3,9 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Ip\IpEntryRepository;
-use Bromate\SecurityApiFirewall\Security\Ip\CidrMatcher;
-use Bromate\SecurityApiFirewall\Security\Ip\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
+use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
+use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 
 final class LoginRateLimiter {
 

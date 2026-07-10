@@ -4,7 +4,7 @@ namespace Bromate\SecurityApiFirewall\Security\Login;
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Ip\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 use Bromate\SecurityApiFirewall\Security\Login\TOTPRepository;
 use WP_Error;
 

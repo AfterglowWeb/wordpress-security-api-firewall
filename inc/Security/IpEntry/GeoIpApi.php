@@ -1,4 +1,4 @@
-<?php namespace Bromate\SecurityApiFirewall\Security\Ip;
+<?php namespace Bromate\SecurityApiFirewall\Security\IpEntry;
 
 use League\ISO3166\ISO3166;
 

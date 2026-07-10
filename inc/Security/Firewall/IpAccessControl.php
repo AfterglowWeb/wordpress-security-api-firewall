@@ -1,8 +1,10 @@
-<?php namespace Bromate\SecurityApiFirewall\Security\Ip;
+<?php namespace Bromate\SecurityApiFirewall\Security\Firewall;
 
-use Bromate\SecurityApiFirewall\Security\Ip\ClientIpResolver;
-use Bromate\SecurityApiFirewall\Security\RateLimit\AutoBlacklist;
+use Bromate\SecurityApiFirewall\Security\Firewall\AutoBlacklist;
 use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
+use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 use WP_Error;
 
 class IpAccessControl {

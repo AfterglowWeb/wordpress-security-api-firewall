@@ -1,4 +1,4 @@
-<?php namespace Bromate\SecurityApiFirewall\Security\RateLimit;
+<?php namespace Bromate\SecurityApiFirewall\Security\Firewall;
 
 defined( 'ABSPATH' ) || exit;
 

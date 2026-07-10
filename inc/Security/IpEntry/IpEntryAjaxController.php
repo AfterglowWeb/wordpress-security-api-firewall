@@ -1,11 +1,11 @@
-<?php namespace Bromate\SecurityApiFirewall\Security\Ip;
+<?php namespace Bromate\SecurityApiFirewall\Security\IpEntry;
 
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
-use Bromate\SecurityApiFirewall\Security\Ip\IpEntryRepository;
-use Bromate\SecurityApiFirewall\Security\Ip\CidrMatcher;
-use Bromate\SecurityApiFirewall\Security\Ip\GeoIpApi;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
+use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
+use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 
 class IpEntryAjaxController {
 

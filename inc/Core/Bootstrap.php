@@ -10,7 +10,7 @@ use Bromate\SecurityApiFirewall\Api\LoginBootstrap;
 use Bromate\SecurityApiFirewall\Security\WordPress\WordPressSecurityBootstrap;
 use Bromate\SecurityApiFirewall\Logs\LogEntryAjaxController;
 
-use Bromate\SecurityApiFirewall\Security\Ip\IpEntryAjaxController;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryAjaxController;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;

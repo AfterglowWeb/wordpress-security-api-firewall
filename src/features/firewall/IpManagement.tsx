@@ -27,7 +27,6 @@ import { useNavigation } from '@contexts/NavigationContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import { IpAPI, type IpEntry, type ListType, type AddEntryForm, type LineResult } from '@services/ip';
 import type { AuthorizedUser } from '@app-types/auth';
-import ConfirmDialog from '@components/ConfirmDialog';
 
 const EMPTY_FORM: AddEntryForm = {
   value: '',
@@ -562,7 +561,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
         wpUsersLoading={wpUsersLoading}
       />
 
-      <ConfirmDialog />
     </>
   );
 }
