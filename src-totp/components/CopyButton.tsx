@@ -16,13 +16,10 @@ interface CopyButtonProps {
 function copyToClipboard(text: string): boolean {
   if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
     navigator.clipboard.writeText(text).catch(() => {
-      // for insecure contexts; a rejected promise on a secure context is rare and not worth double-copying for.
     });
     return true;
   }
 
-  // Fallback for insecure contexts (e.g. local http:// dev sites) where
-  // navigator.clipboard is not exposed at all.
   const textarea = document.createElement('textarea');
   textarea.value = text;
   textarea.setAttribute('readonly', '');

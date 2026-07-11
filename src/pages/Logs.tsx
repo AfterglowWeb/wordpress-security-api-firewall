@@ -11,6 +11,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { LogAPI, type LogEntry, type LogSeverity } from '@services/log';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import ConfirmDialog from '@components/ConfirmDialog';
+import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 const SEVERITY_COLOR: Record<LogSeverity, 'default' | 'info' | 'warning' | 'error'> = {
   debug:    'default',
@@ -86,8 +87,6 @@ function LogsToolbar({ onDeleteSelected, severityFilter, onSeverityChange }: Log
   );
 }
 
-// ── Columns ────────────────────────────────────────────────────────────────
-
 const LOG_COLUMNS: GridColDef<LogEntry>[] = [
   {
     field: 'created_at', headerName: 'Date', width: 160,
@@ -110,7 +109,7 @@ const LOG_COLUMNS: GridColDef<LogEntry>[] = [
   {
     field: 'uri', headerName: 'URI', flex: 1,
     renderCell: ({ value }) => value
-      ? <Tooltip title={value}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span></Tooltip>
+      ? <Tooltip slotProps={{ popper: { container: usePortalContainer() } }} title={value}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span></Tooltip>
       : '—',
   },
   {
@@ -119,7 +118,7 @@ const LOG_COLUMNS: GridColDef<LogEntry>[] = [
       if (!value) return '—';
       const text = JSON.stringify(value);
       return (
-        <Tooltip title={<pre style={{ margin: 0, fontSize: 11 }}>{JSON.stringify(value, null, 2)}</pre>}>
+        <Tooltip slotProps={{ popper: { container: usePortalContainer() } }} title={<pre style={{ margin: 0, fontSize: 11 }}>{JSON.stringify(value, null, 2)}</pre>}>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'monospace', fontSize: 12 }}>
             {text}
           </span>
@@ -129,14 +128,12 @@ const LOG_COLUMNS: GridColDef<LogEntry>[] = [
   },
 ];
 
-// ── Main component ─────────────────────────────────────────────────────────
-
 export default function Logs(): JSX.Element {
   const { openDialog }  = useDialog();
   const [rows, setRows] = useState<LogEntry[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
-  const [page, setPage]             = useState(0);          // DataGrid is 0-based
+  const [page, setPage]             = useState(0);
   const [pageSize, setPageSize]     = useState(50);
   const [severityFilter, setSeverityFilter] = useState<LogSeverity | 'all'>('all');
   const [selection, setSelection]   = useState<GridRowSelectionModel>({

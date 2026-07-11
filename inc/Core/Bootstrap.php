@@ -3,17 +3,22 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 
 use Bromate\SecurityApiFirewall\Api\RestRequestBootstrap;
 use Bromate\SecurityApiFirewall\Api\PublicRequestBootstrap;
 use Bromate\SecurityApiFirewall\Api\LoginBootstrap;
-use Bromate\SecurityApiFirewall\Security\WordPress\WordPressSecurityBootstrap;
-use Bromate\SecurityApiFirewall\Logs\LogEntryAjaxController;
 
+use Bromate\SecurityApiFirewall\Security\Authentication\JwksEndpoint;
+use Bromate\SecurityApiFirewall\Security\Authentication\AuthenticationAjaxController;
+use Bromate\SecurityApiFirewall\Security\WordPress\WordPressSecurityBootstrap;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryAjaxController;
-use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
+
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
+
+use Bromate\SecurityApiFirewall\Logs\LogEntryAjaxController;
+
 
 final class Bootstrap {
 
@@ -27,12 +32,14 @@ final class Bootstrap {
 		PublicRequestBootstrap::register();
 		LoginBootstrap::register();
 		WordPressSecurityBootstrap::register();
-		LogEntryAjaxController::register();
+		JwksEndpoint::register();
 
 		if ( is_admin() ) {
 			AdminPage::register();
 			SettingsAjaxController::register();
+			AuthenticationAjaxController::register();
 			IpEntryAjaxController::register();
+			LogEntryAjaxController::register();
 			Documentation::register();
 		}
 	}

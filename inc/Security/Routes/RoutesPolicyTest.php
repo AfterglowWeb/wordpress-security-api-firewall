@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Authentication\ApplicationPasswordAuthenticator;
+use Bromate\SecurityApiFirewall\Security\Authentication\WordPressApplicationPassword;
 
 use WP_REST_Request;
 
@@ -394,7 +394,7 @@ class RoutesPolicyTest {
 			return $result;
 		}
 
-		$auth_check = ApplicationPasswordAuthenticator::validate_wp_application_password();
+		$auth_check = WordPressApplicationPassword::validate_wp_application_password();
 		if ( is_wp_error( $auth_check ) ) {
 			return $auth_check;
 		}

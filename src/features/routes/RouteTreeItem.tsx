@@ -24,9 +24,11 @@ import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 function PermissionBadge({ type }: { type?: string }) {
   if (!type) return null;
-  if (type === 'public')    return <Tooltip title="Public route"><PublicIcon fontSize="inherit" sx={{ color: 'success.main' }} /></Tooltip>;
-  if (type === 'forbidden') return <Tooltip title="Always forbidden"><BlockIcon fontSize="inherit" sx={{ color: 'error.main' }} /></Tooltip>;
-  return <Tooltip title={`${type} route`}><ShieldIcon fontSize="inherit" sx={{ color: 'warning.main' }} /></Tooltip>;
+    const portalContainer = usePortalContainer();
+
+  if (type === 'public')    return <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Public route"><PublicIcon fontSize="inherit" sx={{ color: 'success.main' }} /></Tooltip>;
+  if (type === 'forbidden') return <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Always forbidden"><BlockIcon fontSize="inherit" sx={{ color: 'error.main' }} /></Tooltip>;
+  return <Tooltip slotProps={{ popper: { container: portalContainer } }} title={`${type} route`}><ShieldIcon fontSize="inherit" sx={{ color: 'warning.main' }} /></Tooltip>;
 }
 
 export default function RouteTreeItem(props: TreeItemProps) {

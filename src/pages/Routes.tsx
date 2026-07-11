@@ -10,6 +10,7 @@ import type { RoutesSettings, RouteNode } from '@app-types/routes';
 
 import GlobalRoutesPolicy from '@features/routes/GlobalRoutesPolicy';
 import RoutesPolicyTree from '@features/routes/RoutesPolicyTree';
+import RedirectFront from '@features/firewall/RedirectFront';
 
 import { RoutesAPI } from '@services/routes';
 import SaveButton from '@components/SaveButton';
@@ -25,7 +26,9 @@ export default function Routes(): JSX.Element {
 		routes_policy_default_hidden_routes: false,
 		routes_policy_hidden_methods:        [],
 		routes_policy_hidden_wp_objects:     [],
+		routes_policy_auth_enforce: false,
 		routes_policy_hidden_response_code:  '404',
+
 	});
 	const [loadedSettings, setLoadedSettings] = useState<RoutesSettings>(settings);
 	

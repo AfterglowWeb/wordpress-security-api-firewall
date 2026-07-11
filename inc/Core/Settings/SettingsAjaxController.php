@@ -3,6 +3,7 @@
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\WordPressObjects;
+use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
 
 class SettingsAjaxController {
 
@@ -19,8 +20,8 @@ class SettingsAjaxController {
 		add_action( 'wp_ajax_bromate_get_routes_policy_tree', array( $self, 'ajax_get_routes_policy_tree' ) );
 		add_action( 'wp_ajax_bromate_save_routes_policy_tree', array( $self, 'ajax_save_routes_policy_tree' ) );
 		add_action( 'wp_ajax_bromate_save_all_routes_settings', array( $self, 'ajax_save_all_routes_settings' ) );
-		add_action( 'wp_ajax_bromate_authorized_users_options', array( $self, 'ajax_authorized_users_options' ) );
 		add_action( 'wp_ajax_bromate_wordpress_objects_options', array( $self, 'ajax_wordpress_objects_options' ) );
+
 	}
 
 	public function ajax_read_options() {
@@ -93,14 +94,6 @@ class SettingsAjaxController {
 		} else {
 			wp_send_json_error( 'Unknown parameter', 422 );
 		}
-	}
-
-	public function ajax_authorized_users_options(): void {
-		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
-		}
-		$wordpress_users = SettingsRepository::authorized_users_options();
-		wp_send_json_success( $wordpress_users );
 	}
 
 	public function ajax_wordpress_objects_options(): void {

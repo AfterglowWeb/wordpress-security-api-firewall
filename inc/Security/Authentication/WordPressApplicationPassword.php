@@ -3,8 +3,50 @@
 defined( 'ABSPATH' ) || exit;
 
 use WP_User;
+use WP_Application_Passwords;
 
-class ApplicationPasswordAuthenticator {
+class WordPressApplicationPassword {
+
+
+	public static function user_has_valid_application_password($user_id) {
+		if (!function_exists('WP_Application_Passwords')) {
+			return false;
+		}
+
+		$user_id = absint($user_id);
+		if ($user_id === 0) {
+			return false;
+		}
+
+		$user = get_userdata($user_id);
+		if (!$user) {
+			return false;
+		}
+
+		$passwords = WP_Application_Passwords::get_user_application_passwords($user_id);
+		
+		if (empty($passwords)) {
+			return false;
+		}
+
+		$has_valid = false;
+		foreach ($passwords as $password) {
+			if (isset($password['revoked_at']) && $password['revoked_at'] !== null) {
+				continue;
+			}
+
+			if (isset($password['expires']) && $password['expires'] !== null) {
+				if ($password['expires'] <= time()) {
+					continue;
+				}
+			}
+
+			$has_valid = true;
+			break;
+		}
+
+		return $has_valid;
+	}
 
 	public static function sync_rest_api_user( int $new_user_id, int $old_user_id = 0 ): void {
 		if (

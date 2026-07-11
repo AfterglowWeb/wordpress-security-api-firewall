@@ -3,7 +3,6 @@
 use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
 use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
-use Bromate\SecurityApiFirewall\Security\Login\TOTPController;
 
 final class SettingsConfig {
 
@@ -28,15 +27,15 @@ final class SettingsConfig {
 	public static function options_config(): array {
 
 		$options = array(
-			'auth_enforce'                             => array(
-				'label'             => esc_html__( 'Require authentication for all API routes', 'bromate-security-api-firewall' ),
-				'info'              => esc_html__( 'When enabled, all REST API routes require authentication unless explicitly allowed by route policies.', 'bromate-security-api-firewall' ),
-				'default_value'     => false,
+
+			'auth_control_enabled'  => array(
+				'label'             => esc_html__( 'Control REST API Authentication', 'bromate-security-api-firewall' ),
+				'default_value'     => 'wp_auth',
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
-
+			
 			'auth_methods'                             => array(
 				'label'             => esc_html__( 'Authentication method', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Choose how API clients authenticate with the REST API.', 'bromate-security-api-firewall' ),
@@ -97,21 +96,28 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_users'                               => array(
-				'label'             => esc_html__( 'Authorized API users', 'bromate-security-api-firewall' ),
-				'info'              => esc_html__( 'Restrict API access to specific WordPress user accounts.', 'bromate-security-api-firewall' ),
-				'default_value'     => array(),
-				'type'              => 'array',
-				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_authorized_user' ),  // ← singular
+			'auth_jwt_cache_jwks'                          => array(
+				'label'             => esc_html__( 'Cache JWKS', 'bromate-security-api-firewall' ),
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
 
-			'auth_user_ids'                            => array(
-				'label'             => esc_html__( 'Authorized API users', 'bromate-security-api-firewall' ),
-				'info'              => esc_html__( 'Restrict API access to specific WordPress user accounts.', 'bromate-security-api-firewall' ),
+			'auth_jwt_cache_duration'                          => array(
+				'label'             => esc_html__( 'Cache JWKS duration', 'bromate-security-api-firewall' ),
+				'default_value'     => false,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'authentication',
+			),
+
+			'auth_users'                               => array(
+				'label'             => esc_html__( 'Authorized REST API users', 'bromate-security-api-firewall' ),
+				'info'              => esc_html__( 'Restrict REST API access to specific WordPress user accounts.', 'bromate-security-api-firewall' ),
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => 'absint',
+				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_authorized_user' ),  // ← singular
 				'group'             => 'authentication',
 			),
 
@@ -194,6 +200,15 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
+			'routes_policy_auth_enforce'                             => array(
+				'label'             => esc_html__( 'Require authentication for all wp/v2/* API routes', 'bromate-security-api-firewall' ),
+				'info'              => esc_html__( 'When enabled, wp/v2/* REST API routes require authentication.', 'bromate-security-api-firewall' ),
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'authentication',
+			),
+
 			'routes_policy_tree'                       => array(
 				'label'             => esc_html__( 'Per-route policies', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Custom visibility and authentication rules applied to individual routes.', 'bromate-security-api-firewall' ),
@@ -244,7 +259,7 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			// Auth hardening.
+			// Login hardening.
 			'login_rate_limit_enabled'                 => array(
 				'label'             => esc_html__( 'Protect login page', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Limit failed login attempts to reduce brute-force attacks.', 'bromate-security-api-firewall' ),
