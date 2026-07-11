@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from '@wordpress/element';
-import { Paper, Typography, Button, Snackbar, Alert, Chip } from '@mui/material';
+import { __ } from '@wordpress/i18n';
+import { Paper, Typography, Button, Snackbar, Alert, Chip, Tooltip, Stack } from '@mui/material';
 import {
   DataGrid, GridColDef, GridActionsCellItem, GridRowId,
   GridRowSelectionModel, Toolbar, useGridApiContext,
@@ -7,14 +8,17 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
-import type { AuthorizedUser, AuthorizedUserMeta } from '@app-types/auth';
+import type { AuthorizedUser, AuthorizedUserMeta, AuthSettings } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
 import type { LogEntry, LogSeverity } from '@services/log';
 import UserDialog from '@features/authentication/UserDialog';
 import { apiRequest } from '@services/api';
 import { SettingsAPI } from '@services/settings';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
+import { usePortalContainer } from '@contexts/PortalContainerContext';
+
 
 declare module '@mui/x-data-grid' {
   interface ToolbarPropsOverrides {
@@ -35,6 +39,11 @@ interface AuthenticationToolbarProps {
   selectedCount: number;
 }
 
+interface AuthorizedUsersGridProps {
+  /** Currently selected/active application auth method — drives JWT-field disabling and the app-password check. */
+  authMethod: AuthSettings['auth_methods'];
+}
+
 function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolbarProps) {
   const apiRef = useGridApiContext();
   const [selectedCount, setSelectedCount] = useState(0);
@@ -53,7 +62,7 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
   return (
     <Toolbar style={{ gap: '16px' }}>
       <Button variant="contained" disableElevation onClick={onAddUser} size="small">
-        Add user
+        {__('Add user', 'bromate-security-api-firewall')}
       </Button>
       <Button
         color="error"
@@ -63,15 +72,15 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
         onClick={() => (onDeleteSelectedUser ? onDeleteSelectedUser(selectedRows) : false)}
         size="small"
       >
-        Delete ({selectedCount})
+        {`${__('Delete', 'bromate-security-api-firewall')} (${selectedCount})`}
       </Button>
     </Toolbar>
   );
 }
 
-export default function AuthorizedUsersGrid(): JSX.Element {
+export default function AuthorizedUsersGrid({ authMethod }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
-
+  const portalContainer = usePortalContainer();
   const { openDialog } = useDialog();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AuthorizedUser | null>(null);
@@ -94,7 +103,7 @@ export default function AuthorizedUsersGrid(): JSX.Element {
         if (!wpUser) return [];
         return [{
           ...wpUser,
-          jwt_claim_sub: meta.jwt_claim_sub,
+          jwt_subclaim: meta.jwt_subclaim,
           status: meta.status,
           expires_at: meta.expires_at,
         }];
@@ -116,13 +125,23 @@ export default function AuthorizedUsersGrid(): JSX.Element {
     return 'active';
   };
 
+  const statusLabels: Record<'active' | 'expiring' | 'revoked', string> = {
+    active: __('active', 'bromate-security-api-firewall'),
+    expiring: __('expiring', 'bromate-security-api-firewall'),
+    revoked: __('revoked', 'bromate-security-api-firewall'),
+  };
+
   const fetchWordPressUsers = useCallback(async () => {
     setWpUsersLoading(true);
     try {
       const users = await apiRequest<AuthorizedUser[]>('bromate_authorized_users_options');
       setWpUsers(users);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load WordPress users', severity: 'error' });
+      setSnackbar({
+        open: true,
+        message: __('Failed to load WordPress users', 'bromate-security-api-firewall'),
+        severity: 'error',
+      });
     } finally {
       setWpUsersLoading(false);
     }
@@ -145,21 +164,29 @@ export default function AuthorizedUsersGrid(): JSX.Element {
         }
       })
       .catch(() =>
-        setSnackbar({ open: true, message: 'Failed to load authorized users', severity: 'error' })
+        setSnackbar({
+          open: true,
+          message: __('Failed to load authorized users', 'bromate-security-api-firewall'),
+          severity: 'error',
+        })
       );
   }, []);
 
   const persistUsers = useCallback((users: AuthorizedUserMeta[]) => {
     setAuthUsers(users);
     SettingsAPI.updateOption('auth_users', users).catch(() =>
-      setSnackbar({ open: true, message: 'Failed to save changes', severity: 'error' })
+      setSnackbar({
+        open: true,
+        message: __('Failed to save changes', 'bromate-security-api-firewall'),
+        severity: 'error',
+      })
     );
   }, []);
 
   const doSaveUser = useCallback((user: AuthorizedUser) => {
     const meta: AuthorizedUserMeta = {
       id: user.id,
-      jwt_claim_sub: user.jwt_claim_sub ?? '',
+      jwt_subclaim: user.jwt_subclaim ?? '',
       status: user.status ?? 'active',
       expires_at: user.expires_at ?? '',
     };
@@ -170,7 +197,9 @@ export default function AuthorizedUsersGrid(): JSX.Element {
     persistUsers(newUsers);
     setSnackbar({
       open: true,
-      message: exists ? 'User updated successfully' : 'User added successfully',
+      message: exists
+        ? __('User updated successfully', 'bromate-security-api-firewall')
+        : __('User added successfully', 'bromate-security-api-firewall'),
       severity: 'success',
     });
     setDialogOpen(false);
@@ -181,11 +210,15 @@ export default function AuthorizedUsersGrid(): JSX.Element {
     const exists = authUsers.some((u) => u.id === user.id);
     openDialog({
       type: DIALOG_TYPES.CONFIRM,
-      title: exists ? 'Save changes?' : 'Add user?',
+      title: exists
+        ? __('Save changes?', 'bromate-security-api-firewall')
+        : __('Add user?', 'bromate-security-api-firewall'),
       content: exists
-        ? `Save changes for ${user.display_name}?`
-        : `Add ${user.display_name} to authorized users?`,
-      confirmLabel: exists ? 'Save' : 'Add',
+        ? `${__('Save changes for', 'bromate-security-api-firewall')} ${user.display_name}?`
+        : `${__('Add', 'bromate-security-api-firewall')} ${user.display_name} ${__('to authorized users?', 'bromate-security-api-firewall')}`,
+      confirmLabel: exists
+        ? __('Save', 'bromate-security-api-firewall')
+        : __('Add', 'bromate-security-api-firewall'),
       onConfirm: () => doSaveUser(user),
     });
   }, [authUsers, openDialog, doSaveUser]);
@@ -194,13 +227,17 @@ export default function AuthorizedUsersGrid(): JSX.Element {
     const user = authorizedUsers.find((u) => u.id === id);
     openDialog({
       type: DIALOG_TYPES.CONFIRM,
-      title: 'Remove user?',
-      content: `Remove ${user?.display_name ?? id} from authorized users?`,
-      confirmLabel: 'Remove',
+      title: __('Remove user?', 'bromate-security-api-firewall'),
+      content: `${__('Remove', 'bromate-security-api-firewall')} ${user?.display_name ?? id} ${__('from authorized users?', 'bromate-security-api-firewall')}`,
+      confirmLabel: __('Remove', 'bromate-security-api-firewall'),
       onConfirm: () => {
         const newUsers = authUsers.filter((u) => u.id !== id);
         persistUsers(newUsers);
-        setSnackbar({ open: true, message: 'User removed', severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: __('User removed', 'bromate-security-api-firewall'),
+          severity: 'success',
+        });
       },
     });
   }, [authUsers, authorizedUsers, openDialog, persistUsers]);
@@ -212,13 +249,17 @@ export default function AuthorizedUsersGrid(): JSX.Element {
 
     openDialog({
       type: DIALOG_TYPES.CONFIRM,
-      title: `Remove ${rows.size} user(s)?`,
-      content: `This will remove: ${names}`,
-      confirmLabel: 'Remove all',
+      title: `${__('Remove', 'bromate-security-api-firewall')} ${rows.size} ${__('user(s)?', 'bromate-security-api-firewall')}`,
+      content: `${__('This will remove:', 'bromate-security-api-firewall')} ${names}`,
+      confirmLabel: __('Remove all', 'bromate-security-api-firewall'),
       onConfirm: () => {
         const newUsers = authUsers.filter((u) => !ids.has(u.id));
         persistUsers(newUsers);
-        setSnackbar({ open: true, message: `Removed ${rows.size} user(s)`, severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: `${__('Removed', 'bromate-security-api-firewall')} ${rows.size} ${__('user(s)', 'bromate-security-api-firewall')}`,
+          severity: 'success',
+        });
         setRowSelectionModel({ type: 'include', ids: new Set() });
       },
     });
@@ -237,36 +278,48 @@ export default function AuthorizedUsersGrid(): JSX.Element {
   const toolbarSlots = useMemo(() => ({ toolbar: CustomToolbar }), []);
 
   const columns: GridColDef<AuthorizedUser>[] = [
-    { field: 'id', headerName: 'ID', width: 80 },
+    { field: 'id', headerName: __('ID', 'bromate-security-api-firewall'), width: 80 },
     {
-      field: 'display_name', headerName: 'User', width: 170,
+      field: 'display_name', headerName: __('User', 'bromate-security-api-firewall'), width: 190,
       valueGetter: (_, row) => row.id ?? null,
       renderCell: ({ row }) => {
         const userId = row.id != null ? Number(row.id) : null;
         if (!userId) return '—';
         const user = wpUsers.find((u) => u.id === userId);
-        return user
-          ? <a href={user.admin_url} target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        if (!user) return `${userId}`;
+        const missingAppPassword = authMethod === 'wp_auth' && !user.has_wp_app_password;
+        return (
+          <Stack direction="row" alignItems="center" gap={0.5}>
+            <a href={user.admin_url} target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               {user.display_name}<OpenInNewIcon fontSize="inherit" />
             </a>
-          : `${userId}`;
+            {missingAppPassword && (
+              <Tooltip slotProps={{ popper: { container: portalContainer } }} title={__('WordPress Auth is active but this user has no application password — REST API requests will be rejected until one is generated on their profile.', 'bromate-security-api-firewall')}>
+                <WarningAmberIcon color="warning" fontSize="small" />
+              </Tooltip>
+            )}
+          </Stack>
+        );
       },
     },
-    { field: 'email', headerName: 'Email', flex: 1, valueGetter: (_, row) => row.email || '—' },
     {
-      field: 'wp_role', headerName: 'Role', width: 120,
+      field: 'email', headerName: __('Email', 'bromate-security-api-firewall'), flex: 1,
+      valueGetter: (_, row) => row.email || '—',
+    },
+    {
+      field: 'wp_role', headerName: __('Role', 'bromate-security-api-firewall'), width: 120,
       valueGetter: (_, row) => (row.roles?.length > 0 ? row.roles[0] : '—'),
     },
     {
-      field: 'jwt_claim_sub', headerName: 'JWT sub claim', flex: 1,
-      valueGetter: (_, row) => row.jwt_claim_sub || '—',
+      field: 'jwt_subclaim', headerName: __('JWT sub claim', 'bromate-security-api-firewall'), flex: 1,
+      valueGetter: (_, row) => row.jwt_subclaim || '—',
     },
     {
-      field: 'status', headerName: 'Status', width: 110,
+      field: 'status', headerName: __('Status', 'bromate-security-api-firewall'), width: 110,
       renderCell: ({ row }) => {
         const s = resolveDisplayStatus(row);
         return (
-          <Chip label={s} size="small" sx={{
+          <Chip label={statusLabels[s]} size="small" sx={{
             backgroundColor: { active: '#4caf50', expiring: '#ff9800', revoked: '#f44336' }[s],
             color: 'white',
           }} />
@@ -274,22 +327,30 @@ export default function AuthorizedUsersGrid(): JSX.Element {
       },
     },
     {
-      field: 'expires_at', headerName: 'Expires', width: 120,
+      field: 'expires_at', headerName: __('Expires', 'bromate-security-api-firewall'), width: 120,
       valueFormatter: (value: string | undefined) =>
         value ? new Date(value).toLocaleDateString() : '—',
     },
     {
       field: 'actions', type: 'actions', width: 80,
       getActions: ({ row }) => [
-        <GridActionsCellItem icon={<EditIcon />} label="Edit" onClick={() => handleEditUser(row)} />,
-        <GridActionsCellItem icon={<DeleteIcon />} label="Remove" onClick={() => handleDeleteUser(row.id)} />,
+        <GridActionsCellItem
+          icon={<EditIcon />}
+          label={__('Edit', 'bromate-security-api-firewall')}
+          onClick={() => handleEditUser(row)}
+        />,
+        <GridActionsCellItem
+          icon={<DeleteIcon />}
+          label={__('Remove', 'bromate-security-api-firewall')}
+          onClick={() => handleDeleteUser(row.id)}
+        />,
       ],
     },
   ];
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Typography variant="h6" mb={2}>Authorized users</Typography>
+      <Typography variant="h6" mb={2}>{__('Application authorized users', 'bromate-security-api-firewall')}</Typography>
       <DataGrid
         rows={authorizedUsers}
         columns={columns}
@@ -319,6 +380,7 @@ export default function AuthorizedUsersGrid(): JSX.Element {
         wpUsersLoading={wpUsersLoading}
         fetchWordPressUsers={fetchWordPressUsers}
         authorizedUserIds={authorizedUserIds}
+        authMethod={authMethod}
       />
 
       <Snackbar open={snackbar.open} autoHideDuration={4000}

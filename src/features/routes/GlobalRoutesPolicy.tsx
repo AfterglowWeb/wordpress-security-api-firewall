@@ -22,7 +22,8 @@ const SECURITY_DEFAULTS = {
   routes_policy_default_hidden_routes:  true,
   routes_policy_hidden_methods:         ['delete', 'put', 'patch'] as string[],
   routes_policy_hidden_wp_objects:      [] as string[],
-  routes_policy_hidden_response_code:   '403' as const,
+  routes_policy_auth_enforce:           false,
+  routes_policy_hidden_response_code:   '404' as const,
 };
 
 type Props = {
@@ -137,6 +138,24 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
             <MenuItem value="404">{__('404 Not Found', 'bromate-security-api-firewall')}</MenuItem>
           </Select>
         </FormControl>
+      </Stack>
+
+      <Stack>
+        <FormControlLabel
+          label={
+          <>
+          <Typography variant="body1">{__('Enforce Authentication', 'bromate-security-api-firewall')}</Typography>
+          <Typography variant="caption">{__('Authentication will be enforced on wp/v2/* REST API routes only. You may control plugin routes in the REST API tree.', 'bromate-security-api-firewall')}</Typography>
+          </>
+          }
+          control={
+            <Switch
+              size="small"
+              checked={settings.routes_policy_auth_enforce}
+              onChange={(e) => onChange('routes_policy_auth_enforce',  e.target.checked)}
+            />
+          }
+        />
       </Stack>
 
     </Stack>

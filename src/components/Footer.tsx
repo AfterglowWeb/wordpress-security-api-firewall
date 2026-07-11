@@ -5,9 +5,11 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
+import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 export default function Footer() {
 	const { adminData } = useAdminData();
+	const portalContainer = usePortalContainer();
 
 	useEffect( () => {
 		if ( ! adminData ) {
@@ -37,7 +39,7 @@ export default function Footer() {
 		>
 
 			<Typography component="p" variant="caption" color="text.secondary">
-				<Tooltip title={ 'Open in a new tab' } disableInteractive followCursor>
+				<Tooltip title={ 'Open in a new tab' } slotProps={{ popper: { container: portalContainer } }} disableInteractive followCursor>
 					<Link
 					href="https://wal.abc-plugins.com"
 					target="_blank"
@@ -50,7 +52,7 @@ export default function Footer() {
 				</Tooltip>
 			</Typography>
 			<Typography component="p" variant="caption" color="text.secondary">
-				<Tooltip title={ 'Open in a new tab' } disableInteractive followCursor>
+				<Tooltip title={ 'Open in a new tab' } slotProps={{ popper: { container: portalContainer } }} disableInteractive followCursor>
 					<Link
 					href="https://creativecommons.org/licenses/by-sa/4.0/"
 					target="_blank"

@@ -1,19 +1,22 @@
 import { useState, useEffect } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import { Stack, Snackbar, Alert } from '@mui/material';
 
 import type { AuthSettings } from '@app-types/auth';
 import { SettingsAPI } from '@services/settings';
-import ConfirmDialog from '@components/ConfirmDialog';
 import AuthOptions from '@features/authentication/AuthOptions';
 import AuthorizedUsersGrid from '@features/authentication/AuthorizedUsersGrid';
 
 const DEFAULT_SETTINGS: AuthSettings = {
-  auth_enforce: false,
-  auth_methods: 'wp_auth',
+  auth_control_enabled: true,
+  auth_methods: 'jwt',
   auth_jwt_algorithm: 'RS256',
   auth_jwt_public_key: '',
   auth_jwt_audience: '',
   auth_jwt_issuer: '',
+  auth_jwt_jwks_url: '',
+  auth_jwt_cache_jwks: false,
+  auth_jwt_cache_duration: 0,
 };
 
 export default function Authentication(): JSX.Element {
@@ -28,7 +31,7 @@ export default function Authentication(): JSX.Element {
         setSettings(rest);
         setLoadedSettings(rest);
       })
-      .catch(() => setLoadError('Failed to load settings'));
+      .catch(() => setLoadError(__('Failed to load settings', 'bromate-security-api-firewall')));
   }, []);
 
   return (
@@ -40,9 +43,7 @@ export default function Authentication(): JSX.Element {
         onSaved={setLoadedSettings}
       />
 
-      <AuthorizedUsersGrid />
-
-      <ConfirmDialog />
+      <AuthorizedUsersGrid authMethod={settings.auth_methods} />
 
       <Snackbar open={!!loadError} autoHideDuration={4000} onClose={() => setLoadError(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>

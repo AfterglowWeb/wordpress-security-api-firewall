@@ -31,6 +31,7 @@ export type RoutesSettings = {
   routes_policy_default_hidden_routes: boolean;
   routes_policy_hidden_methods:        string[];
   routes_policy_hidden_wp_objects:     string[];
+  routes_policy_auth_enforce:          boolean;
   routes_policy_hidden_response_code:  '401' | '403' | '404';
 };
 

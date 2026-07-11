@@ -3,31 +3,52 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Authentication\ApplicationPasswordAuthenticator;
+use Bromate\SecurityApiFirewall\Security\Authentication\WordPressApplicationPassword;
 use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
 use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
 
 class AuthenticationManager {
 
 	public static function authenticate() {
-
 		$options = SettingsRepository::read_options();
-		$method  = $options['firewall_auth_method'] ?? 'wp_auth';
+		$method = $options['firewall_auth_method'] ?? 'wp_auth';
 
-		if ( 'jwt' === $method ) {
+		if ('jwt' === $method) {
+			$jwks_url = $options['firewall_jwt_jwks_url'] ?? '';
+			
+			if (empty($jwks_url)) {
+				$jwks_url = rest_url('bromate/v1/.well-known/jwks.json');
+			}
 
-			$auth_result = JwtAuthenticator::validate_bearer_jwt(
-				array(
-					'algorithm'  => $options['firewall_jwt_algorithm'] ?? 'RS256',
-					'public_key' => $options['firewall_jwt_public_key'] ?? '',
-					'audience'   => $options['firewall_jwt_audience'] ?? '',
-					'issuer'     => $options['firewall_jwt_issuer'] ?? '',
-				)
-			);
+			$auth_config = [
+				'algorithm' => $options['firewall_jwt_algorithm'] ?? 'RS256',
+				'public_key' => $options['firewall_jwt_public_key'] ?? '',
+				'jwks_url' => $jwks_url,
+				'audience' => $options['firewall_jwt_audience'] ?? '',
+				'issuer' => $options['firewall_jwt_issuer'] ?? '',
+				'cache_jwks' => $options['firewall_jwt_cache_jwks'] ?? true,
+				'cache_duration' => $options['firewall_jwt_cache_duration'] ?? 3600,
+			];
+			
+			$auth_result = JwtAuthenticator::validate_bearer_jwt($auth_config);
+			
+			if ($auth_result) {
+				FirewallLogger::auth_success(true);
+				return true;
+			}
+			
+			FirewallLogger::auth_failed('invalid_jwt');
+			return false;
 		}
 
-		$auth_result = ApplicationPasswordAuthenticator::validate_wp_application_password();
-		true === $auth_result ? FirewallLogger::auth_success( true ) : FirewallLogger::auth_failed( 'invalid_jwt' );
+		$auth_result = WordPressApplicationPassword::validate_wp_application_password();
+		
+		if (true === $auth_result) {
+			FirewallLogger::auth_success(true);
+		} else {
+			FirewallLogger::auth_failed('invalid_application_password');
+		}
+		
 		return $auth_result;
 	}
 }

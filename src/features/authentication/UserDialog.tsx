@@ -1,16 +1,15 @@
-import { useState, useEffect, useCallback } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Stack, Autocomplete, CircularProgress,
-  Typography, Box, IconButton, Divider, Alert, Chip
+  Typography, Box, Alert, Chip
 } from '@mui/material';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import DeleteIcon from '@mui/icons-material/Delete';
 
-import type { AuthorizedUser } from '@app-types/auth';
+import type { AuthorizedUser, AuthSettings } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
 import { IpAPI } from '@services/ip';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
@@ -25,6 +24,8 @@ interface UserDialogProps {
   fetchWordPressUsers: () => void;
   authorizedUserIds: number[];
   onIpAdded?: () => void;
+  /** Currently selected/active application auth method — disables JWT fields and triggers the app-password check when 'wp_auth'. */
+  authMethod: AuthSettings['auth_methods'];
 }
 
 const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
@@ -33,37 +34,51 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
   admin_url: '',
   current_user: false,
   roles: [],
-  jwt_claim_sub: '',
+  jwt_subclaim: '',
   status: 'active',
   expires_at: '',
   ip_entries: [],
+  has_wp_app_password: false,
 };
 
 export default function UserDialog({
   open, user, onSave, onClose,
   wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, onIpAdded,
+  authMethod,
 }: UserDialogProps): JSX.Element {
 
   const isEditing = user !== null;
+  const isWpAuth = authMethod === 'wp_auth';
   const [wpUserId, setWpUserId]           = useState<number | ''>('');
   const [form, setForm]                   = useState(EMPTY_FORM);
   const [selectedWpUser, setSelectedWpUser] = useState<AuthorizedUser | null>(null);
   const [saving, setSaving]               = useState(false);
 
-  const [ipEntries, setIpEntries]   = useState<IpEntry[]>([]);
-  const [newIpValue, setNewIpValue] = useState('');
-  const [newReferrer, setNewReferrer] = useState('');
-  const [ipError, setIpError]       = useState<string | null>(null);
+  // ipEntries holds the last-known-persisted state (from the backend); ipListValue/ipListReferrer
+  // are the editable textarea representation the user types into directly.
+  const [ipEntries, setIpEntries]     = useState<IpEntry[]>([]);
+  const [ipListValue, setIpListValue] = useState('');
+  const [ipListReferrer, setIpListReferrer] = useState('');
+  const [ipError, setIpError]         = useState<string | null>(null);
 
   const portalContainer = usePortalContainer();
   const noUser = !isEditing && selectedWpUser === null;
   const currentUserId = isEditing ? user!.id : (selectedWpUser?.id ?? null);
   const isValid = wpUserId !== '' && form.display_name.trim() !== '';
 
+  // Application-password status for the currently selected/edited user, used to warn when WordPress Auth is active.
+  const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
+  const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
+
+  const applyIpEntries = (entries: IpEntry[]) => {
+    setIpEntries(entries);
+    setIpListValue(entries.map((e) => e.ip).join('\n'));
+    setIpListReferrer(entries.length > 0 ? (entries[0].referrer ?? '') : '');
+  };
+
   useEffect(() => {
   if (!open) return;
   if (user) {
-    // Re-resolve from wpUsers to get fresh ip_entries
     const freshUser = wpUsers.find(wp => wp.id === user.id);
     const resolvedIpEntries = freshUser?.ip_entries ?? user.ip_entries ?? [];
 
@@ -74,25 +89,20 @@ export default function UserDialog({
       current_user:  user.current_user,
       admin_url:     user.admin_url,
       roles:         user.roles,
-      jwt_claim_sub: user.jwt_claim_sub ?? '',
+      jwt_subclaim: user.jwt_subclaim ?? '',
       status:        user.status || 'active',
       expires_at:    user.expires_at ?? '',
       ip_entries:    resolvedIpEntries,
+      has_wp_app_password: freshUser?.has_wp_app_password ?? user.has_wp_app_password ?? false,
     });
-    setIpEntries(resolvedIpEntries);
-    const sharedReferrer = resolvedIpEntries.length > 0
-  ? (resolvedIpEntries[0].referrer ?? '')
-  : '';
-setNewReferrer(sharedReferrer);
+    applyIpEntries(resolvedIpEntries);
     setSelectedWpUser(freshUser || null);
   } else {
     setWpUserId('');
     setForm(EMPTY_FORM);
     setSelectedWpUser(null);
-    setIpEntries([]);
+    applyIpEntries([]);
   }
-  setNewIpValue('');
-  setNewReferrer('');
   setIpError(null);
   setSaving(false);
 }, [open, user, wpUsers]);
@@ -102,8 +112,8 @@ setNewReferrer(sharedReferrer);
   }, [open]);
 
   useEffect(() => {
-    if (!selectedWpUser) { setIpEntries([]); return; }
-    setIpEntries(selectedWpUser.ip_entries ?? []);
+    if (!selectedWpUser) { applyIpEntries([]); return; }
+    applyIpEntries(selectedWpUser.ip_entries ?? []);
   }, [selectedWpUser]);
 
   const handleWpUserSelect = (_: unknown, value: AuthorizedUser | null) => {
@@ -114,67 +124,83 @@ setNewReferrer(sharedReferrer);
       ...prev,
       display_name:  value.display_name,
       roles:         value.roles,
-      jwt_claim_sub: prev.jwt_claim_sub || `user_${value.id}`,
+      jwt_subclaim: prev.jwt_subclaim || `user_${value.id}`,
       ip_entries:    value.ip_entries || [],
+      has_wp_app_password: value.has_wp_app_password ?? false,
     }));
   };
 
   const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleRemoveIp = useCallback(async (id: number) => {
-    await IpAPI.deleteEntry(id);
-    setIpEntries(prev => prev.filter(e => e.id !== id));
-  }, []);
-
   const handleSave = async () => {
     if (wpUserId === '') return;
     setSaving(true);
     setIpError(null);
 
-    let ipAdded = false;
-    if (currentUserId && newIpValue.trim()) {
-      const lines = newIpValue.split('\n').map(l => l.trim()).filter(Boolean);
-      const results = await Promise.allSettled(
-        lines.map((ip) =>
-          IpAPI.addEntry(ip, 'whitelist', currentUserId, newReferrer.trim() || null)
-        )
+    let finalIpEntries = ipEntries;
+
+    if (currentUserId) {
+      const desiredReferrer = ipListReferrer.trim() || null;
+      const desiredLines = Array.from(
+        new Set(ipListValue.split('\n').map((l) => l.trim()).filter(Boolean))
       );
+      const desiredSet = new Set(desiredLines);
 
-      const failures = results
-        .map((r, i) => ({ r, ip: lines[i] }))
-        .filter(({ r }) => r.status === 'rejected')
-        .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`);
+      // Entries no longer on the list, or whose origin changed, must be deleted and (if the IP is
+      // still present) re-created — the API has no "update", only add/delete.
+      const toDelete = ipEntries.filter(
+        (e) => !desiredSet.has(e.ip) || (e.referrer ?? null) !== desiredReferrer
+      );
+      const keptIps = new Set(
+        ipEntries
+          .filter((e) => desiredSet.has(e.ip) && (e.referrer ?? null) === desiredReferrer)
+          .map((e) => e.ip)
+      );
+      const toAdd = desiredLines.filter((ip) => !keptIps.has(ip));
 
-      if (failures.length) {
-        setIpError(failures.join('\n'));
-        setSaving(false);
-        return;
+      if (toDelete.length || toAdd.length) {
+        const [deleteResults, addResults] = await Promise.all([
+          Promise.allSettled(toDelete.map((e) => IpAPI.deleteEntry(e.id))),
+          Promise.allSettled(toAdd.map((ip) => IpAPI.addEntry(ip, 'whitelist', currentUserId, desiredReferrer))),
+        ]);
+
+        const failures = [
+          ...deleteResults
+            .map((r, i) => ({ r, ip: toDelete[i].ip }))
+            .filter(({ r }) => r.status === 'rejected')
+            .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`),
+          ...addResults
+            .map((r, i) => ({ r, ip: toAdd[i] }))
+            .filter(({ r }) => r.status === 'rejected')
+            .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`),
+        ];
+
+        if (failures.length) {
+          setIpError(failures.join('\n'));
+          setSaving(false);
+          return;
+        }
+
+        const fresh = await IpAPI.getUserEntries(currentUserId);
+        finalIpEntries = fresh.entries;
+        applyIpEntries(fresh.entries);
+
+        if (onIpAdded) onIpAdded();
       }
-
-      const fresh = await IpAPI.getUserEntries(currentUserId);
-      setIpEntries(fresh.entries);
-      setNewIpValue('');
-      setNewReferrer('');
-      ipAdded = true;
     }
 
     onSave({
       id: wpUserId as number,
       ...form,
-      jwt_claim_sub: form.jwt_claim_sub || undefined,
+      jwt_subclaim: form.jwt_subclaim || undefined,
       expires_at:    form.expires_at    || undefined,
-      ip_entries:    ipEntries,
+      ip_entries:    finalIpEntries,
       ...(selectedWpUser && {
         email: selectedWpUser.email,
         roles: selectedWpUser.roles,
       }),
     });
-
-    if (ipAdded && onIpAdded) {
-      onIpAdded();
-    }
-
 
     setSaving(false);
   };
@@ -194,7 +220,7 @@ setNewReferrer(sharedReferrer);
       </DialogTitle>
 
       <DialogContent dividers>
-        <Stack direction="column" gap={2.5}>
+        <Stack direction="column" gap={2}>
 
           {!isEditing && (
             <Autocomplete<AuthorizedUser>
@@ -214,7 +240,7 @@ setNewReferrer(sharedReferrer);
                         {option.display_name}
                       </Typography>
                       {option.current_user && (
-                        <Chip label="Me" size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
+                        <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
                       )}
                     </Stack>
                     <Typography variant="caption" color="text.secondary">
@@ -226,7 +252,7 @@ setNewReferrer(sharedReferrer);
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Select WordPress user"
+                  label={__('Select WordPress user', 'bromate-security-api-firewall')}
                   size="small"
                   slotProps={{ input: {
                     ...params.InputProps,
@@ -261,9 +287,17 @@ setNewReferrer(sharedReferrer);
             >{__('Profile', 'bromate-security-api-firewall')}</Button>
           </Stack>
 
-          
+          {showAppPasswordWarning && (
+            <Alert severity="info">
+              {__(
+                'The user has no WordPress application password. Create one from their Profile page.',
+                'bromate-security-api-firewall'
+              )}
+            </Alert>
+          )}
+
           {/* ── Readonly user info ── */}
-          <Stack direction="row" gap={3}>
+          <Stack direction="row" gap={3} p={1}>
             <ReadonlyField label={__('ID', 'bromate-security-api-firewall')}  value={selectedWpUser?.id.toString() ?? '' } />
             <Stack >
               <ReadonlyField label={__('Name', 'bromate-security-api-firewall')}  value={selectedWpUser?.display_name ?? form.display_name} />
@@ -275,14 +309,12 @@ setNewReferrer(sharedReferrer);
             <ReadonlyField label={__('Roles', 'bromate-security-api-firewall')} value={(selectedWpUser?.roles ?? form.roles).join(', ')} />
           </Stack>
 
-          <Divider />
-
           {/* ── JWT + expiry ── */}
-          <TextField
-            label={__('JWT sub claim', 'bromate-security-api-firewall')} value={form.jwt_claim_sub} disabled={noUser} size="small"
-            onChange={(e) => updateField('jwt_claim_sub', e.target.value)}
-            helperText={__('Expected value in the incoming token\'s `sub` claim', 'bromate-security-api-firewall')}
-          />
+          { !isWpAuth && <TextField
+            label={__('JWT sub claim', 'bromate-security-api-firewall')} value={form.jwt_subclaim} disabled={noUser || isWpAuth} size="small"
+            onChange={(e) => updateField('jwt_subclaim', e.target.value)}
+            helperText={ __('Expected value in the incoming token\'s `sub` claim', 'bromate-security-api-firewall')}
+          />}
           <TextField
             label={__('Authorization expires', 'bromate-security-api-firewall')} type="date" value={form.expires_at || ''}
             disabled={noUser} size="small"
@@ -291,57 +323,32 @@ setNewReferrer(sharedReferrer);
             slotProps={{ inputLabel: { shrink: true } }}
           />
 
-
-          {/* ── Whitelisted IPs ── */}
-          <Box>
-
-            {ipEntries.length > 0 && (
-              <Stack direction="column" gap={0.5} mb={2}>
-                {ipEntries.map((entry) => (
-                  <Stack key={entry.id} direction="row" alignItems="center" gap={1}
-                    sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: 'action.hover' }}>
-                    <Typography variant="body2" fontFamily="monospace" sx={{ flex: 1 }}>
-                      {entry.ip}
-                    </Typography>
-                    {entry.referrer && (
-                      <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
-                        ↳ {entry.referrer}
-                      </Typography>
-                    )}
-                    <IconButton size="small" color="error" disabled={noUser}
-                      onClick={() => handleRemoveIp(entry.id)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
-                ))}
-              </Stack>
-            )}
-            <Stack direction="column" gap={1.5}>
-              <TextField
-                label={__('IPs to whitelist (one per line)', 'bromate-security-api-firewall')}
-                placeholder={'203.0.113.1\n203.0.113.0/24'}
-                value={newIpValue}
-                onChange={(e) => setNewIpValue(e.target.value)}
-                multiline minRows={2} maxRows={6}
-                fullWidth size="small"
-                disabled={noUser}
-              />
-              <TextField
-                label={__('Allowed origin (optional)', 'bromate-security-api-firewall')}
-                placeholder="https://app.example.com"
-                value={newReferrer}
-                onChange={(e) => setNewReferrer(e.target.value)}
-                fullWidth size="small"
-                disabled={noUser}
-                helperText={__('If set, all IPs above are restricted to this origin', 'bromate-security-api-firewall')}
-              />
-              {ipError && (
-                <Alert severity="error" variant="outlined">
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{ipError}</Typography>
-                </Alert>
-              )}
-            </Stack>
-          </Box>
+          {/* ── Whitelisted IPs — existing entries and new ones are edited directly as text ── */}
+          <TextField
+            label={__('Whitelisted IPs (one per line)', 'bromate-security-api-firewall')}
+            placeholder={'203.0.113.1\n203.0.113.0/24'}
+            value={ipListValue}
+            onChange={(e) => setIpListValue(e.target.value)}
+            multiline
+            minRows={3}
+            fullWidth size="small"
+            disabled={noUser}
+            helperText={__('Add or remove a line to grant or revoke that IP on save', 'bromate-security-api-firewall')}
+          />
+          <TextField
+            label={__('Allowed origin (optional)', 'bromate-security-api-firewall')}
+            placeholder="https://app.example.com"
+            value={ipListReferrer}
+            onChange={(e) => setIpListReferrer(e.target.value)}
+            fullWidth size="small"
+            disabled={noUser}
+            helperText={__('If set, all IPs above are restricted to this origin', 'bromate-security-api-firewall')}
+          />
+          {ipError && (
+            <Alert severity="error" variant="outlined">
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{ipError}</Typography>
+            </Alert>
+          )}
 
         </Stack>
       </DialogContent>
@@ -361,7 +368,7 @@ setNewReferrer(sharedReferrer);
           disabled={!isValid || saving}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
         >
-          {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Add user'}
+          {saving ? __('Saving…', 'bromate-security-api-firewall') : isEditing ? __('Save changes', 'bromate-security-api-firewall') : __('Add user', 'bromate-security-api-firewall') }
         </Button>
       </DialogActions>
     </Dialog>
