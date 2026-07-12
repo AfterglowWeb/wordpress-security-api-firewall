@@ -38,6 +38,9 @@ interface AuthenticationToolbarProps {
   selectedCount: number;
 }
 
+// Reported to the parent whenever the authorized users list changes, so
+// sibling components (AuthOptions) can gate their own save logic on
+// "is there at least one authorized user" without duplicating the fetch.
 export interface AuthorizedUsersInfo {
   count: number;
   loading: boolean;
@@ -85,6 +88,8 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
 
 export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
+  // Tracks the auth_users fetch specifically (distinct from wpUsersLoading,
+  // which tracks the separate WordPress users list fetch below).
   const [authUsersLoading, setAuthUsersLoading] = useState(true);
   const portalContainer = usePortalContainer();
   const { openDialog } = useDialog();
@@ -119,6 +124,10 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
 
   const authorizedUserIds = useMemo(() => authUsers.map((u) => u.id), [authUsers]);
 
+  // Report count + loading state to the parent any time either changes.
+  // setAuthUsersInfo in the parent is a plain useState setter (referentially
+  // stable) and receives primitive values, so React bails out of re-render
+  // loops when nothing actually changed.
   useEffect(() => {
     onUsersChange?.({ count: authUsers.length, loading: authUsersLoading });
   }, [authUsers, authUsersLoading, onUsersChange]);
@@ -194,18 +203,31 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     );
   }, []);
 
-  const doSaveUser = useCallback((user: AuthorizedUser) => {
+  // UserDialog.handleSave() has ALREADY persisted the change to auth_users
+  // via SettingsAPI.updateOption before calling onSave — this only syncs
+  // local state so the grid reflects it without a refetch. A second network
+  // write here would race with the one UserDialog just made.
+  const applySavedUser = useCallback((user: AuthorizedUser) => {
     const meta: AuthorizedUserMeta = {
       id: user.id,
       jwt_subclaim: user.jwt_subclaim ?? '',
       status: user.status ?? 'active',
       expires_at: user.expires_at ?? '',
     };
-    const exists = authUsers.some((u) => u.id === meta.id);
-    const newUsers = exists
-      ? authUsers.map((u) => (u.id === meta.id ? meta : u))
-      : [...authUsers, meta];
-    persistUsers(newUsers);
+    setAuthUsers((prev) => {
+      const exists = prev.some((u) => u.id === meta.id);
+      return exists ? prev.map((u) => (u.id === meta.id ? meta : u)) : [...prev, meta];
+    });
+  }, []);
+
+  // No confirmation dialog here on purpose: UserDialog's own Add/Save
+  // button is already the deliberate action. A second "are you sure?"
+  // modal stacked on top of the still-open UserDialog added no real
+  // protection (unlike delete below, which stays confirmed since it's
+  // destructive) and made the nested-dialog flow fragile.
+  const handleSaveUser = useCallback((user: AuthorizedUser) => {
+    const exists = authUsers.some((u) => u.id === user.id);
+    applySavedUser(user);
     setSnackbar({
       open: true,
       message: exists
@@ -215,24 +237,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     });
     setDialogOpen(false);
     setEditingUser(null);
-  }, [authUsers, persistUsers]);
-
-  const handleSaveUser = useCallback((user: AuthorizedUser) => {
-    const exists = authUsers.some((u) => u.id === user.id);
-    openDialog({
-      type: DIALOG_TYPES.CONFIRM,
-      title: exists
-        ? __('Save changes?', 'bromate-security-api-firewall')
-        : __('Add user?', 'bromate-security-api-firewall'),
-      content: exists
-        ? `${__('Save changes for', 'bromate-security-api-firewall')} ${user.display_name}?`
-        : `${__('Add', 'bromate-security-api-firewall')} ${user.display_name} ${__('to authorized users?', 'bromate-security-api-firewall')}`,
-      confirmLabel: exists
-        ? __('Save', 'bromate-security-api-firewall')
-        : __('Add', 'bromate-security-api-firewall'),
-      onConfirm: () => doSaveUser(user),
-    });
-  }, [authUsers, openDialog, doSaveUser]);
+  }, [authUsers, applySavedUser]);
 
   const handleDeleteUser = useCallback((id: GridRowId) => {
     const user = authorizedUsers.find((u) => u.id === id);
@@ -361,7 +366,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Typography variant="h6" mb={2}>{__('REST API Authorized Users', 'bromate-security-api-firewall')}</Typography>
+      <Typography variant="h6" mb={2}>{__('Application authorized users', 'bromate-security-api-firewall')}</Typography>
       <DataGrid
         rows={authorizedUsers}
         columns={columns}
@@ -391,6 +396,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
         wpUsersLoading={wpUsersLoading}
         fetchWordPressUsers={fetchWordPressUsers}
         authorizedUserIds={authorizedUserIds}
+        authorizedUsers={authUsers}
         authMethod={authMethod}
       />
 

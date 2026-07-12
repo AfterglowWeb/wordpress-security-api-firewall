@@ -49,7 +49,7 @@ export interface AuthorizedUserDialogProps {
   wpUsersLoading: boolean;
   fetchWordPressUsers: () => void;
   authorizedUserIds: number[];
+  authorizedUsers: AuthorizedUserMeta[];
   onIpAdded?: () => void;
   authMethod: AuthMethod;
 }
-
