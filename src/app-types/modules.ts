@@ -1,8 +1,10 @@
 export type SecurityModuleKey =
 	| 'authentication'
 	| 'firewall'
-	| 'routes'
+	| 'login-hardening'
 	| 'wordpress'
+	| 'authentication'
+	| 'routes'
 	| 'models'
 	| 'logs';
 

@@ -5,7 +5,7 @@ import { Stack, Snackbar, Alert } from '@mui/material';
 import type { AuthSettings } from '@app-types/auth';
 import { SettingsAPI } from '@services/settings';
 import AuthOptions from '@features/authentication/AuthOptions';
-import AuthorizedUsersGrid from '@features/authentication/AuthorizedUsersGrid';
+import AuthorizedUsersGrid, { AuthorizedUsersInfo } from '@features/authentication/AuthorizedUsersGrid';
 
 const DEFAULT_SETTINGS: AuthSettings = {
   auth_control_enabled: true,
@@ -17,10 +17,19 @@ const DEFAULT_SETTINGS: AuthSettings = {
   auth_jwt_jwks_url: ''
 };
 
+// Starts as loading=true, count=0: AuthOptions treats "loading" as
+// blocking (fail-closed) so an in-flight fetch can never be read as
+// "confirmed zero users" and let a save through.
+const DEFAULT_AUTHORIZED_USERS_INFO: AuthorizedUsersInfo = { count: 0, loading: true };
+
 export default function Authentication(): JSX.Element {
   const [settings, setSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
   const [loadedSettings, setLoadedSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Owned here, not in AuthOptions: the authorized users list lives in
+  // AuthorizedUsersGrid (which persists its own changes instantly), but
+  // AuthOptions' save button needs to know whether at least one exists.
+  const [authorizedUsersInfo, setAuthorizedUsersInfo] = useState<AuthorizedUsersInfo>(DEFAULT_AUTHORIZED_USERS_INFO);
 
   useEffect(() => {
     SettingsAPI.readOptions()
@@ -39,9 +48,15 @@ export default function Authentication(): JSX.Element {
         loadedSettings={loadedSettings}
         onChange={setSettings}
         onSaved={setLoadedSettings}
+        authorizedUsersCount={authorizedUsersInfo.count}
+        authorizedUsersLoading={authorizedUsersInfo.loading}
       />
 
-      <AuthorizedUsersGrid authMethod={settings.auth_methods} authEnabled={settings.auth_control_enabled} />
+      <AuthorizedUsersGrid
+        authMethod={settings.auth_methods}
+        authEnabled={settings.auth_control_enabled}
+        onUsersChange={setAuthorizedUsersInfo}
+      />
 
       <Snackbar open={!!loadError} autoHideDuration={4000} onClose={() => setLoadError(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>

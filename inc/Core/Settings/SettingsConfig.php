@@ -96,22 +96,6 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_jwt_cache_jwks'                      => array(
-				'label'             => esc_html__( 'Cache JWKS', 'bromate-security-api-firewall' ),
-				'default_value'     => false,
-				'type'              => 'boolean',
-				'sanitize_callback' => 'rest_sanitize_boolean',
-				'group'             => 'authentication',
-			),
-
-			'auth_jwt_cache_duration'                  => array(
-				'label'             => esc_html__( 'Cache JWKS duration', 'bromate-security-api-firewall' ),
-				'default_value'     => false,
-				'type'              => 'integer',
-				'sanitize_callback' => 'absint',
-				'group'             => 'authentication',
-			),
-
 			'auth_users'                               => array(
 				'label'             => esc_html__( 'Authorized REST API users', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Restrict REST API access to specific WordPress user accounts.', 'bromate-security-api-firewall' ),
