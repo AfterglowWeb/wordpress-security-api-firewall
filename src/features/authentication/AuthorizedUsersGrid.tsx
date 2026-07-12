@@ -38,9 +38,15 @@ interface AuthenticationToolbarProps {
   selectedCount: number;
 }
 
+export interface AuthorizedUsersInfo {
+  count: number;
+  loading: boolean;
+}
+
 interface AuthorizedUsersGridProps {
   authMethod: AuthSettings['auth_methods'];
   authEnabled: AuthSettings['auth_control_enabled'];
+  onUsersChange?: (info: AuthorizedUsersInfo) => void;
 }
 
 function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolbarProps) {
@@ -77,8 +83,9 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
   );
 }
 
-export default function AuthorizedUsersGrid({ authMethod, authEnabled }: AuthorizedUsersGridProps): JSX.Element {
+export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
+  const [authUsersLoading, setAuthUsersLoading] = useState(true);
   const portalContainer = usePortalContainer();
   const { openDialog } = useDialog();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,6 +118,10 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled }: Authori
   );
 
   const authorizedUserIds = useMemo(() => authUsers.map((u) => u.id), [authUsers]);
+
+  useEffect(() => {
+    onUsersChange?.({ count: authUsers.length, loading: authUsersLoading });
+  }, [authUsers, authUsersLoading, onUsersChange]);
 
   const resolveDisplayStatus = (user: AuthorizedUser): 'active' | 'expiring' | 'revoked' => {
     if (user.status === 'revoked') return 'revoked';
@@ -168,7 +179,8 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled }: Authori
           message: __('Failed to load authorized users', 'bromate-security-api-firewall'),
           severity: 'error',
         })
-      );
+      )
+      .finally(() => setAuthUsersLoading(false));
   }, []);
 
   const persistUsers = useCallback((users: AuthorizedUserMeta[]) => {
@@ -349,7 +361,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled }: Authori
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Typography variant="h6" mb={2}>{__('Application authorized users', 'bromate-security-api-firewall')}</Typography>
+      <Typography variant="h6" mb={2}>{__('REST API Authorized Users', 'bromate-security-api-firewall')}</Typography>
       <DataGrid
         rows={authorizedUsers}
         columns={columns}
