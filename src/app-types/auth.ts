@@ -38,6 +38,18 @@ export interface AuthSettings {
   auth_jwt_audience: string;
   auth_jwt_issuer: string;
   auth_jwt_jwks_url: string;
-  auth_jwt_cache_jwks: boolean;
-  auth_jwt_cache_duration: number;
 }
+
+export interface AuthorizedUserDialogProps {
+  open: boolean;
+  user: AuthorizedUser | null;
+  onSave: (user: AuthorizedUser) => void;
+  onClose: () => void;
+  wpUsers: AuthorizedUser[];
+  wpUsersLoading: boolean;
+  fetchWordPressUsers: () => void;
+  authorizedUserIds: number[];
+  onIpAdded?: () => void;
+  authMethod: AuthMethod;
+}
+

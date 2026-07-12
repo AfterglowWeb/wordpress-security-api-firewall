@@ -9,24 +9,10 @@ import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
-import type { AuthorizedUser, AuthSettings } from '@app-types/auth';
+import type { AuthorizedUser, AuthorizedUserDialogProps } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
 import { IpAPI } from '@services/ip';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
-
-interface UserDialogProps {
-  open: boolean;
-  user: AuthorizedUser | null;
-  onSave: (user: AuthorizedUser) => void;
-  onClose: () => void;
-  wpUsers: AuthorizedUser[];
-  wpUsersLoading: boolean;
-  fetchWordPressUsers: () => void;
-  authorizedUserIds: number[];
-  onIpAdded?: () => void;
-  /** Currently selected/active application auth method — disables JWT fields and triggers the app-password check when 'wp_auth'. */
-  authMethod: AuthSettings['auth_methods'];
-}
 
 const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
   display_name: '',
@@ -45,7 +31,7 @@ export default function UserDialog({
   open, user, onSave, onClose,
   wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, onIpAdded,
   authMethod,
-}: UserDialogProps): JSX.Element {
+}: AuthorizedUserDialogProps): JSX.Element {
 
   const isEditing = user !== null;
   const isWpAuth = authMethod === 'wp_auth';
@@ -54,8 +40,6 @@ export default function UserDialog({
   const [selectedWpUser, setSelectedWpUser] = useState<AuthorizedUser | null>(null);
   const [saving, setSaving]               = useState(false);
 
-  // ipEntries holds the last-known-persisted state (from the backend); ipListValue/ipListReferrer
-  // are the editable textarea representation the user types into directly.
   const [ipEntries, setIpEntries]     = useState<IpEntry[]>([]);
   const [ipListValue, setIpListValue] = useState('');
   const [ipListReferrer, setIpListReferrer] = useState('');
@@ -66,7 +50,6 @@ export default function UserDialog({
   const currentUserId = isEditing ? user!.id : (selectedWpUser?.id ?? null);
   const isValid = wpUserId !== '' && form.display_name.trim() !== '';
 
-  // Application-password status for the currently selected/edited user, used to warn when WordPress Auth is active.
   const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
   const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
 
@@ -147,8 +130,6 @@ export default function UserDialog({
       );
       const desiredSet = new Set(desiredLines);
 
-      // Entries no longer on the list, or whose origin changed, must be deleted and (if the IP is
-      // still present) re-created — the API has no "update", only add/delete.
       const toDelete = ipEntries.filter(
         (e) => !desiredSet.has(e.ip) || (e.referrer ?? null) !== desiredReferrer
       );
@@ -309,9 +290,14 @@ export default function UserDialog({
             <ReadonlyField label={__('Roles', 'bromate-security-api-firewall')} value={(selectedWpUser?.roles ?? form.roles).join(', ')} />
           </Stack>
 
-          {/* ── JWT + expiry ── */}
           { !isWpAuth && <TextField
-            label={__('JWT sub claim', 'bromate-security-api-firewall')} value={form.jwt_subclaim} disabled={noUser || isWpAuth} size="small"
+            label={__('JWT sub claim', 'bromate-security-api-firewall')} 
+            value={selectedWpUser?.jwt_subclaim ?? form.jwt_subclaim} 
+            disabled={noUser || isWpAuth} 
+            size="small"
+            slotProps={{htmlInput:{
+              readOnly:true
+            }}}
             onChange={(e) => updateField('jwt_subclaim', e.target.value)}
             helperText={ __('Expected value in the incoming token\'s `sub` claim', 'bromate-security-api-firewall')}
           />}
@@ -323,7 +309,6 @@ export default function UserDialog({
             slotProps={{ inputLabel: { shrink: true } }}
           />
 
-          {/* ── Whitelisted IPs — existing entries and new ones are edited directly as text ── */}
           <TextField
             label={__('Whitelisted IPs (one per line)', 'bromate-security-api-firewall')}
             placeholder={'203.0.113.1\n203.0.113.0/24'}

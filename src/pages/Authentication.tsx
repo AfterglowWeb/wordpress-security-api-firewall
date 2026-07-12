@@ -14,9 +14,7 @@ const DEFAULT_SETTINGS: AuthSettings = {
   auth_jwt_public_key: '',
   auth_jwt_audience: '',
   auth_jwt_issuer: '',
-  auth_jwt_jwks_url: '',
-  auth_jwt_cache_jwks: false,
-  auth_jwt_cache_duration: 0,
+  auth_jwt_jwks_url: ''
 };
 
 export default function Authentication(): JSX.Element {
@@ -43,7 +41,7 @@ export default function Authentication(): JSX.Element {
         onSaved={setLoadedSettings}
       />
 
-      <AuthorizedUsersGrid authMethod={settings.auth_methods} />
+      <AuthorizedUsersGrid authMethod={settings.auth_methods} authEnabled={settings.auth_control_enabled} />
 
       <Snackbar open={!!loadError} autoHideDuration={4000} onClose={() => setLoadError(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>

@@ -12,7 +12,7 @@ class IpAccessControl {
 
 	public static function inspect() {
 
-		if ( empty( SettingsRepository::read_option('firewall_enabled') ) ) {
+		if ( empty( SettingsRepository::read_option( 'firewall_enabled' ) ) ) {
 			return true;
 		}
 

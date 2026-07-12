@@ -21,7 +21,6 @@ class SettingsAjaxController {
 		add_action( 'wp_ajax_bromate_save_routes_policy_tree', array( $self, 'ajax_save_routes_policy_tree' ) );
 		add_action( 'wp_ajax_bromate_save_all_routes_settings', array( $self, 'ajax_save_all_routes_settings' ) );
 		add_action( 'wp_ajax_bromate_wordpress_objects_options', array( $self, 'ajax_wordpress_objects_options' ) );
-
 	}
 
 	public function ajax_read_options() {
