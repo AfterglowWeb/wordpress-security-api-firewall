@@ -19,7 +19,6 @@ import { SettingsAPI } from '@services/settings';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
-
 declare module '@mui/x-data-grid' {
   interface ToolbarPropsOverrides {
     onAddUser?: () => void;
@@ -40,8 +39,8 @@ interface AuthenticationToolbarProps {
 }
 
 interface AuthorizedUsersGridProps {
-  /** Currently selected/active application auth method — drives JWT-field disabling and the app-password check. */
   authMethod: AuthSettings['auth_methods'];
+  authEnabled: AuthSettings['auth_control_enabled'];
 }
 
 function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolbarProps) {
@@ -78,7 +77,7 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
   );
 }
 
-export default function AuthorizedUsersGrid({ authMethod }: AuthorizedUsersGridProps): JSX.Element {
+export default function AuthorizedUsersGrid({ authMethod, authEnabled }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
   const portalContainer = usePortalContainer();
   const { openDialog } = useDialog();

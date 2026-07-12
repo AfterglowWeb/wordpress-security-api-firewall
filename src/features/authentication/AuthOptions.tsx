@@ -3,17 +3,14 @@ import { __, sprintf } from '@wordpress/i18n';
 import {
   Paper, Typography, Stack, TextField, Select, MenuItem,
   FormControl, InputLabel, RadioGroup, FormControlLabel, Radio, Switch,
-  Accordion, AccordionSummary, AccordionDetails,
   IconButton, Alert, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, CircularProgress, Chip,
   Tooltip, Divider, Collapse, List, ListItem, ListItemText
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import HistoryIcon from '@mui/icons-material/History';
@@ -51,6 +48,8 @@ interface KeyPairSummary {
 
 const EMPTY_SUMMARY: KeyPairSummary = { active: null, rotating: [] };
 
+type ValidatedField = 'auth_jwt_audience' | 'auth_jwt_issuer';
+
 const formatDate = (unixSeconds: number): string =>
   new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
@@ -64,6 +63,31 @@ const formatRelativeToNow = (unixSeconds: number): string => {
   if (diffDays === 1) return __('in 1 day', 'bromate-security-api-firewall');
   return sprintf(__('in %d days', 'bromate-security-api-firewall'), diffDays);
 };
+
+function validateAuthSettings(settings: AuthSettings): Partial<Record<ValidatedField, string>> {
+  const errors: Partial<Record<ValidatedField, string>> = {};
+
+  const jwtFieldsRequired = settings.auth_control_enabled && settings.auth_methods === 'jwt';
+  if (!jwtFieldsRequired) {
+    return errors;
+  }
+
+  if (!settings.auth_jwt_audience?.trim()) {
+    errors.auth_jwt_audience = __(
+      'Required for JWT Authentication.',
+      'bromate-security-api-firewall'
+    );
+  }
+
+  if (!settings.auth_jwt_issuer?.trim()) {
+    errors.auth_jwt_issuer = __(
+      'Required for JWT Authentication.',
+      'bromate-security-api-firewall'
+    );
+  }
+
+  return errors;
+}
 
 export default function AuthOptions({
   settings,
@@ -92,6 +116,11 @@ export default function AuthOptions({
     [settings, loadedSettings]
   );
 
+  const fieldErrors = useMemo(() => validateAuthSettings(settings), [settings]);
+  const hasValidationErrors = Object.keys(fieldErrors).length > 0;
+
+  const saveDisabled = !isDirty || hasValidationErrors;
+
   const update = <K extends keyof AuthSettings>(key: K, value: AuthSettings[K]) =>
     onChange({ ...settings, [key]: value });
 
@@ -118,7 +147,7 @@ export default function AuthOptions({
       const data = await apiRequest<{ has_key: boolean; summary: KeyPairSummary }>('bromate_check_jwt_key');
       setKeySummary(data.summary ?? EMPTY_SUMMARY);
     } catch (error) {
-      // Ignore — key management section just shows the "no key" state.
+      // Ignore.
     }
   }, []);
 
@@ -144,7 +173,7 @@ export default function AuthOptions({
       if (data.public_key) {
         setKeySummary(data.summary ?? EMPTY_SUMMARY);
         setKeyGenSuccess(true);
-        setShowPublicKey(true); 
+        setShowPublicKey(true);
 
         await fetchJwksEndpoint();
       }
@@ -201,9 +230,7 @@ export default function AuthOptions({
         title: __('Regenerate JWT Key Pair', 'bromate-security-api-firewall'),
         content: __(
           'A new key becomes active immediately for signing. ' +
-          'The current key keeps validating existing tokens for a 7-day grace period, ' +
-          'so already-issued tokens won\'t break right away — but any token issued ' +
-          'after this point must use the new key. Are you sure you want to continue?',
+          'The current key keeps validating existing tokens for a 7-day grace period.',
           'bromate-security-api-firewall'
         ),
         confirmLabel: __('Regenerate', 'bromate-security-api-firewall'),
@@ -212,9 +239,8 @@ export default function AuthOptions({
       return {
         title: __('Delete JWT Key Pair', 'bromate-security-api-firewall'),
         content: __(
-          '⚠️ WARNING: Deleting the key pair removes the active key AND any key still ' +
-          'in its rotation grace period. Every existing JWT token will immediately fail ' +
-          'validation, and no new tokens can be issued until a new key pair is generated. ' +
+          'WARNING: Every existing JWT token will immediately fail validation. ' +
+          'No new tokens can be issued until a new key pair is generated. ' +
           'Are you sure you want to continue?',
           'bromate-security-api-firewall'
         ),
@@ -232,20 +258,33 @@ export default function AuthOptions({
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" justifyContent="flex-end">
-        <SaveButton
-          onSave={handleSave}
-          disabled={!isDirty}
-          messages={{
-            confirmTitle: __('Save authentication settings', 'bromate-security-api-firewall'),
-            confirmContent: __('Apply these REST API authentication settings now?', 'bromate-security-api-firewall'),
-            confirmLabel: __('Save', 'bromate-security-api-firewall'),
-            successMessage: __('Settings saved successfully.', 'bromate-security-api-firewall'),
-            errorMessage: __('Failed to save settings.', 'bromate-security-api-firewall'),
-            saveLabel: __('Save', 'bromate-security-api-firewall'),
-            savingLabel: __('Saving...', 'bromate-security-api-firewall'),
-          }}
-        />
+      <Stack direction="row" justifyContent="flex-end" alignItems="center" gap={1}>
+        {hasValidationErrors && isDirty && (
+          <Alert color="error">
+            {__('Complete required fields before saving.', 'bromate-security-api-firewall')}
+          </Alert>
+        )}
+        <Tooltip
+          title={hasValidationErrors ? __('JWT Audience and JWT Issuer are required while REST API Authentication is enabled', 'bromate-security-api-firewall') : ''}
+          disableHoverListener={!hasValidationErrors}
+          disableInteractive
+        >
+          <span>
+            <SaveButton
+              onSave={handleSave}
+              disabled={saveDisabled}
+              messages={{
+                confirmTitle: __('Save authentication settings', 'bromate-security-api-firewall'),
+                confirmContent: __('Apply these REST API authentication settings now?', 'bromate-security-api-firewall'),
+                confirmLabel: __('Save', 'bromate-security-api-firewall'),
+                successMessage: __('Settings saved successfully.', 'bromate-security-api-firewall'),
+                errorMessage: __('Failed to save settings.', 'bromate-security-api-firewall'),
+                saveLabel: __('Save', 'bromate-security-api-firewall'),
+                savingLabel: __('Saving...', 'bromate-security-api-firewall'),
+              }}
+            />
+          </span>
+        </Tooltip>
       </Stack>
 
       <Paper sx={{ p: 2 }} elevation={0}>
@@ -267,14 +306,14 @@ export default function AuthOptions({
               <Typography variant="h6">{__('REST API Authentication', 'bromate-security-api-firewall')}</Typography>
               <Typography variant="caption" color="text.secondary">
                 {__(
-                  'When enabled, only the authorized users listed below can authenticate to the REST API.',
+                  'When enabled, only the authorized users listed below can use authentication on the REST API.',
                   'bromate-security-api-firewall'
                 )}
               </Typography>
             </Stack>
           </Stack>
 
-          <FormControl>
+          <FormControl disabled={!settings.auth_control_enabled}>
             <Typography variant="h6">{__('Application authentication method', 'bromate-security-api-firewall')}</Typography>
             <RadioGroup
               row
@@ -289,7 +328,7 @@ export default function AuthOptions({
           {settings.auth_methods === 'jwt' && (
             <Stack spacing={2}>
 
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={!settings.auth_control_enabled}>
                 <InputLabel>{__('JWT Algorithm', 'bromate-security-api-firewall')}</InputLabel>
                 <Select
                   MenuProps={{ container: portalContainer }}
@@ -303,7 +342,6 @@ export default function AuthOptions({
                 </Select>
               </FormControl>
 
-              {/* Key Management Section */}
               <Stack spacing={2} sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                   <Typography variant="subtitle2" fontWeight={500}>
@@ -312,8 +350,8 @@ export default function AuthOptions({
                   {hasStoredKey && (
                     <Chip
                       icon={<CheckCircleIcon />}
-                      label={__('Key Active', 'bromate-security-api-firewall')}
-                      color="success"
+                      label={settings.auth_control_enabled ? __('Key Active', 'bromate-security-api-firewall'): __('Auth Disabled', 'bromate-security-api-firewall')}
+                      color={settings.auth_control_enabled ? 'success' : 'default'}
                       size="small"
                       variant="outlined"
                     />
@@ -321,8 +359,9 @@ export default function AuthOptions({
                 </Stack>
 
                 <Typography variant="body2" color="text.secondary">
-                  {hasStoredKey
-                    ? __('Your JWT key pair is securely stored. The public key is served via JWKS.', 'bromate-security-api-firewall')
+                  {!settings.auth_control_enabled ? __('The JWKS endpoint is disabled.', 'bromate-security-api-firewall') : 
+                  hasStoredKey
+                    ? __('The public key is served via JWKS.', 'bromate-security-api-firewall')
                     : __('Generate a key pair to enable JWT authentication.', 'bromate-security-api-firewall')
                   }
                 </Typography>
@@ -335,7 +374,7 @@ export default function AuthOptions({
 
                 {keyGenSuccess && (
                   <Alert severity="success" onClose={() => setKeyGenSuccess(false)}>
-                    {__('Key pair generated successfully! The JWKS endpoint has been updated.', 'bromate-security-api-firewall')}
+                    {__('Key pair generated successfully. The JWKS endpoint has been updated.', 'bromate-security-api-firewall')}
                   </Alert>
                 )}
 
@@ -345,7 +384,7 @@ export default function AuthOptions({
                       variant="contained"
                       startIcon={<VpnKeyIcon />}
                       onClick={() => openConfirmDialog('generate')}
-                      disabled={generatingKey}
+                      disabled={generatingKey || !settings.auth_control_enabled}
                     >
                       {__('Generate Key Pair', 'bromate-security-api-firewall')}
                     </Button>
@@ -355,7 +394,7 @@ export default function AuthOptions({
                         variant="outlined"
                         startIcon={<RefreshIcon />}
                         onClick={() => openConfirmDialog('regenerate')}
-                        disabled={generatingKey}
+                        disabled={generatingKey || !settings.auth_control_enabled}
                       >
                         {__('Regenerate', 'bromate-security-api-firewall')}
                       </Button>
@@ -373,17 +412,25 @@ export default function AuthOptions({
 
                 {hasStoredKey && keySummary.active && (
                   <Stack spacing={1} sx={{ mt: 1 }}>
+                    
                     <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="body2" fontWeight={500}>
-                          {__('Active Public Key', 'bromate-security-api-firewall')}
+                          {settings.auth_control_enabled ? __('Active Public Key', 'bromate-security-api-firewall') : __('Stored Public Key', 'bromate-security-api-firewall')}
                         </Typography>
-                        <Tooltip title={__('Key ID (kid) — identifies this key in the JWKS document', 'bromate-security-api-firewall')}>
+                        <Tooltip 
+                        disableInteractive
+                        slotProps={{ popper: { container: portalContainer } }} 
+                        title={settings.auth_control_enabled ? __('Identifies this Key ID in the JWKS document', 'bromate-security-api-firewall') : ''}
+                        >
                           <Chip label={`kid: ${keySummary.active.kid}`} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
                         </Tooltip>
                       </Stack>
                       <Stack direction="row" spacing={1}>
-                        <Tooltip title={showPublicKey ? __('Hide', 'bromate-security-api-firewall') : __('Show', 'bromate-security-api-firewall')}>
+                        <Tooltip 
+                        disableInteractive
+                        slotProps={{ popper: { container: portalContainer } }}
+                        title={showPublicKey ? __('Hide', 'bromate-security-api-firewall') : __('Show', 'bromate-security-api-firewall')}>
                           <IconButton
                             size="small"
                             onClick={() => setShowPublicKey(!showPublicKey)}
@@ -465,13 +512,15 @@ export default function AuthOptions({
                     {__('JWKS Endpoint', 'bromate-security-api-firewall')}
                   </Typography>
                   <Stack direction="row" spacing={1}>
-                    <Tooltip title={__('Open in new tab', 'bromate-security-api-firewall')}>
+                    <Tooltip 
+                    disableInteractive
+                    slotProps={{ popper: { container: portalContainer } }} title={__('Open in new tab', 'bromate-security-api-firewall')}>
                       <IconButton
                         size="small"
                         component="a"
                         href={jwksEndpoint}
                         target="_blank"
-                        disabled={!jwksEndpoint}
+                        disabled={!jwksEndpoint || !settings.auth_control_enabled}
                         rel="noopener noreferrer"
                       >
                         <OpenInNewIcon fontSize="small" />
@@ -500,8 +549,10 @@ export default function AuthOptions({
                         __('Copy this URL to configure your JWT issuer', 'bromate-security-api-firewall')
                       )
                     }
+                    disabled={!settings.auth_control_enabled}
                   />
-                  <CopyButton toCopy={jwksEndpoint} sx={{ position: 'absolute', top: '4px', right: '12px', height: '32px', width: '32px' }} />
+                  {settings.auth_control_enabled &&
+                  <CopyButton toCopy={jwksEndpoint} sx={{ position: 'absolute', top: '4px', right: '12px', height: '32px', width: '32px' }} />}
                 </Stack>
               </Stack>
 
@@ -509,7 +560,13 @@ export default function AuthOptions({
                 label={__('JWT Audience', 'bromate-security-api-firewall')}
                 value={settings.auth_jwt_audience}
                 onChange={(e) => update('auth_jwt_audience', e.target.value)}
-                helperText={__('Expected audience (aud) claim in the token', 'bromate-security-api-firewall')}
+                disabled={!settings.auth_control_enabled}
+                required={settings.auth_control_enabled}
+                error={isDirty && !!fieldErrors.auth_jwt_audience}
+                helperText={
+                  fieldErrors.auth_jwt_audience
+                    ?? __('Expected audience (aud) claim in the token', 'bromate-security-api-firewall')
+                }
                 size="small"
               />
 
@@ -517,39 +574,28 @@ export default function AuthOptions({
                 label={__('JWT Issuer', 'bromate-security-api-firewall')}
                 value={settings.auth_jwt_issuer}
                 onChange={(e) => update('auth_jwt_issuer', e.target.value)}
-                helperText={__('Expected issuer (iss) claim in the token', 'bromate-security-api-firewall')}
+                disabled={!settings.auth_control_enabled}
+                required={settings.auth_control_enabled}
+                error={isDirty && !!fieldErrors.auth_jwt_issuer}
+                helperText={
+                  fieldErrors.auth_jwt_issuer
+                    ?? __('Expected issuer (iss) claim in the token', 'bromate-security-api-firewall')
+                }
                 size="small"
               />
 
-              <Accordion elevation={0} variant="outlined">
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body1" fontWeight={500}>
-                    {__('Advanced Settings', 'bromate-security-api-firewall')}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Stack spacing={2}>
-
-                    <Typography variant="body1" fontWeight={500}>
-                      {__('External JWKS Provider', 'bromate-security-api-firewall')}
-                    </Typography>
-
-                    <TextField
-                      label={__('Custom JWKS URL (Optional)', 'bromate-security-api-firewall')}
-                      value={settings.auth_jwt_jwks_url}
-                      onChange={(e) => update('auth_jwt_jwks_url', e.target.value)}
-                      helperText={__(
-                        'Leave empty to use the built-in endpoint. Use this to point to an external JWKS provider ' +
-                        '(one that exposes its own rotating keys with a matching kid).',
-                        'bromate-security-api-firewall'
-                      )}
-                      placeholder="https://your-auth-server.com/.well-known/jwks.json"
-                      size="small"
-                    />
-
-                  </Stack>
-                </AccordionDetails>
-              </Accordion>
+              <TextField
+                label={__('External JWKS Provider (Optional)', 'bromate-security-api-firewall')}
+                value={settings.auth_jwt_jwks_url}
+                disabled={!settings.auth_control_enabled}
+                onChange={(e) => update('auth_jwt_jwks_url', e.target.value)}
+                helperText={__(
+                  'Leave empty to use the built-in endpoint.',
+                  'bromate-security-api-firewall'
+                )}
+                placeholder="https://your-auth-server.com/.well-known/jwks.json"
+                size="small"
+              />
 
             </Stack>
           )}
@@ -566,11 +612,7 @@ export default function AuthOptions({
       >
         <DialogTitle>
           <Stack direction="row" alignItems="center" spacing={1}>
-            {confirmAction === 'delete' || confirmAction === 'regenerate' ? (
-              <WarningIcon color="warning" />
-            ) : (
-              <VpnKeyIcon />
-            )}
+            <VpnKeyIcon />
             <Typography variant="h6">
               {confirmContent.title}
             </Typography>
@@ -578,7 +620,7 @@ export default function AuthOptions({
         </DialogTitle>
         <DialogContent>
           <Alert
-            severity={confirmAction === 'delete' || confirmAction === 'regenerate' ? 'warning' : 'info'}
+            severity="info"
             sx={{ mt: 2 }}
           >
             <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
@@ -593,7 +635,6 @@ export default function AuthOptions({
           <Button
             onClick={handleConfirmAction}
             variant="contained"
-            color={confirmAction === 'delete' ? 'error' : confirmAction === 'regenerate' ? 'warning' : 'primary'}
             disabled={generatingKey}
             startIcon={generatingKey ? <CircularProgress size={20} /> : undefined}
           >

@@ -13,7 +13,7 @@ final class RestRequestBootstrap {
 
 	public static function register(): void {
 
-		if(is_admin()) {
+		if ( is_admin() ) {
 			return;
 		}
 
@@ -73,6 +73,7 @@ final class RestRequestBootstrap {
 		}
 
 		$policy = RoutesResolver::resolve_for_request( $request );
+
 		if ( empty( $policy['protect'] ) ) {
 			return $result;
 		}

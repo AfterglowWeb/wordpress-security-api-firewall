@@ -28,7 +28,6 @@ class RoutesResolver {
 	}
 
 
-
 	protected static function resolve_for_route( string $route, string $method ): array {
 
 		$tree = RoutesPolicyRepository::get_routes_policy_tree();

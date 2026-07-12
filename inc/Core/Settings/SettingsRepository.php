@@ -123,16 +123,16 @@ class SettingsRepository {
 		return array_map(
 			static function ( WP_User $user ) use ( $current_user_id ): array {
 				return array(
-					'id'            => absint( $user->ID ),
-					'display_name'  => sanitize_text_field( $user->display_name ?? '' ),
-					'email'         => sanitize_email( $user->user_email ),
-					'current_user'  => $current_user_id === $user->ID ? true : false,
-					'admin_url'     => sanitize_url( get_edit_user_link( $user->ID ) ),
-					'roles'         => array_map( 'sanitize_key', $user->roles ),
-					'jwt_subclaim' => JwtAuthenticator::create_user_subclaim( $user->ID ),
-					'status'        => '',
-					'expires_at'    => '',
-					'ip_entries'    => IpEntryRepository::find_by_user( $user->ID ),
+					'id'                  => absint( $user->ID ),
+					'display_name'        => sanitize_text_field( $user->display_name ?? '' ),
+					'email'               => sanitize_email( $user->user_email ),
+					'current_user'        => $current_user_id === $user->ID ? true : false,
+					'admin_url'           => sanitize_url( get_edit_user_link( $user->ID ) ),
+					'roles'               => array_map( 'sanitize_key', $user->roles ),
+					'jwt_subclaim'        => JwtAuthenticator::create_user_subclaim( $user->ID ),
+					'status'              => '',
+					'expires_at'          => '',
+					'ip_entries'          => IpEntryRepository::find_by_user( $user->ID ),
 					'has_wp_app_password' => WordPressApplicationPassword::user_has_valid_application_password( $user->ID ),
 				);
 			},
@@ -153,12 +153,12 @@ class SettingsRepository {
 				}
 
 				return array(
-					'id'            => absint( $user['id'] ),
+					'id'           => absint( $user['id'] ),
 					'jwt_subclaim' => sanitize_text_field( $user['jwt_subclaim'] ?? '' ),
-					'status'        => in_array( $user['status'] ?? '', $allowed_statuses, true )
+					'status'       => in_array( $user['status'] ?? '', $allowed_statuses, true )
 										? $user['status']
 										: 'active',
-					'expires_at'    => sanitize_text_field( $user['expires_at'] ?? '' ),
+					'expires_at'   => sanitize_text_field( $user['expires_at'] ?? '' ),
 				);
 			},
 			$users
@@ -177,19 +177,19 @@ class SettingsRepository {
 		}
 
 		return array(
-			'id'            => absint( $user['id'] ),
+			'id'           => absint( $user['id'] ),
 			'jwt_subclaim' => sanitize_text_field( $user['jwt_subclaim'] ?? '' ),
-			'status'        => in_array( $user['status'] ?? '', $allowed_statuses, true )
+			'status'       => in_array( $user['status'] ?? '', $allowed_statuses, true )
 								? $user['status']
 								: 'active',
-			'expires_at'    => sanitize_text_field( $user['expires_at'] ?? '' ),
+			'expires_at'   => sanitize_text_field( $user['expires_at'] ?? '' ),
 		);
 	}
 
 	public static function get_jwks_endpoint(): array {
-		return [
-			'endpoint' => sanitize_url( rest_url('bromate/v1/.well-known/jwks.json') ),
-		];
+		return array(
+			'endpoint' => sanitize_url( rest_url( 'bromate/v1/.well-known/jwks.json' ) ),
+		);
 	}
 
 	public static function sanitize_recaptcha_threshold( $value ): float {

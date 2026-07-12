@@ -28,14 +28,14 @@ final class SettingsConfig {
 
 		$options = array(
 
-			'auth_control_enabled'  => array(
+			'auth_control_enabled'                     => array(
 				'label'             => esc_html__( 'Control REST API Authentication', 'bromate-security-api-firewall' ),
 				'default_value'     => 'wp_auth',
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
-			
+
 			'auth_methods'                             => array(
 				'label'             => esc_html__( 'Authentication method', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Choose how API clients authenticate with the REST API.', 'bromate-security-api-firewall' ),
@@ -96,7 +96,7 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_jwt_cache_jwks'                          => array(
+			'auth_jwt_cache_jwks'                      => array(
 				'label'             => esc_html__( 'Cache JWKS', 'bromate-security-api-firewall' ),
 				'default_value'     => false,
 				'type'              => 'boolean',
@@ -104,7 +104,7 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_jwt_cache_duration'                          => array(
+			'auth_jwt_cache_duration'                  => array(
 				'label'             => esc_html__( 'Cache JWKS duration', 'bromate-security-api-firewall' ),
 				'default_value'     => false,
 				'type'              => 'integer',
@@ -200,7 +200,7 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			'routes_policy_auth_enforce'                             => array(
+			'routes_policy_auth_enforce'               => array(
 				'label'             => esc_html__( 'Require authentication for all wp/v2/* API routes', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'When enabled, wp/v2/* REST API routes require authentication.', 'bromate-security-api-firewall' ),
 				'default_value'     => false,
