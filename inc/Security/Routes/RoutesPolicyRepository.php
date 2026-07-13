@@ -79,14 +79,6 @@ class RoutesPolicyRepository {
 		);
 	}
 
-	public static function get_routes_policy_tree(): array {
-		$flat       = self::list_all_rest_routes();
-		$tree       = self::build_policy_tree( $flat );
-		$saved_tree = self::get_saved_routes_policy_tree();
-
-		return self::merge_saved_tree_into_current_tree( $tree, $saved_tree );
-	}
-
 	public static function get_default_hidden_routes(): array {
 		$default_hidden_routes = apply_filters( 'bromate_security_api_firewall_default_hidden_routes', self::DEFAULT_HIDDEN_ROUTES );
 		if ( ! is_array( $default_hidden_routes ) || empty( $default_hidden_routes ) ) {
@@ -95,14 +87,6 @@ class RoutesPolicyRepository {
 		return array_map( 'sanitize_text_field', $default_hidden_routes );
 	}
 
-	public static function get_saved_routes_policy_tree(): array {
-		$saved = SettingsRepository::read_option( 'routes_policy_tree' );
-		if ( ! is_array( $saved ) ) {
-			return array();
-		}
-
-		return self::sanitize_routes_policy_tree( $saved );
-	}
 
 	public static function sanitize_hidden_methods( $value ): array {
 		if ( ! is_array( $value ) ) {
@@ -149,6 +133,81 @@ class RoutesPolicyRepository {
 		return in_array( $value, array( '401', '403', '404' ), true ) ? $value : '404';
 	}
 
+	public static function get_routes_policy_tree(): array {
+		$flat       = self::list_all_rest_routes();
+		$tree       = self::build_policy_tree( $flat );
+		$saved_tree = self::get_saved_rest_routes();
+
+		return self::merge_saved_tree_into_current_tree( $tree, $saved_tree );
+	}
+
+	public static function save_routes_policy_tree( array $tree ): bool {
+		try {
+			$sanitized_tree = self::sanitize_routes_policy_tree( $tree );
+			$result         = SettingsRepository::update_option( 'routes_policy_tree', $sanitized_tree );
+
+			return false !== $result;
+		} catch ( \Throwable $e ) {
+			return false;
+		}
+	}
+
+	public static function list_all_rest_routes(): array {
+
+		$cached = get_transient( 'rest_firewall_routes_list' );
+		if ( false !== $cached && is_array( $cached ) ) {
+			return $cached;
+		}
+
+		$server = rest_get_server();
+		$routes = $server->get_routes();
+
+		$output = array();
+
+		foreach ( $routes as $route => $endpoints ) {
+
+			foreach ( $endpoints as $endpoint ) {
+
+				$methods = array_keys( $endpoint['methods'] ?? array() );
+				if ( empty( $methods ) ) {
+					continue;
+				}
+
+				foreach ( $methods as $method ) {
+
+					$permission_cb = $endpoint['permission_callback'] ?? null;
+					$route_params  = self::extract_route_params( $route );
+
+					$output[] = array(
+						'route'               => $route,
+						'params'              => $route_params,
+						'method'              => $method,
+						'callback'            => self::normalize_callable(
+							$endpoint['callback'] ?? null
+						),
+						'permission_callback' => self::normalize_callable(
+							$permission_cb
+						),
+						'permission_type'     => self::describe_permission_callback(
+							$permission_cb
+						),
+						'show_in_index'       => (bool) ( $endpoint['show_in_index'] ?? false ),
+						'namespace'           => explode( '/', trim( $route, '/' ) )[0] ?? '',
+					);
+
+				}
+			}
+		}
+
+		set_transient( 'rest_firewall_routes_list', $output, HOUR_IN_SECONDS );
+
+		return $output;
+	}
+
+	public static function flush_routes_cache(): void {
+		delete_transient( 'rest_firewall_routes_list' );
+	}
+
 	public static function sanitize_routes_policy_tree( $tree ): array {
 		if ( ! is_array( $tree ) ) {
 			return array();
@@ -164,6 +223,108 @@ class RoutesPolicyRepository {
 				static fn( $node ) => is_array( $node )
 			)
 		);
+	}
+
+	private static function build_policy_tree( array $flat_routes ): array {
+
+		$tree = array();
+
+		foreach ( $flat_routes as $route ) {
+
+			$parsed = self::route_to_segments( $route['route'] );
+
+			if ( empty( $parsed ) ) {
+				continue;
+			}
+
+			$namespace = $parsed['namespace'];
+			$segments  = $parsed['segments'];
+
+			if ( ! isset( $tree[ $namespace ] ) ) {
+				$tree[ $namespace ] = array(
+					'id'       => self::node_id( '/' . $namespace ),
+					'label'    => $namespace,
+					'path'     => '/' . $namespace,
+					'children' => array(),
+					'routes'   => array(),
+				);
+			}
+
+			if ( empty( $segments ) ) {
+				$already_exists = false;
+				foreach ( $tree[ $namespace ]['routes'] as $existing ) {
+					if ( $existing['method'] === $route['method'] && $existing['route'] === $route['route'] ) {
+						$already_exists = true;
+						break;
+					}
+				}
+				if ( ! $already_exists ) {
+					$tree[ $namespace ]['routes'][] = self::build_route_entry( $route );
+				}
+				continue;
+			}
+
+			self::insert_route(
+				$tree[ $namespace ]['children'],
+				$segments,
+				$route,
+				'/' . $namespace
+			);
+
+		}
+
+		return self::normalize_tree( $tree );
+	}
+
+	private static function get_saved_rest_routes(): array {
+		$saved = SettingsRepository::read_option( 'routes_policy_tree' );
+		if ( ! is_array( $saved ) ) {
+			return array();
+		}
+
+		return self::sanitize_routes_policy_tree( $saved );
+	}
+
+	private static function merge_saved_tree_into_current_tree( array $tree, array $saved_tree ): array {
+		$saved_index = self::build_saved_tree_index( $saved_tree );
+
+		$result = array();
+		$seen   = array();
+		foreach ( $tree as $node ) {
+			if ( ! is_array( $node ) ) {
+				continue;
+			}
+
+			$identity = self::node_identity( $node );
+			if ( '' !== $identity ) {
+				$seen[ $identity ] = true;
+			}
+
+			$matching_saved = null;
+			foreach ( self::node_identity_candidates( $node ) as $candidate ) {
+				if ( isset( $saved_index[ $candidate ] ) ) {
+					$matching_saved = $saved_index[ $candidate ];
+					break;
+				}
+			}
+
+			$result[] = self::merge_node_with_saved( $node, $matching_saved );
+		}
+
+		foreach ( $saved_tree as $saved_node ) {
+			if ( ! is_array( $saved_node ) ) {
+				continue;
+			}
+
+			$identity = self::node_identity( $saved_node );
+			if ( '' === $identity || isset( $seen[ $identity ] ) ) {
+				continue;
+			}
+
+			$result[] = $saved_node;
+		}
+
+		return $result;
 	}
 
 	private static function sanitize_route_node( array $node ): array {
@@ -234,48 +395,6 @@ class RoutesPolicyRepository {
 		}
 
 		return $sanitized;
-	}
-
-	private static function merge_saved_tree_into_current_tree( array $tree, array $saved_tree ): array {
-		$saved_index = self::build_saved_tree_index( $saved_tree );
-
-		$result = array();
-		$seen   = array();
-		foreach ( $tree as $node ) {
-			if ( ! is_array( $node ) ) {
-				continue;
-			}
-
-			$identity = self::node_identity( $node );
-			if ( '' !== $identity ) {
-				$seen[ $identity ] = true;
-			}
-
-			$matching_saved = null;
-			foreach ( self::node_identity_candidates( $node ) as $candidate ) {
-				if ( isset( $saved_index[ $candidate ] ) ) {
-					$matching_saved = $saved_index[ $candidate ];
-					break;
-				}
-			}
-
-			$result[] = self::merge_node_with_saved( $node, $matching_saved );
-		}
-
-		foreach ( $saved_tree as $saved_node ) {
-			if ( ! is_array( $saved_node ) ) {
-				continue;
-			}
-
-			$identity = self::node_identity( $saved_node );
-			if ( '' === $identity || isset( $seen[ $identity ] ) ) {
-				continue;
-			}
-
-			$result[] = $saved_node;
-		}
-
-		return $result;
 	}
 
 	private static function build_saved_tree_index( array $saved_tree ): array {
@@ -430,68 +549,6 @@ class RoutesPolicyRepository {
 		}
 
 		return $merged;
-	}
-
-	public static function save_routes_policy_tree( array $tree ): bool {
-		try {
-			$sanitized_tree = self::sanitize_routes_policy_tree( $tree );
-			$result         = SettingsRepository::update_option( 'routes_policy_tree', $sanitized_tree );
-
-			return false !== $result;
-		} catch ( \Throwable $e ) {
-			return false;
-		}
-	}
-
-	public static function build_policy_tree( array $flat_routes ): array {
-
-		$tree = array();
-
-		foreach ( $flat_routes as $route ) {
-
-			$parsed = self::route_to_segments( $route['route'] );
-
-			if ( empty( $parsed ) ) {
-				continue;
-			}
-
-			$namespace = $parsed['namespace'];
-			$segments  = $parsed['segments'];
-
-			if ( ! isset( $tree[ $namespace ] ) ) {
-				$tree[ $namespace ] = array(
-					'id'       => self::node_id( '/' . $namespace ),
-					'label'    => $namespace,
-					'path'     => '/' . $namespace,
-					'children' => array(),
-					'routes'   => array(),
-				);
-			}
-
-			if ( empty( $segments ) ) {
-				$already_exists = false;
-				foreach ( $tree[ $namespace ]['routes'] as $existing ) {
-					if ( $existing['method'] === $route['method'] && $existing['route'] === $route['route'] ) {
-						$already_exists = true;
-						break;
-					}
-				}
-				if ( ! $already_exists ) {
-					$tree[ $namespace ]['routes'][] = self::build_route_entry( $route );
-				}
-				continue;
-			}
-
-			self::insert_route(
-				$tree[ $namespace ]['children'],
-				$segments,
-				$route,
-				'/' . $namespace
-			);
-
-		}
-
-		return self::normalize_tree( $tree );
 	}
 
 	private static function normalize_tree( array $tree ): array {
@@ -680,62 +737,6 @@ class RoutesPolicyRepository {
 
 	private static function route_uuid( array $route ): string {
 		return md5( $route['route'] . '|' . $route['method'] );
-	}
-
-	public static function list_all_rest_routes(): array {
-
-		$cached = get_transient( 'rest_firewall_routes_list' );
-		if ( false !== $cached && is_array( $cached ) ) {
-			return $cached;
-		}
-
-		$server = rest_get_server();
-		$routes = $server->get_routes();
-
-		$output = array();
-
-		foreach ( $routes as $route => $endpoints ) {
-
-			foreach ( $endpoints as $endpoint ) {
-
-				$methods = array_keys( $endpoint['methods'] ?? array() );
-				if ( empty( $methods ) ) {
-					continue;
-				}
-
-				foreach ( $methods as $method ) {
-
-					$permission_cb = $endpoint['permission_callback'] ?? null;
-					$route_params  = self::extract_route_params( $route );
-
-					$output[] = array(
-						'route'               => $route,
-						'params'              => $route_params,
-						'method'              => $method,
-						'callback'            => self::normalize_callable(
-							$endpoint['callback'] ?? null
-						),
-						'permission_callback' => self::normalize_callable(
-							$permission_cb
-						),
-						'permission_type'     => self::describe_permission_callback(
-							$permission_cb
-						),
-						'show_in_index'       => (bool) ( $endpoint['show_in_index'] ?? false ),
-						'namespace'           => explode( '/', trim( $route, '/' ) )[0] ?? '',
-					);
-
-				}
-			}
-		}
-
-		set_transient( 'rest_firewall_routes_list', $output, HOUR_IN_SECONDS );
-
-		return $output;
-	}
-
-	public static function flush_routes_cache(): void {
-		delete_transient( 'rest_firewall_routes_list' );
 	}
 
 	private static function normalize_callable( $callback_name ) {

@@ -547,9 +547,9 @@ export default function AuthOptions({
 
               </Stack>
 
-              <Stack spacing={1}>
+              <Stack spacing={0}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="caption" color={'text.secondary'}>
                     {__('JWKS Endpoint', 'bromate-security-api-firewall')}
                   </Typography>
                   <Stack direction="row" spacing={1}>
@@ -589,7 +589,7 @@ export default function AuthOptions({
                           {endpointError}
                         </Typography>
                       ) : (
-                        __('Copy this URL to configure your JWT issuer', 'bromate-security-api-firewall')
+                        __('Copy this URL to configure your JWT issuer.', 'bromate-security-api-firewall')
                       )
                     }
                   />
@@ -606,7 +606,7 @@ export default function AuthOptions({
                 error={isDirty && !!fieldErrors.auth_jwt_audience}
                 helperText={
                   fieldErrors.auth_jwt_audience
-                    ?? __('Expected audience (aud) claim in the token', 'bromate-security-api-firewall')
+                    ?? __('Expected audience (aud) claim in the token.', 'bromate-security-api-firewall')
                 }
                 size="small"
               />
@@ -620,7 +620,7 @@ export default function AuthOptions({
                 error={isDirty && !!fieldErrors.auth_jwt_issuer}
                 helperText={
                   fieldErrors.auth_jwt_issuer
-                    ?? __('Expected issuer (iss) claim in the token', 'bromate-security-api-firewall')
+                    ?? __('Expected issuer (iss) claim in the token.', 'bromate-security-api-firewall')
                 }
                 size="small"
               />

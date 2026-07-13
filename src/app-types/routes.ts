@@ -37,6 +37,7 @@ export type RoutesSettings = {
 
 export type RoutesPolicyTreeProps = {
   tree:     RouteNode[];
+  baselineTree: RouteNode[];
   globals:  RoutesSettings;   // ← ajout
   onChange: (tree: RouteNode[]) => void;
   defaultHiddenRoutes: string[];
