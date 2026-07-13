@@ -98,10 +98,11 @@ function renderOptions(options: OptionEntry[], selected: string[]) {
 interface Props {
   label:    string;
   value:    string[];
+  disabled: boolean;
   onChange: (value: string[]) => void;
 }
 
-export default function ObjectTypeSelect({ label, value, onChange }: Props): JSX.Element | null {
+export default function ObjectTypeSelect({ label, value, onChange, disabled }: Props): JSX.Element | null {
   const [objects,  setObjects]  = useState<WpObject[]>([]);
   const [loading,  setLoading]  = useState(true);
   const portalContainer = usePortalContainer();
@@ -159,7 +160,7 @@ export default function ObjectTypeSelect({ label, value, onChange }: Props): JSX
   }
 
   return (
-    <FormControl fullWidth size="small">
+    <FormControl fullWidth size="small" disabled={disabled}>
       <InputLabel>{label}</InputLabel>
       <Select
         multiple

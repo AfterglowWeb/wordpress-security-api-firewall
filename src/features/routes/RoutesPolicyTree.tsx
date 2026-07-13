@@ -47,10 +47,6 @@ function countCustomRules(node: RouteNode): number {
 	return count;
 }
 
-// Converts a resolved node back into "raw" input suitable for re-resolving:
-// explicit overrides are kept as forced values, everything else (including
-// previously-inherited values) is reset so resolveNode recomputes it fresh
-// instead of that inherited snapshot leaking back in as a new explicit truth.
 function toRawNode(node: RouteNode): RouteNode {
 	const stripKey = (key: ToggleableSettingKey): InheritableSetting => {
 		const s = node.settings?.[key];
@@ -68,6 +64,17 @@ function toRawNode(node: RouteNode): RouteNode {
 			protect: stripKey('protect'),
 		},
 		children: node.children?.map(toRawNode),
+	};
+}
+
+function clearOverridesForKey(node: RouteNode, key: ToggleableSettingKey): RouteNode {
+	return {
+		...node,
+		settings: {
+			...node.settings,
+			[key]: { value: false, inherited: false },
+		},
+		children: node.children?.map((child) => clearOverridesForKey(child, key)),
 	};
 }
 
@@ -112,26 +119,31 @@ function normalizeTree(tree: RouteNode): TreeState {
   return { rootId: tree.id, nodes };
 }
 
+function collectCustomFlags(nodes: RouteNode[]): Record<string, boolean> {
+	const map: Record<string, boolean> = {};
+	function walk(node: RouteNode) {
+		map[node.id] = !!node.settings?.custom;
+		node.children?.forEach(walk);
+	}
+	nodes.forEach(walk);
+	return map;
+}
 
-export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, onChange }: RoutesPolicyTreeProps): JSX.Element {
+export default function RoutesPolicyTree({ tree, baselineTree, globals, defaultHiddenRoutes, onChange }: RoutesPolicyTreeProps): JSX.Element {
 	const [state, setState] = useState(() =>
 		normalizeTree(wrapTree(resolveInheritance(tree, globals, defaultHiddenRoutes)))
 	);
 
 	const [version, setVersion] = useState(0);
 
-	const baselineCustom = useMemo(() => {
-		const map: Record<string, boolean> = {};
-		function walk(node: RouteNode) {
-			map[node.id] = !!node.settings?.custom;
-			node.children?.forEach(walk);
-		}
-		tree.forEach(walk);
-		return map;
-	}, [tree]);
+	const baselineCustom = useMemo(
+		() => collectCustomFlags(baselineTree),
+		[baselineTree]
+	);
 
 	useEffect(() => {
 		setState(normalizeTree(wrapTree(resolveInheritance(tree, globals, defaultHiddenRoutes))));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [globals, defaultHiddenRoutes]);
 
 	const [expandedItems, setExpandedItems] = useState<string[]>([]);
@@ -175,11 +187,10 @@ export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, o
 
 				const toggledRoot = updateNode(rawRoot, id, (n) => ({
 					...n,
+					children: n.children?.map((child) => clearOverridesForKey(child, key)),
 					settings: {
 						...n.settings,
-						[key]: newValue
-							? { value: true, inherited: false, overridden: true }
-							: { value: false, inherited: false },
+						[key]: { value: newValue, inherited: false, overridden: true },
 					},
 				}));
 

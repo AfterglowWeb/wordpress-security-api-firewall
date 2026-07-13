@@ -23,7 +23,7 @@ const SECURITY_DEFAULTS = {
   routes_policy_hidden_methods:         ['delete', 'put', 'patch'] as string[],
   routes_policy_hidden_wp_objects:      [] as string[],
   routes_policy_auth_enforce:           false,
-  routes_policy_hidden_response_code:   '404' as const,
+  routes_policy_hidden_response_code:   '403' as const,
 };
 
 type Props = {
@@ -34,6 +34,8 @@ type Props = {
 export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.Element {
   const portalContainer = usePortalContainer();
 
+  const enabled = settings.routes_policy_enabled ?? false;
+
   const securityDefaultsApplied = useMemo(() => (
     !!settings.routes_policy_default_hidden_routes &&
     ['delete', 'put', 'patch'].every((m) => settings.routes_policy_hidden_methods?.includes(m)) &&
@@ -42,7 +44,6 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
 
   const toggleSecurityDefaults = () => {
     if (securityDefaultsApplied) {
-      onChange('routes_policy_enabled', false);
       onChange('routes_policy_default_hidden_routes', false);
       onChange('routes_policy_hidden_methods', []);
       onChange('routes_policy_hidden_response_code', '404' as const);
@@ -69,7 +70,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
 					label={__('Enable', 'bromate-security-api-firewall')}
 					control={
 					<Switch
-            checked={settings.routes_policy_enabled ?? false}
+            checked={enabled}
             onChange={(e) => onChange('routes_policy_enabled', e.target.checked)}
 					/>
 					}
@@ -81,12 +82,19 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
 				</Stack>
 			</Stack>
 
+      {/* Disabled, not hidden, when REST API Control is off: the settings
+          below are meaningless while the feature itself is off, but hiding
+          them would lose the admin's configuration from view and make it
+          harder to prepare settings before flipping the master switch on. */}
+      <Stack spacing={3} sx={{ opacity: enabled ? 1 : 0.6 }}>
+
       <FormControlLabel
         control={
           <Switch
             size="small"
             checked={securityDefaultsApplied}
             onChange={toggleSecurityDefaults}
+            disabled={!enabled}
           />
         }
         label={__('Apply security defaults', 'bromate-security-api-firewall')}
@@ -99,6 +107,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
           label={__('Select types', 'bromate-security-api-firewall')}
           value={settings.routes_policy_hidden_wp_objects ?? []}
           onChange={(value: string[]) => onChange('routes_policy_hidden_wp_objects', value)}
+          disabled={!enabled}
         />
       </Stack>
 
@@ -114,6 +123,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
                   size="small"
                   checked={settings.routes_policy_hidden_methods?.includes(method.toLowerCase()) ?? false}
                   onChange={() => toggleMethod(method)}
+                  disabled={!enabled}
                 />
               }
             />
@@ -123,7 +133,7 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
 
       <Stack spacing={2}>
         <Typography variant="body1">{__('Blocked Response', 'bromate-security-api-firewall')}</Typography>
-        <FormControl size="small" sx={{ maxWidth: 200 }}>
+        <FormControl size="small" sx={{ maxWidth: 200 }} disabled={!enabled}>
           <InputLabel>{__('Code', 'bromate-security-api-firewall')}</InputLabel>
           <Select
             MenuProps={ {
@@ -151,11 +161,14 @@ export default function GlobalRoutesPolicy({ settings, onChange }: Props): JSX.E
           control={
             <Switch
               size="small"
-              checked={settings.routes_policy_auth_enforce}
+              checked={settings.routes_policy_auth_enforce ?? false}
               onChange={(e) => onChange('routes_policy_auth_enforce',  e.target.checked)}
+              disabled={!enabled}
             />
           }
         />
+      </Stack>
+
       </Stack>
 
     </Stack>

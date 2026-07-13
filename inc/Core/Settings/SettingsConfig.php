@@ -101,7 +101,7 @@ final class SettingsConfig {
 				'info'              => esc_html__( 'Restrict REST API access to specific WordPress user accounts.', 'bromate-security-api-firewall' ),
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_authorized_user' ),  // ← singular
+				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_authorized_users' ),
 				'group'             => 'authentication',
 			),
 

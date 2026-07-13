@@ -10,7 +10,6 @@ import type { RoutesSettings, RouteNode } from '@app-types/routes';
 
 import GlobalRoutesPolicy from '@features/routes/GlobalRoutesPolicy';
 import RoutesPolicyTree from '@features/routes/RoutesPolicyTree';
-import RedirectFront from '@features/firewall/RedirectFront';
 
 import { RoutesAPI } from '@services/routes';
 import SaveButton from '@components/SaveButton';
@@ -20,6 +19,12 @@ export default function Routes(): JSX.Element {
 	const [loading, setLoading] = useState(true);
 
 	const [tree, setTree] = useState<RouteNode[]>([]);
+	// Tree as last loaded/saved from the server — a stable reference point,
+	// distinct from `tree` which round-trips through RoutesPolicyTree's
+	// onChange on every single toggle. RoutesPolicyTree needs this fixed
+	// snapshot to compute which routes were ALREADY custom before this
+	// session, without that computation feeding back into itself.
+	const [loadedTree, setLoadedTree] = useState<RouteNode[]>([]);
 	const [defaultHiddenRoutes, setDefaultHiddenRoutes] = useState<string[]>([]);
 	const [settings, setSettings] = useState<RoutesSettings>({
 		routes_policy_enabled:               false,
@@ -62,6 +67,7 @@ export default function Routes(): JSX.Element {
 		try {
 			const data = await RoutesAPI.getAllSettings();
 			setTree(data.tree);
+			setLoadedTree(data.tree);
 			setSettings(data.settings);
 			setLoadedSettings(data.settings);
 			setDefaultHiddenRoutes(data.default_hidden_routes);
@@ -74,6 +80,11 @@ export default function Routes(): JSX.Element {
 
 	const handleSave = useCallback(async () => {
 		await RoutesAPI.saveAllSettings({ settings, tree });
+		// Without this, isDirty (settings vs loadedSettings) stays true
+		// forever after the first edit, and RoutesPolicyTree's baseline
+		// (loadedTree) would never reflect what was actually just persisted.
+		setLoadedSettings(settings);
+		setLoadedTree(tree);
 	}, [tree, settings]);
 
 	if (loading) {
@@ -102,6 +113,7 @@ export default function Routes(): JSX.Element {
 				<Stack direction="column" gap={2}>
 					<RoutesPolicyTree
 						tree={tree}
+						baselineTree={loadedTree}
 						globals={settings}
 						onChange={handleTreeChange}
 						defaultHiddenRoutes={defaultHiddenRoutes}

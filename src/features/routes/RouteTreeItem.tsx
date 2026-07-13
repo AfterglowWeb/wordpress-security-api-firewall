@@ -83,7 +83,11 @@ export default function RouteTreeItem(props: TreeItemProps) {
           direction="row" alignItems="center" spacing={0.5} sx={{ ml: 1 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <Tooltip slotProps={{popper:{container: portalContainer}}} title={isInheritedDisabled ? 'Disabled (inherited)' : 'Disable route'}>
+          <Tooltip 
+          slotProps={{popper:{container: portalContainer}}} 
+          disableInteractive
+          followCursor
+          title={isInheritedDisabled ? 'Disabled (inherited)' : 'Disable route'}>
             <Stack direction="row" alignItems="center" spacing={0.25}>
               <BlockIcon fontSize="inherit"
                 sx={{ color: isDisabled ? 'error.main' : 'text.disabled' }} />
@@ -92,12 +96,15 @@ export default function RouteTreeItem(props: TreeItemProps) {
                 checked={isDisabled}
                 onChange={() => toggleSetting(itemId, 'disabled')}
                 onClick={(e) => e.stopPropagation()}
-                disabled={isInheritedDisabled}
               />
             </Stack>
           </Tooltip>
 
-          <Tooltip slotProps={{popper:{container: portalContainer}}} title={isDisabled ? 'Route is disabled' : (isInheritedProtect ? 'Protected (inherited)' : 'Restrict to authorized users')}>
+          <Tooltip 
+          slotProps={{popper:{container: portalContainer}}}
+          disableInteractive
+          followCursor 
+          title={isDisabled ? 'Route is disabled' : (isInheritedProtect ? 'Protected (inherited)' : 'Restrict to authorized users')}>
             <Stack direction="row" alignItems="center" spacing={0.25}>
               <LockIcon fontSize="inherit"
                 sx={{ color: isProtect ? 'warning.main' : 'text.disabled' }} />
@@ -106,7 +113,7 @@ export default function RouteTreeItem(props: TreeItemProps) {
                 checked={isProtect}
                 onChange={() => toggleSetting(itemId, 'protect')}
                 onClick={(e) => e.stopPropagation()}
-                disabled={isInheritedProtect || isDisabled}
+                disabled={isDisabled}
               />
             </Stack>
           </Tooltip>

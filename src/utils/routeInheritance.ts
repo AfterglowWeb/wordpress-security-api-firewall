@@ -40,22 +40,33 @@ function resolveNode(
 
   const globallyDisabled = isGloballyDisabled(node, globals, defaultHiddenNamespaces);
 
+  // Priority order matters here: an explicit override on THIS route must
+  // win over a global rule or an inherited parent value — that's the whole
+  // point of letting an admin allow a single route even when its method or
+  // namespace is blocked globally. It used to be checked last (or not at
+  // all against globallyDisabled), so the override never had a chance.
   let disabled: InheritableSetting;
-  if (globallyDisabled) {
+  if (isOverriddenDisabled) {
+    disabled = { value: rawDisabled, inherited: false, overridden: true };
+  } else if (globallyDisabled) {
     disabled = { value: true, inherited: true };
-  } else if (parentDisabled.value && !isOverriddenDisabled) {
+  } else if (parentDisabled.value) {
     disabled = { value: true, inherited: true };
   } else if (rawDisabled) {
-    disabled = { value: true, inherited: false, overridden: isOverriddenDisabled };
+    // Legacy/initial shape: the route came back from the server already
+    // marked disabled as a plain value, without override metadata attached.
+    disabled = { value: true, inherited: false, overridden: false };
   } else {
     disabled = { value: false, inherited: false };
   }
 
   let protect: InheritableSetting;
-  if (parentProtect.value && !isOverriddenProtect) {
+  if (isOverriddenProtect) {
+    protect = { value: rawProtect, inherited: false, overridden: true };
+  } else if (parentProtect.value) {
     protect = { value: true, inherited: true };
   } else if (rawProtect) {
-    protect = { value: true, inherited: false, overridden: isOverriddenProtect };
+    protect = { value: true, inherited: false, overridden: false };
   } else {
     protect = { value: false, inherited: false };
   }

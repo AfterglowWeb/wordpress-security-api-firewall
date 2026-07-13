@@ -3,7 +3,8 @@ import { __ } from '@wordpress/i18n';
 
 import {
   Box, Paper, Typography, Switch,
-  Stack, TextField, Button, FormControlLabel
+  Stack, TextField, Button, FormControlLabel,
+  Divider
 } from '@mui/material';
 
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
@@ -94,43 +95,61 @@ export default function Firewall(): JSX.Element {
             />
           </Stack>
 
-          {/* Rate Limiting Section */}
           <Paper sx={{ p: 2 }} elevation={0}>
             <Stack flexDirection="column" gap={2}>
-              <FormControlLabel
-                label={__('Enable Firewall', 'bromate-security-api-firewall')}
-                control={
-                  <Switch
-                    checked={settings.rate_limit_enabled}
-                    onChange={(e) => updateSetting('rate_limit_enabled', e.target.checked)}
-                  />
-                }
-              />
+              
+              <Stack flexDirection="row" gap={1} alignItems="center">
+                <FormControlLabel
+                  label={__('Enable', 'bromate-security-api-firewall')}
+                  control={
+                    <Switch
+                      checked={settings.rate_limit_enabled ?? false}
+                      onChange={(e) => updateSetting('rate_limit_enabled', e.target.checked)}
+                    />
+                  }
+                  sx={{ mr: 0, '& .MuiTypography-root': { lineHeight: '2em' } }}
+                />
+                <Divider orientation="vertical" variant="middle" flexItem />
+                <Stack>
+                  <Typography variant="h6">{__('Firewall', 'bromate-security-api-firewall')}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {__(
+                      'When enabled, rate limiting, blocked countries and IPs management are applied.',
+                      'bromate-security-api-firewall'
+                    )}
+                  </Typography>
+                </Stack>
+              </Stack>
 
+              {/* Rate Limiting Section */}
               <Stack>
                 <Typography variant="h6" mb={2}>Rate Limiting</Typography>
                 <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
                   <TextField
                     label={__('Maximum requests', 'bromate-security-api-firewall')}
                     type="number"
+                    disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_max}
                     onChange={(e) => updateSetting('rate_limit_max', Number(e.target.value))}
                   />
                   <TextField
                     label={__('Time window (seconds)', 'bromate-security-api-firewall')}
                     type="number"
+                    disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_time}
                     onChange={(e) => updateSetting('rate_limit_time', Number(e.target.value))}
                   />
                   <TextField
                     label={__('Block duration (seconds)', 'bromate-security-api-firewall')}
                     type="number"
+                    disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_block_duration}
                     onChange={(e) => updateSetting('rate_limit_block_duration', Number(e.target.value))}
                   />
                   <TextField
                     label={__('Blacklist threshold', 'bromate-security-api-firewall')}
                     type="number"
+                    disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_blacklist_threshold}
                     onChange={(e) => updateSetting('rate_limit_blacklist_threshold', Number(e.target.value))}
                     helperText="Violations before auto-ban"

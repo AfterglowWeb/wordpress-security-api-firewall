@@ -11,10 +11,11 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { AuthorizedUser, AuthorizedUserDialogProps } from '@app-types/auth';
+import type { AuthorizedUser, AuthorizedUserDialogProps, AuthorizedUserMeta } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
 import { IpAPI } from '@services/ip';
 import { apiRequest } from '@services/api';
+import { SettingsAPI } from '@services/settings';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import CopyButton from '@components/CopyButton';
 
@@ -33,7 +34,7 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
 
 export default function UserDialog({
   open, user, onSave, onClose,
-  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, onIpAdded,
+  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers, onIpAdded,
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
 
@@ -43,6 +44,7 @@ export default function UserDialog({
   const [form, setForm]                   = useState(EMPTY_FORM);
   const [selectedWpUser, setSelectedWpUser] = useState<AuthorizedUser | null>(null);
   const [saving, setSaving]               = useState(false);
+  const [saveError, setSaveError]         = useState<string | null>(null);
   const [subclaimLoading, setSubclaimLoading] = useState(false);
 
   const [ipEntries, setIpEntries]     = useState<IpEntry[]>([]);
@@ -68,12 +70,7 @@ export default function UserDialog({
     if (!open) return;
 
     if (user) {
-      // Edit mode: `user` is already the grid's merged, up-to-date record
-      // (live WordPress profile fields + our own persisted meta). We
-      // deliberately do NOT re-derive from `wpUsers` here — that list is
-      // only refreshed when the dialog opens to ADD a user (see the effect
-      // below), so reusing it on edit served stale roles/email/subclaim
-      // and was the source of the dialog/grid values disagreeing.
+
       const resolvedIpEntries = user.ip_entries ?? [];
 
       setWpUserId(user.id);
@@ -98,6 +95,7 @@ export default function UserDialog({
       applyIpEntries([]);
     }
     setIpError(null);
+    setSaveError(null);
     setSaving(false);
   }, [open, user]);
 
@@ -119,14 +117,9 @@ export default function UserDialog({
       display_name: value.display_name,
       roles:        value.roles,
       ip_entries:   value.ip_entries || [],
-      has_wp_app_password: value.has_wp_app_password ?? false,
     }));
 
-    // The subclaim is generated and persisted server-side in user meta
-    // (JwtAuthenticator::create_user_subclaim) — it's the value actually
-    // matched against incoming tokens' `sub` claim, so it must never be
-    // fabricated client-side. This call is idempotent: if the user was
-    // authorized before and already has one, it's returned unchanged.
+
     if (!isWpAuth) {
       setSubclaimLoading(true);
       try {
@@ -150,6 +143,7 @@ export default function UserDialog({
     if (wpUserId === '') return;
     setSaving(true);
     setIpError(null);
+    setSaveError(null);
 
     let finalIpEntries = ipEntries;
 
@@ -199,6 +193,25 @@ export default function UserDialog({
 
         if (onIpAdded) onIpAdded();
       }
+    }
+
+    const meta: AuthorizedUserMeta = {
+      id: wpUserId as number,
+      jwt_subclaim: form.jwt_subclaim || '',
+      status: form.status,
+      expires_at: form.expires_at || '',
+    };
+    const exists = authorizedUsers.some((u) => u.id === meta.id);
+    const newAuthUsers = exists
+      ? authorizedUsers.map((u) => (u.id === meta.id ? meta : u))
+      : [...authorizedUsers, meta];
+
+    try {
+      await SettingsAPI.updateOption('auth_users', newAuthUsers);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : __('Failed to save user', 'bromate-security-api-firewall'));
+      setSaving(false);
+      return;
     }
 
     onSave({
@@ -378,6 +391,11 @@ export default function UserDialog({
           {ipError && (
             <Alert severity="error" variant="outlined">
               <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{ipError}</Typography>
+            </Alert>
+          )}
+          {saveError && (
+            <Alert severity="error" variant="outlined">
+              <Typography variant="body2">{saveError}</Typography>
             </Alert>
           )}
 
