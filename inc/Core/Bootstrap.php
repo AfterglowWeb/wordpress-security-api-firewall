@@ -26,7 +26,7 @@ final class Bootstrap {
 
 
 	public static function register(): void {
-		add_action( 'plugins_loaded', array( SchemaManager::class, 'install' ), 1 );
+		add_action( 'plugins_loaded', array( SchemaManager::class, 'install' ) );
 
 		RestRequestBootstrap::register();
 		PublicRequestBootstrap::register();
@@ -55,7 +55,7 @@ final class Bootstrap {
 		if ( false === get_option( 'bromate_security_api_firewall_options' ) ) {
 			update_option(
 				'bromate_security_api_firewall_options',
-				array( 'version' => BROMATE_REST_API_FIREWALL_VERSION ),
+				array( 'version' => BROMATE_SECURITY_API_FIREWALL_VERSION ),
 				false
 			);
 		}

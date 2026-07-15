@@ -3,7 +3,7 @@ import { __ } from '@wordpress/i18n';
 
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
-import CircularProgress from '@mui/material/CircularProgress';
+import Skeleton from '@mui/material/Skeleton';
 import Alert from '@mui/material/Alert';
 
 import type { RoutesSettings, RouteNode } from '@app-types/routes';
@@ -19,11 +19,6 @@ export default function Routes(): JSX.Element {
 	const [loading, setLoading] = useState(true);
 
 	const [tree, setTree] = useState<RouteNode[]>([]);
-	// Tree as last loaded/saved from the server — a stable reference point,
-	// distinct from `tree` which round-trips through RoutesPolicyTree's
-	// onChange on every single toggle. RoutesPolicyTree needs this fixed
-	// snapshot to compute which routes were ALREADY custom before this
-	// session, without that computation feeding back into itself.
 	const [loadedTree, setLoadedTree] = useState<RouteNode[]>([]);
 	const [defaultHiddenRoutes, setDefaultHiddenRoutes] = useState<string[]>([]);
 	const [settings, setSettings] = useState<RoutesSettings>({
@@ -33,6 +28,7 @@ export default function Routes(): JSX.Element {
 		routes_policy_hidden_wp_objects:     [],
 		routes_policy_auth_enforce: false,
 		routes_policy_hidden_routes_redirect_option:  '404',
+		routes_policy_hidden_routes_redirect_user_url: '',
 
 	});
 	const [loadedSettings, setLoadedSettings] = useState<RoutesSettings>(settings);
@@ -80,20 +76,20 @@ export default function Routes(): JSX.Element {
 
 	const handleSave = useCallback(async () => {
 		await RoutesAPI.saveAllSettings({ settings, tree });
-		// Without this, isDirty (settings vs loadedSettings) stays true
-		// forever after the first edit, and RoutesPolicyTree's baseline
-		// (loadedTree) would never reflect what was actually just persisted.
 		setLoadedSettings(settings);
 		setLoadedTree(tree);
 	}, [tree, settings]);
 
 	if (loading) {
 		return (
-			<Stack height="100%" alignItems="center" justifyContent="center">
-				<CircularProgress />
+			<Stack spacing={3}>
+				<Skeleton variant="rounded" width={'100%'} height={50} />
+				<Skeleton variant="rounded" width={'100%'} height={680} />
+				<Skeleton variant="rounded" width={'100%'} height={420} />
 			</Stack>
 		);
 	}
+
 
 	return (
 		<Stack flexGrow={1} spacing={3}>

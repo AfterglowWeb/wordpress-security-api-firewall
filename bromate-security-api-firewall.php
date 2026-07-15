@@ -23,12 +23,14 @@ defined( 'ABSPATH' ) || exit;
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
  */
 
-define( 'BROMATE_REST_API_FIREWALL_VERSION', '0.1.0' );
-define( 'BROMATE_REST_API_FIREWALL_DIR', plugin_dir_path( __FILE__ ) );
-define( 'BROMATE_REST_API_FIREWALL_URL', plugin_dir_url( __FILE__ ) );
-define( 'BROMATE_REST_API_FIREWALL_FILE', __FILE__ );
+define( 'BROMATE_SECURITY_API_FIREWALL_VERSION', '0.1.0' );
+define( 'BROMATE_SECURITY_API_FIREWALL_DIR', plugin_dir_path( __FILE__ ) );
+define( 'BROMATE_SECURITY_API_FIREWALL_URL', plugin_dir_url( __FILE__ ) );
+define( 'BROMATE_SECURITY_API_FIREWALL_FILE', __FILE__ );
+define( 'BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION', '1.7.2');
 
-require_once BROMATE_REST_API_FIREWALL_DIR . 'vendor/autoload.php';
+
+require_once BROMATE_SECURITY_API_FIREWALL_DIR . 'vendor/autoload.php';
 Core\Bootstrap::register();
 
 register_activation_hook( __FILE__, array( Core\Bootstrap::class, 'activate' ) );

@@ -47,7 +47,7 @@ class DisableAPIs {
 			);
 		}
 
-		if ( true === SettingsRepository::read_option( 'wordpress_disable_atom_rss' ) ) {
+		if ( true === SettingsRepository::read_option( 'disable_atom_rss' ) ) {
 			add_action( 'do_feed', array( $this, 'disable_all_feeds_response' ), 10 );
 			add_action( 'do_feed_rdf', array( $this, 'disable_all_feeds_response' ), 10 );
 			add_action( 'do_feed_rss', array( $this, 'disable_all_feeds_response' ), 10 );

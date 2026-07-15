@@ -112,7 +112,6 @@ class WordPressObjects {
 		);
 	}
 
-
 	public static function list_rest_api_object_types(): array {
 		return array_merge(
 			self::list_post_types(),

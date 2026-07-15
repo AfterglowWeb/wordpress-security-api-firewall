@@ -1,26 +1,29 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Schema;
 
 defined( 'ABSPATH' ) || exit;
+use WP_Filesystem_Base;
 
 final class SchemaManager {
 
-	const SCHEMA_VERSION = '1.7.2';
-	const OPTION_KEY     = 'bromate_firewall_schema_version';
+	const OPTION_KEY = 'bromate_security_api_firewall_schema_version';
 
 	public static function install(): void {
-		$current = get_option( self::OPTION_KEY, '0.0.0' );
+		$current = get_option( self::OPTION_KEY, '1.7.2' );
 
-		if ( version_compare( $current, self::SCHEMA_VERSION, '>=' ) ) {
+		if ( version_compare( $current, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, '>=' ) ) {
 			return;
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		$wp_filesystem = new WP_Filesystem_Base;
+		$abspath = $wp_filesystem->abspath();
+
+		require_once  realpath( $abspath . 'wp-admin/includes/upgrade.php' );
 		global $wpdb;
 
 		self::create_ip_entries( $wpdb );
 		self::create_logs( $wpdb );
 
-		update_option( self::OPTION_KEY, self::SCHEMA_VERSION, false );
+		update_option( self::OPTION_KEY, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, false );
 	}
 
 	private static function create_ip_entries( \wpdb $wpdb ): void {

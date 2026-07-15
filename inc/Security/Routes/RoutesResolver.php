@@ -3,6 +3,8 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\Security\Routes\RoutesTreeRepository;
+use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
 use WP_REST_Request;
 
 class RoutesResolver {
@@ -30,7 +32,7 @@ class RoutesResolver {
 
 	protected static function resolve_for_route( string $route, string $method ): array {
 
-		$tree = RoutesPolicyRepository::get_routes_policy_tree();
+		$tree = RoutesTreeRepository::get_routes_policy_tree();
 
 		$node_chain = self::find_node_chain( $tree, $route );
 
@@ -155,7 +157,6 @@ class RoutesResolver {
 		$resolved = array(
 			'disabled' => false,
 			'protect'  => false,
-			'tags'     => array(),
 		);
 
 		foreach ( $node_settings_chain as $settings ) {
@@ -171,7 +172,6 @@ class RoutesResolver {
 		return array(
 			'disabled' => ! $final['disabled'],
 			'protect'  => $final['protect'],
-			'tags'     => $final['tags'] ?? array(),
 		);
 	}
 

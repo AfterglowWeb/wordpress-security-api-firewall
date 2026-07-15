@@ -30,7 +30,7 @@ class Documentation {
 
 	public static function read_pages() {
 
-		$docs_dir = BROMATE_REST_API_FIREWALL_DIR . 'docs';
+		$docs_dir = BROMATE_SECURITY_API_FIREWALL_DIR . 'docs';
 
 		if ( ! FileUtils::is_dir( $docs_dir ) ) {
 			return array();

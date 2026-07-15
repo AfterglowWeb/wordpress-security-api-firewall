@@ -39,7 +39,7 @@ final class Recaptcha {
 			'google-recaptcha',
 			'https://www.google.com/recaptcha/api.js?render=' . esc_attr( $options['site_key'] ),
 			array(),
-			BROMATE_REST_API_FIREWALL_VERSION,
+			BROMATE_SECURITY_API_FIREWALL_VERSION,
 			true
 		);
 	}
@@ -240,5 +240,10 @@ final class Recaptcha {
 		}
 
 		return false;
+	}
+
+	public static function sanitize_recaptcha_threshold( $value ): float {
+		$value = is_numeric( $value ) ? (float) $value : 0.5;
+		return max( 0.0, min( 1.0, $value ) );
 	}
 }

@@ -19,6 +19,12 @@ class SettingsRepository {
 		return isset( $options[ $option_key ] ) ? $options[ $option_key ] : false;
 	}
 
+	public static function read_option_settings( string $option_key ): array {
+		$option_key = sanitize_key( $option_key );
+		$options_config = SettingsConfig::options_config();
+		return isset( $options_config[ $option_key ] ) ? $options_config[ $option_key ] : [];
+	}
+
 	public static function update_options( array $new_options ): array {
 
 		$old_options       = self::read_options();
@@ -186,38 +192,4 @@ class SettingsRepository {
 		);
 	}
 
-	public static function get_jwks_endpoint(): array {
-		return array(
-			'endpoint' => sanitize_url( rest_url( 'bromate/v1/.well-known/jwks.json' ) ),
-		);
-	}
-
-	public static function sanitize_recaptcha_threshold( $value ): float {
-		$value = is_numeric( $value ) ? (float) $value : 0.5;
-		return max( 0.0, min( 1.0, $value ) );
-	}
-
-	public static function sanitize_2fa_policy( $value ): string {
-		$allowed = array( 'free', 'grace', 'mandatory' );
-		$value   = sanitize_text_field( $value );
-
-		if ( ! in_array( $value, $allowed, true ) ) {
-			return 'free';
-		}
-
-		return $value;
-	}
-
-	public static function sanitize_2fa_grace_period( $value ): int {
-		$value = absint( $value );
-
-		if ( $value < 1 ) {
-			return 1;
-		}
-		if ( $value > 30 ) {
-			return 30;
-		}
-
-		return $value;
-	}
 }

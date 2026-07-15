@@ -218,7 +218,9 @@ export default function RoutesPolicyTree({ tree, baselineTree, globals, defaultH
 			<Stack flexDirection="row" gap={2}>
 				<Chip size="small" label={`${customCount} custom rules`} />
 				<Stack flex={1} />
-				<Button startIcon={<RefreshIcon />}>{__('Refresh','bromate-security-api-firewall')}</Button>
+				<Button 
+				disabled={customCount < 1}
+				startIcon={<RefreshIcon />}>{__('Cancel All','bromate-security-api-firewall')}</Button>
 			</Stack>
 			<RoutePolicyTreeContext.Provider value={{ toggleSetting, getNode }}>
 				<RichTreeView<RouteNode>

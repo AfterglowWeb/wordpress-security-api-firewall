@@ -2,12 +2,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Authentication\AuthenticationManager;
 use Bromate\SecurityApiFirewall\Security\Firewall\RateLimiter;
 use Bromate\SecurityApiFirewall\Security\Firewall\IpAccessControl;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesResolver;
+use Bromate\SecurityApiFirewall\Security\WordPress\HttpHeaders;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -22,9 +22,9 @@ final class RestRequestBootstrap {
 
 		add_action(
 			'rest_pre_serve_request',
-			array( self::class, 'remove_cache_headers' ),
+			array( HttpHeaders::class, 'add_headers_to_rest' ),
 			10,
-			1
+			3
 		);
 
 		add_filter(
@@ -54,15 +54,6 @@ final class RestRequestBootstrap {
 			10,
 			1
 		);
-	}
-
-	public static function remove_cache_headers( $served ) {
-
-		header_remove( 'Cache-Control' );
-		header_remove( 'Expires' );
-		header_remove( 'Pragma' );
-
-		return $served;
 	}
 
 	public static function authenticate_request( $result, $request = null ) {
