@@ -18,7 +18,7 @@ class LogEntryAjaxController {
 	public function ajax_get_log_entries(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
@@ -45,7 +45,7 @@ class LogEntryAjaxController {
 	public function ajax_delete_log_entry(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -67,7 +67,7 @@ class LogEntryAjaxController {
 	public function ajax_delete_log_entries(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing

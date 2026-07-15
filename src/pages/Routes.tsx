@@ -32,7 +32,7 @@ export default function Routes(): JSX.Element {
 		routes_policy_hidden_methods:        [],
 		routes_policy_hidden_wp_objects:     [],
 		routes_policy_auth_enforce: false,
-		routes_policy_hidden_response_code:  '404',
+		routes_policy_hidden_routes_redirect_option:  '404',
 
 	});
 	const [loadedSettings, setLoadedSettings] = useState<RoutesSettings>(settings);

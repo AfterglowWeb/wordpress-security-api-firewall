@@ -14,7 +14,7 @@ import Divider from '@mui/material/Divider';
 
 const TEXT_DOMAIN = 'bromate-security-api-firewall';
 
-type RedirectFrontOptions = '404' | 'front' | 'login' | 'custom';
+type RedirectFrontOptions = '404' | '401' | '403' | 'front' | 'login' | 'custom';
 
 export interface RedirectFrontProps {
 	enabled: boolean;
@@ -67,7 +67,7 @@ export default function RedirectFront({
 				<Divider orientation="vertical" variant="middle" flexItem />
 				<Stack>
 					<Typography variant="h6">
-						{__('Redirect Front', 'bromate-security-api-firewall')}
+						{__('Redirect Theme', 'bromate-security-api-firewall')}
 					</Typography>
 					<Typography variant="caption" color="text.secondary">
 						{__(
@@ -83,6 +83,9 @@ export default function RedirectFront({
 				disabled={!enabled}
 				sx={{ display: 'block' }}
 			>
+				<Typography variant="subtitle1">
+					{__('Redirected Theme Response', 'bromate-security-api-firewall')}
+				</Typography>
 				<RadioGroup
 					value={options || '404'}
 					onChange={handleRedirectChange}
@@ -90,7 +93,17 @@ export default function RedirectFront({
 					<FormControlLabel
 						value="404"
 						control={<Radio size="small" />}
-						label={__('404 Raw Response', TEXT_DOMAIN)}
+						label={__('404 Not Found', TEXT_DOMAIN)}
+					/>
+					<FormControlLabel
+						value="403"
+						control={<Radio size="small" />}
+						label={__('403 Forbidden', TEXT_DOMAIN)}
+					/>
+					<FormControlLabel
+						value="401"
+						control={<Radio size="small" />}
+						label={__('401 Unauthorized', TEXT_DOMAIN)}
 					/>
 					<FormControlLabel
 						value="front"
@@ -107,7 +120,6 @@ export default function RedirectFront({
 						control={<Radio size="small" />}
 						label={__('Custom URL', TEXT_DOMAIN)}
 					/>
-
 					<Stack sx={{ pl: 4, mt: 1 }}>
 						<TextField
 							label={__('Custom URL', TEXT_DOMAIN)}
@@ -121,12 +133,9 @@ export default function RedirectFront({
 								options !== 'custom'
 							}
 							fullWidth
-							helperText={__(
-								'Full URL with protocol and domain',
-								TEXT_DOMAIN
-							)}
 						/>
 					</Stack>
+					
 				</RadioGroup>
 			</FormControl>
 		</Stack>

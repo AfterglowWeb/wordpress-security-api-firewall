@@ -229,7 +229,7 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			'routes_policy_hidden_response_code'       => array(
+			'routes_policy_hidden_routes_redirect_option'       => array(
 				'label'             => esc_html__( 'Hidden ressources response code', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'HTTP response code on hidden ressources.', 'bromate-security-api-firewall' ),
 				'default_value'     => '404',
@@ -237,9 +237,20 @@ final class SettingsConfig {
 					'401',
 					'403',
 					'404',
+					'login',
+					'front',
+					'custom'
 				),
 				'type'              => 'string',
-				'sanitize_callback' => array( RoutesPolicyRepository::class, 'sanitize_hidden_response_code' ),
+				'sanitize_callback' => array( RoutesPolicyRepository::class, 'sanitize_hidden_routes_redirect_option' ),
+				'group'             => 'routes',
+			),
+
+			'routes_policy_hidden_routes_redirect_user_url' => array(
+				'label'             => esc_html__( 'Custom URL', 'bromate-security-api-firewall' ),
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_url',
 				'group'             => 'routes',
 			),
 
@@ -447,11 +458,19 @@ final class SettingsConfig {
 				'options'           => array(
 					array(
 						'value' => '404',
-						'label' => esc_html__( 'Front Page', 'bromate-security-api-firewall' ),
+						'label' => esc_html__( '404 Not Found', 'bromate-security-api-firewall' ),
+					),
+					array(
+						'value' => '403',
+						'label' => esc_html__( '403 Forbidden', 'bromate-security-api-firewall' ),
+					),
+					array(
+						'value' => '401',
+						'label' => esc_html__( '401 Unauthorized', 'bromate-security-api-firewall' ),
 					),
 					array(
 						'value' => 'front',
-						'label' => esc_html__( 'Blog Page', 'bromate-security-api-firewall' ),
+						'label' => esc_html__( 'Front Page', 'bromate-security-api-firewall' ),
 					),
 					array(
 						'value' => 'login',

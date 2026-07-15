@@ -21,7 +21,7 @@ class AuthenticationAjaxController {
 
 	public function ajax_authorized_users_options(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 		$wordpress_users = SettingsRepository::authorized_users_options();
 		wp_send_json_success( $wordpress_users );
@@ -29,7 +29,7 @@ class AuthenticationAjaxController {
 
 	public function ajax_get_jwks_endpoint(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 		$wordpress_users = SettingsRepository::get_jwks_endpoint();
 		wp_send_json_success( $wordpress_users );
@@ -37,7 +37,7 @@ class AuthenticationAjaxController {
 
 	public function ajax_generate_jwt_key_pair(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		try {
@@ -70,7 +70,7 @@ class AuthenticationAjaxController {
 
 	public function ajax_check_jwt_key(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		wp_send_json_success(
@@ -83,7 +83,7 @@ class AuthenticationAjaxController {
 
 	public function ajax_delete_jwt_key(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		$deleted = JwtAuthenticator::delete_key_pair();
@@ -106,7 +106,7 @@ class AuthenticationAjaxController {
 
 	public function ajax_generate_jwt_subclaim(): void {
 		if (false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps()) {
-			wp_send_json_error(array('message' => esc_html__('Unauthorized', 'bromate-security-api-firewall')), 403);
+			wp_send_json_error(array('message' => esc_html__('Unauthorized', 'bromate-security-api-firewall')), 401);
 		}
  
 		$user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;

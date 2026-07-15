@@ -3,6 +3,9 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Throwable;
+use WP_Error;
+use WP_REST_Response;
 
 class RoutesPolicyRepository {
 
@@ -13,7 +16,7 @@ class RoutesPolicyRepository {
 		'routes_policy_default_hidden_routes' => false,
 		'routes_policy_hidden_methods'        => array(),
 		'routes_policy_hidden_wp_objects'     => array(),
-		'routes_policy_hidden_response_code'  => '404',
+		'routes_policy_hidden_routes_redirect_option'  => '404',
 		'redirect_front_enabled'              => false,
 		'redirect_front_options'              => '404',
 		'redirect_front_user_url'             => '',
@@ -86,7 +89,52 @@ class RoutesPolicyRepository {
 		}
 		return array_map( 'sanitize_text_field', $default_hidden_routes );
 	}
+    
 
+	public static function disabled_routes_response() {
+		$redirect_option = SettingsRepository::read_option('routes_policy_hidden_routes_redirect_option');
+		$redirect_user_url = SettingsRepository::read_option('routes_policy_hidden_routes_redirect_user_url');
+		
+		$redirect_url = '';
+		
+		switch ($redirect_option) {
+			case 'login':
+				$redirect_url = wp_login_url();
+				break;
+			case 'front':
+				$redirect_url = home_url();
+				break;
+			case 'custom':
+				$redirect_url = $redirect_user_url;
+				break;
+			default :
+				$redirect_url = ''; 
+		}
+
+		$code_message = '';
+		switch ($redirect_option) {
+			case '401':
+				$code_message = __('Unauthorized', 'bromate-security-api-firewall');
+				break;
+			case '404':
+				$code_message = __('The ressource doesn\'t exist', 'bromate-security-api-firewall');
+				break;
+			case '403':
+				$code_message = __('Forbidden', 'bromate-security-api-firewall');
+				break;
+			default :
+				$code_message = '';
+				break;
+		}
+
+		return [
+			'redirect_option' => $redirect_option,
+			'redirect_url' => $redirect_url,
+			'code_message' => $code_message,
+		];
+
+		
+	}
 
 	public static function sanitize_hidden_methods( $value ): array {
 		if ( ! is_array( $value ) ) {
@@ -128,9 +176,9 @@ class RoutesPolicyRepository {
 		);
 	}
 
-	public static function sanitize_hidden_response_code( $value ): string {
+	public static function sanitize_hidden_routes_redirect_option( $value ): string {
 		$value = sanitize_text_field( (string) $value );
-		return in_array( $value, array( '401', '403', '404' ), true ) ? $value : '404';
+		return in_array( $value, array( '401', '403', '404', 'login', 'front', 'custom' ), true ) ? $value : '404';
 	}
 
 	public static function get_routes_policy_tree(): array {
@@ -147,7 +195,7 @@ class RoutesPolicyRepository {
 			$result         = SettingsRepository::update_option( 'routes_policy_tree', $sanitized_tree );
 
 			return false !== $result;
-		} catch ( \Throwable $e ) {
+		} catch ( Throwable $e ) {
 			return false;
 		}
 	}

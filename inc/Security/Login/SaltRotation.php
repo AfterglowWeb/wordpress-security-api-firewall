@@ -121,7 +121,7 @@ class SaltRotation {
 	public static function ajax_salt_rotation_status(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		wp_send_json_success(
@@ -136,7 +136,7 @@ class SaltRotation {
 	public static function ajax_rotate_salt_now(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		self::rotate_salt_now();

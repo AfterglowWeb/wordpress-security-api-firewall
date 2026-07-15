@@ -32,7 +32,8 @@ export type RoutesSettings = {
   routes_policy_hidden_methods:        string[];
   routes_policy_hidden_wp_objects:     string[];
   routes_policy_auth_enforce:          boolean;
-  routes_policy_hidden_response_code:  '401' | '403' | '404';
+  routes_policy_hidden_routes_redirect_option:  '401' | '403' | '404' | 'front' | 'login' | 'custom';
+  routes_policy_hidden_routes_redirect_user_url: string;
 };
 
 export type RoutesPolicyTreeProps = {
