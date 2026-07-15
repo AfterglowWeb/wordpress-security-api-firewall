@@ -71,7 +71,7 @@ class DisableEmbeds {
 
 	public static function ajax_flush_rewrite_rules(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		flush_rewrite_rules( false );

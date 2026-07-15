@@ -75,7 +75,7 @@ final class TOTPController {
 
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 403 );
+			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 401 );
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in self::validate_ajax_nonce()
@@ -147,7 +147,7 @@ final class TOTPController {
 
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 403 );
+			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 401 );
 			return;
 		}
 
@@ -183,7 +183,7 @@ final class TOTPController {
 
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 403 );
+			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 401 );
 			return;
 		}
 
@@ -208,7 +208,7 @@ final class TOTPController {
 
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 403 );
+			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 401 );
 			return;
 		}
 

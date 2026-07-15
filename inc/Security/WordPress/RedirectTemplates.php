@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use WP_Query;
 
 class RedirectTemplates {
 
@@ -52,7 +53,9 @@ class RedirectTemplates {
 				status_header( 404 );
 				nocache_headers();
 				global $wp_query;
-				$wp_query->set_404();
+				if( $wp_query instanceof WP_Query) {
+					$wp_query->set_404();
+				}
 				add_filter( 'pre_handle_404', '__return_true' );
 				die( '404 - Page Not Found' );
 		}

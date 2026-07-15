@@ -26,7 +26,7 @@ class RoutesPolicyTest {
 
 	public function ajax_run_policy_test() {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
@@ -166,21 +166,26 @@ class RoutesPolicyTest {
 		return $results;
 	}
 
-	protected function get_model_for_route( string $route ): ?array {
+	protected function get_model_for_route( string $route ): array {
 
 		$post_type = $this->post_type_from_route( $route );
 		if ( ! $post_type ) {
-			return null;
+			return [];
+		}
+		
+		if( ! class_exists( '\Bromate\RestApiModels\Models\ModelsRepository' ) ) {
+			return [];
 		}
 
-		return \cmk\SecurityApiFirewallPro\Models\ModelRepository::find_enabled_by_object_type(
+		$model_repository = new \Bromate\RestApiModels\Models\ModelsRepository;
+		return $model_repository->get_by_object_type(
 			$post_type
 		);
 	}
 
 	protected function post_type_from_route( string $route ): ?string {
 		if ( ! preg_match( '#^/wp/v2/([^/]+)#', $route, $m ) ) {
-			return null;
+			return [];
 		}
 
 		$segment = $m[1];
@@ -192,7 +197,7 @@ class RoutesPolicyTest {
 			}
 		}
 
-		return null;
+		return [];
 	}
 
 	protected function fetch_data( string $route, string $method ): array {

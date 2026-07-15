@@ -26,7 +26,7 @@ class IpEntryAjaxController {
 	public function ajax_get_ip_entries(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -40,7 +40,7 @@ class IpEntryAjaxController {
 	public function ajax_get_login_ip_entries(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -54,7 +54,7 @@ class IpEntryAjaxController {
 	public function ajax_add_ip_entry(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
@@ -106,7 +106,7 @@ class IpEntryAjaxController {
 	public function ajax_update_ip_entry(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
@@ -159,7 +159,7 @@ class IpEntryAjaxController {
 	public function ajax_delete_ip_entry(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -181,7 +181,7 @@ class IpEntryAjaxController {
 	public function ajax_delete_ip_entries(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -201,7 +201,7 @@ class IpEntryAjaxController {
 
 	public function ajax_get_user_ip_entries(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -218,7 +218,7 @@ class IpEntryAjaxController {
 	public function ajax_get_country_stats(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -238,7 +238,7 @@ class IpEntryAjaxController {
 	public function ajax_toggle_country_block(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing

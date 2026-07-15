@@ -33,7 +33,7 @@ class SessionManager {
 	public static function ajax_revoke_users_sessions(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		$affected = self::revoke_users_sessions();
@@ -50,7 +50,7 @@ class SessionManager {
 	public static function ajax_revoke_user_sessions(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		if ( ! isset( $_POST['user_id'] ) ) {
@@ -72,7 +72,7 @@ class SessionManager {
 	public static function ajax_get_users_sessions(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		wp_send_json_success(
@@ -86,7 +86,7 @@ class SessionManager {
 	public static function ajax_get_user_sessions(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 403 );
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
 		if ( ! isset( $_POST['user_id'] ) ) {

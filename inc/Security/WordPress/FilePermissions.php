@@ -32,7 +32,7 @@ class FilePermissions {
 
 	public function ajax_update_file_permissions(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		$permissions = $this->read_wp_config_permissions();
@@ -76,7 +76,7 @@ class FilePermissions {
 
 	public function ajax_get_file_status(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		$wpconfig_perms  = $this->read_wp_config_permissions();
@@ -99,7 +99,7 @@ class FilePermissions {
 
 	public function ajax_protect_uploads_dir(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 403 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		$upload_dir   = wp_upload_dir();

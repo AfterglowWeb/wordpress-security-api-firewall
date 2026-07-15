@@ -2,12 +2,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Authentication\AuthenticationManager;
 use Bromate\SecurityApiFirewall\Security\Firewall\RateLimiter;
 use Bromate\SecurityApiFirewall\Security\Firewall\IpAccessControl;
+use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesResolver;
 use WP_Error;
 use WP_REST_Request;
+use WP_REST_Response;
 
 final class RestRequestBootstrap {
 
@@ -102,10 +105,28 @@ final class RestRequestBootstrap {
 			return $result;
 		}
 
+		return self::disabled_routes_response();
+	}
+
+	public static function disabled_routes_response() {
+
+		$response = RoutesPolicyRepository::disabled_routes_response();
+		$redirect_url = isset( $response['redirect_url'] ) ? $response['redirect_url'] : '';
+		$response_code = isset($response['redirect_option']) && is_numeric($response['redirect_option']) ? (int) $response['redirect_option'] : 403;
+		$response_code_message = isset($response['code_message']) ? $response['code_message'] : '';
+		
+		if (! empty( $redirect_url ) ) {
+			return new WP_REST_Response(
+				[],
+				302,
+				['Location' => $redirect_url]
+			);
+		}
+
 		return new WP_Error(
 			'rest_firewall_route_disabled',
-			__( 'This route is disabled by the REST API firewall policy.', 'bromate-security-api-firewall' ),
-			array( 'status' => 403 )
+			$response_code_message,
+			['status' => $response_code]
 		);
 	}
 
