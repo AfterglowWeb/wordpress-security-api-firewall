@@ -57,34 +57,34 @@ class AdminPage {
 			return;
 		}
 
-		$mui_config       = FileUtils::load_script_config( BROMATE_REST_API_FIREWALL_DIR . 'build/mui.asset.php' );
+		$mui_config       = FileUtils::load_script_config( BROMATE_SECURITY_API_FIREWALL_DIR . 'build/mui.asset.php' );
 		$mui_dependencies = ! empty( $mui_config ) && isset( $mui_config['dependencies'] ) ? $mui_config['dependencies'] : array();
 		$mui_dependencies = array_unique( $mui_dependencies );
 		wp_enqueue_script(
 			'bromate-security-api-firewall-mui',
-			BROMATE_REST_API_FIREWALL_URL . 'build/mui.js',
+			BROMATE_SECURITY_API_FIREWALL_URL . 'build/mui.js',
 			$mui_dependencies,
 			$mui_config['version'],
 			true
 		);
 
-		$mui_datagrid_config       = FileUtils::load_script_config( BROMATE_REST_API_FIREWALL_DIR . 'build/mui-datagrid.asset.php' );
+		$mui_datagrid_config       = FileUtils::load_script_config( BROMATE_SECURITY_API_FIREWALL_DIR . 'build/mui-datagrid.asset.php' );
 		$mui_datagrid_dependencies = ! empty( $mui_datagrid_config ) && isset( $mui_datagrid_config['dependencies'] ) ? $mui_datagrid_config['dependencies'] : array();
 		$mui_datagrid_dependencies = array_unique( array_merge( array( 'bromate-security-api-firewall-mui' ), $mui_datagrid_dependencies ) );
 		wp_enqueue_script(
 			'bromate-security-api-firewall-mui-datagrid',
-			BROMATE_REST_API_FIREWALL_URL . 'build/mui-datagrid.js',
+			BROMATE_SECURITY_API_FIREWALL_URL . 'build/mui-datagrid.js',
 			$mui_datagrid_dependencies,
 			$mui_datagrid_config['version'],
 			true
 		);
 
-		$index_script_config = FileUtils::load_script_config( BROMATE_REST_API_FIREWALL_DIR . 'build/index.asset.php' );
+		$index_script_config = FileUtils::load_script_config( BROMATE_SECURITY_API_FIREWALL_DIR . 'build/index.asset.php' );
 		$index_dependencies  = ! empty( $index_script_config ) && isset( $index_script_config['dependencies'] ) ? $index_script_config['dependencies'] : array();
 		$index_dependencies  = array_unique( array_merge( array( 'bromate-security-api-firewall-mui' ), $index_dependencies ) );
 		wp_enqueue_script(
 			'bromate-security-api-firewall',
-			BROMATE_REST_API_FIREWALL_URL . 'build/index.js',
+			BROMATE_SECURITY_API_FIREWALL_URL . 'build/index.js',
 			$index_dependencies,
 			$index_script_config['version'],
 			true
@@ -99,7 +99,7 @@ class AdminPage {
 				'options'             => SettingsRepository::read_options(),
 				'plugin'              => array(
 					'name'    => 'WP Security & API Firewall',
-					'version' => BROMATE_REST_API_FIREWALL_VERSION,
+					'version' => BROMATE_SECURITY_API_FIREWALL_VERSION,
 				),
 				'currentUser'         => array(
 					'id'    => $user->ID,
@@ -138,7 +138,7 @@ class AdminPage {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 
-		$plugin_data = get_plugin_data( BROMATE_REST_API_FIREWALL_FILE );
+		$plugin_data = get_plugin_data( BROMATE_SECURITY_API_FIREWALL_FILE );
 
 		if ( ! is_array( $plugin_data ) ) {
 			return;

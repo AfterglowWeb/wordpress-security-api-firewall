@@ -11,7 +11,7 @@ final class TOTPController {
 	private const ENABLED_META_KEY            = '_bromate_totp_enabled';
 	private const USER_SETTINGS_META_KEY      = '_bromate_totp_settings';
 	private const SESSION_VERIFIED_META_KEY   = '_bromate_totp_session_verified';
-	private const ACTIVATION_OPTION_KEY       = 'bromate_login_2fa_activated_at';
+	private const ACTIVATION_OPTION_KEY       = 'bromate_login_totp_activated_at';
 	private const REMINDER_DISMISSED_META_KEY = '_bromate_totp_reminder_dismissed_at';
 
 	public function __construct() {}
@@ -271,23 +271,23 @@ final class TOTPController {
 		$is_profile_page = 'profile.php' === $pagenow;
 		$show_dialog     = self::should_show_dialog( $user_id, $settings, $is_user_enabled );
 
-		$mui_script_config = FileUtils::load_script_config( BROMATE_REST_API_FIREWALL_DIR . 'build/mui.asset.php' );
+		$mui_script_config = FileUtils::load_script_config( BROMATE_SECURITY_API_FIREWALL_DIR . 'build/mui.asset.php' );
 		$mui_dependencies  = ! empty( $mui_script_config ) && isset( $mui_script_config['dependencies'] ) ? $mui_script_config['dependencies'] : array();
 
 		wp_enqueue_script(
 			'bromate-security-api-firewall-totp-mui',
-			BROMATE_REST_API_FIREWALL_URL . 'build/mui.js',
+			BROMATE_SECURITY_API_FIREWALL_URL . 'build/mui.js',
 			$mui_dependencies,
 			$mui_script_config['version'],
 			true
 		);
 
-		$totp_script_config = FileUtils::load_script_config( BROMATE_REST_API_FIREWALL_DIR . 'build/index.asset.php' );
+		$totp_script_config = FileUtils::load_script_config( BROMATE_SECURITY_API_FIREWALL_DIR . 'build/index.asset.php' );
 		$totp_dependencies  = ! empty( $totp_script_config ) && isset( $totp_script_config['dependencies'] ) ? $totp_script_config['dependencies'] : array();
 
 		wp_enqueue_script(
 			'bromate-security-api-firewall-totp',
-			BROMATE_REST_API_FIREWALL_URL . 'build/totp.js',
+			BROMATE_SECURITY_API_FIREWALL_URL . 'build/totp.js',
 			array_merge( $totp_dependencies, array( 'bromate-security-api-firewall-totp-mui' ) ),
 			$totp_script_config['version'],
 			true
@@ -318,7 +318,7 @@ final class TOTPController {
 			return null;
 		}
 
-		$activated_at = (int) SettingsRepository::read_option( 'login_2fa_enabled_timestamp' );
+		$activated_at = (int) SettingsRepository::read_option( 'login_totp_enabled_timestamp' );
 		if ( ! $activated_at ) {
 			return (int) $settings['grace_period'];
 		}
@@ -407,10 +407,10 @@ final class TOTPController {
 		);
 
 		$settings = array(
-			'enabled'      => SettingsRepository::read_option( 'login_2fa_enabled' ),
-			'issuer'       => SettingsRepository::read_option( 'login_2fa_issuer' ),
-			'policy'       => SettingsRepository::read_option( 'login_2fa_policy' ),
-			'grace_period' => SettingsRepository::read_option( 'login_2fa_grace_period' ),
+			'enabled'      => SettingsRepository::read_option( 'login_totp_enabled' ),
+			'issuer'       => SettingsRepository::read_option( 'login_totp_issuer' ),
+			'policy'       => SettingsRepository::read_option( 'login_totp_policy' ),
+			'grace_period' => SettingsRepository::read_option( 'login_totp_grace_period' ),
 		);
 
 		return wp_parse_args( $settings, $defaults );

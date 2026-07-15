@@ -22,6 +22,7 @@ import {
   Divider,
   MenuItem,
   CircularProgress,
+  Skeleton
 } from '@mui/material';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
@@ -41,10 +42,10 @@ interface LoginSettings {
   login_recaptcha_secret_key: string;
   login_recaptcha_threshold: number;
 
-  login_2fa_enabled: boolean;
-  login_2fa_issuer: string;
-  login_2fa_policy: 'grace' | 'mandatory' | 'free';
-  login_2fa_grace_period: number;
+  login_totp_enabled: boolean;
+  login_totp_issuer: string;
+  login_totp_policy: 'grace' | 'mandatory' | 'free';
+  login_totp_grace_period: number;
 
   cookie_hardening_samesite_enabled: boolean;
   cookie_hardening_samesite_mode: 'Strict' | 'Lax';
@@ -68,10 +69,10 @@ const DEFAULT_SETTINGS: LoginSettings = {
   login_recaptcha_secret_key: '',
   login_recaptcha_threshold: 0.5,
 
-  login_2fa_enabled: false,
-  login_2fa_issuer: 'Bromate REST API',
-  login_2fa_policy: 'grace',
-  login_2fa_grace_period: 7,
+  login_totp_enabled: false,
+  login_totp_issuer: 'Bromate REST API',
+  login_totp_policy: 'grace',
+  login_totp_grace_period: 7,
 
   cookie_hardening_samesite_enabled: false,
   cookie_hardening_samesite_mode: 'Strict',
@@ -229,14 +230,15 @@ export default function LoginHardening(): JSX.Element {
   }, [openDialog, handleRevokeAll]);
 
   if (loading) {
-    return (
-      <Stack spacing={3} p={2}>
-        <Paper sx={{ p: 2 }} elevation={0}>
-          <Typography>Loading...</Typography>
-        </Paper>
-      </Stack>
-    );
-  }
+		return (
+			<Stack spacing={3}>
+				<Skeleton variant="rounded" width={'100%'} height={50} />
+				<Skeleton variant="rounded" width={'100%'} height={120} />
+				<Skeleton variant="rectangular" width={'100%'} height={200} />
+				<Skeleton variant="rectangular" width={'100%'} height={600} />
+			</Stack>
+		);
+	}
 
   return (
     <Stack spacing={3} p={0}>
@@ -394,7 +396,7 @@ export default function LoginHardening(): JSX.Element {
           </Stack>
       </Paper>
 
-      {/* 2FA Section */}
+      {/* TOTP Section */}
       <Paper sx={{ p: 2 }} elevation={0}>
         <Stack flexDirection="column" gap={2}>
 
@@ -403,9 +405,9 @@ export default function LoginHardening(): JSX.Element {
               label={__('Enable', 'bromate-security-api-firewall')}
               control={
                 <Switch
-                checked={settings.login_2fa_enabled}
+                checked={settings.login_totp_enabled}
                   onChange={(e) =>
-                  updateSetting('login_2fa_enabled', e.target.checked)
+                  updateSetting('login_totp_enabled', e.target.checked)
                   }
                 />
               }
@@ -419,9 +421,9 @@ export default function LoginHardening(): JSX.Element {
             <TextField
               label={__('Issuer Name', 'bromate-security-api-firewall')}
               size="small"
-              value={settings.login_2fa_issuer}
+              value={settings.login_totp_issuer}
               onChange={(e) =>
-                updateSetting('login_2fa_issuer', e.target.value)
+                updateSetting('login_totp_issuer', e.target.value)
               }
               sx={{ maxWidth: 400 }}
               helperText={__('Name shown in your authentication app', 'bromate-security-api-firewall')}
@@ -433,9 +435,9 @@ export default function LoginHardening(): JSX.Element {
               {__('Enforcement Policy', 'bromate-security-api-firewall')}
             </Typography>
             <RadioGroup
-              value={settings.login_2fa_policy || 'grace'}
+              value={settings.login_totp_policy || 'grace'}
               onChange={(e) =>
-                updateSetting('login_2fa_policy', e.target.value as 'grace' | 'mandatory' | 'free')
+                updateSetting('login_totp_policy', e.target.value as 'grace' | 'mandatory' | 'free')
               }
             >
               <FormControlLabel
@@ -471,9 +473,9 @@ export default function LoginHardening(): JSX.Element {
                     label={__('Grace Period (days)', 'bromate-security-api-firewall')}
                     type="number"
                     size="small"
-                    value={settings.login_2fa_grace_period || 7}
+                    value={settings.login_totp_grace_period || 7}
                     onChange={(e) =>
-                      updateSetting('login_2fa_grace_period', Number(e.target.value))
+                      updateSetting('login_totp_grace_period', Number(e.target.value))
                     }
                     slotProps={{ htmlInput: { min: 1, max: 30 } }}
                     helperText={__('Number of days before 2FA becomes mandatory', 'bromate-security-api-firewall')}

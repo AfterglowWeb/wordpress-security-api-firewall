@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from '@wordpress/element';
-import { Box, Grid, Paper, Typography, Stack, Chip, Card, CardContent, useTheme, CircularProgress } from '@mui/material';
+import { Box, Grid, Paper, Typography, Stack, Chip, Card, CardContent, useTheme, CircularProgress, Skeleton } from '@mui/material';
 import type { SecurityModule } from '@app-types/modules';
 import { SettingsAPI } from '@services/settings';
 
@@ -102,7 +102,7 @@ export default function Dashboard(): JSX.Element {
 				enabled: getGroupEnabledStatus(settings, [
 					'login_rate_limit_enabled',
 					'login_recaptcha_enabled',
-					'login_2fa_enabled',
+					'login_totp_enabled',
 					'salt_rotation_enabled',
 					'redirect_front_enabled'
 				]),
@@ -165,9 +165,10 @@ export default function Dashboard(): JSX.Element {
 
 	if (loading) {
 		return (
-			<Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-				<CircularProgress />
-			</Box>
+			<Stack spacing={3}>
+				<Skeleton variant="rectangular" width={'100%'} height={330} />
+				<Skeleton variant="rectangular" width={'100%'} height={630} />
+			</Stack>
 		);
 	}
 

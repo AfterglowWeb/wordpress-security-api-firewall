@@ -62,4 +62,10 @@ class JwksEndpoint {
 		$response->header( 'Expires', '0' );
 		return $response;
 	}
+
+	public static function get_jwks_endpoint(): array {
+		return array(
+			'endpoint' => sanitize_url( rest_url( 'bromate/v1/.well-known/jwks.json' ) ),
+		);
+	}
 }

@@ -3,7 +3,8 @@
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\WordPressObjects;
-use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
+use Bromate\SecurityApiFirewall\Security\Routes\RoutesTreeRepository;
+use Bromate\SecurityApiFirewall\Security\WordPress\HttpHeaders;
 
 class SettingsAjaxController {
 
@@ -21,6 +22,7 @@ class SettingsAjaxController {
 		add_action( 'wp_ajax_bromate_save_routes_policy_tree', array( $self, 'ajax_save_routes_policy_tree' ) );
 		add_action( 'wp_ajax_bromate_save_all_routes_settings', array( $self, 'ajax_save_all_routes_settings' ) );
 		add_action( 'wp_ajax_bromate_wordpress_objects_options', array( $self, 'ajax_wordpress_objects_options' ) );
+		add_action( 'wp_ajax_bromate_get_headers_options', array( $self, 'ajax_get_headers_options' ) );
 	}
 
 	public function ajax_read_options() {
@@ -103,6 +105,14 @@ class SettingsAjaxController {
 		wp_send_json_success( $wordpress_objects );
 	}
 
+	public function ajax_get_headers_options(): void {
+		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+		
+		wp_send_json_success( HttpHeaders::get_all_headers_options() );
+	}
+
 	public static function ajax_validate_has_firewall_admin_caps(): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified below via wp_verify_nonce
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
@@ -128,7 +138,7 @@ class SettingsAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		$routes_tree = RoutesPolicyRepository::get_routes_policy_tree();
+		$routes_tree = RoutesTreeRepository::get_routes_policy_tree();
 		wp_send_json_success(
 			array(
 				'tree' => $routes_tree,
@@ -212,7 +222,7 @@ class SettingsAjaxController {
 			);
 		}
 
-		$saved = RoutesPolicyRepository::save_routes_policy_tree( $tree );
+		$saved = RoutesTreeRepository::save_routes_policy_tree( $tree );
 
 		if ( ! $saved ) {
 			wp_send_json_error(

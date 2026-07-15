@@ -31,7 +31,7 @@ class AuthenticationAjaxController {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
-		$wordpress_users = SettingsRepository::get_jwks_endpoint();
+		$wordpress_users = JwksEndpoint::get_jwks_endpoint();
 		wp_send_json_success( $wordpress_users );
 	}
 

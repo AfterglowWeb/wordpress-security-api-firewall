@@ -25,7 +25,7 @@ final class TOTPLoginService {
 
 	public static function register(): void {
 		$service = new self();
-		if ( empty( SettingsRepository::read_option( 'login_2fa_enabled' ) ) ) {
+		if ( empty( SettingsRepository::read_option( 'login_totp_enabled' ) ) ) {
 			return;
 		}
 
@@ -90,9 +90,9 @@ final class TOTPLoginService {
 
 		wp_enqueue_script(
 			'bromate-totp-login',
-			BROMATE_REST_API_FIREWALL_URL . 'public/js/totp-login.js',
+			BROMATE_SECURITY_API_FIREWALL_URL . 'public/js/totp-login.js',
 			array( 'jquery' ),
-			BROMATE_REST_API_FIREWALL_VERSION,
+			BROMATE_SECURITY_API_FIREWALL_VERSION,
 			true
 		);
 

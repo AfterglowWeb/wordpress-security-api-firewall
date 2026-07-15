@@ -246,4 +246,28 @@ final class TOTPRepository {
 			)
 		);
 	}
+
+	public static function sanitize_totp_policy( $value ): string {
+		$allowed = array( 'free', 'grace', 'mandatory' );
+		$value   = sanitize_text_field( $value );
+
+		if ( ! in_array( $value, $allowed, true ) ) {
+			return 'free';
+		}
+
+		return $value;
+	}
+
+	public static function sanitize_totp_grace_period( $value ): int {
+		$value = absint( $value );
+
+		if ( $value < 1 ) {
+			return 1;
+		}
+		if ( $value > 30 ) {
+			return 30;
+		}
+
+		return $value;
+	}
 }

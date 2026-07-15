@@ -17,18 +17,12 @@ const DEFAULT_SETTINGS: AuthSettings = {
   auth_jwt_jwks_url: ''
 };
 
-// Starts as loading=true, count=0: AuthOptions treats "loading" as
-// blocking (fail-closed) so an in-flight fetch can never be read as
-// "confirmed zero users" and let a save through.
 const DEFAULT_AUTHORIZED_USERS_INFO: AuthorizedUsersInfo = { count: 0, loading: true };
 
 export default function Authentication(): JSX.Element {
   const [settings, setSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
   const [loadedSettings, setLoadedSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Owned here, not in AuthOptions: the authorized users list lives in
-  // AuthorizedUsersGrid (which persists its own changes instantly), but
-  // AuthOptions' save button needs to know whether at least one exists.
   const [authorizedUsersInfo, setAuthorizedUsersInfo] = useState<AuthorizedUsersInfo>(DEFAULT_AUTHORIZED_USERS_INFO);
 
   useEffect(() => {

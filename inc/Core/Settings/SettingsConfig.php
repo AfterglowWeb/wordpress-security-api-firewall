@@ -2,7 +2,10 @@
 
 use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
 use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
+use Bromate\SecurityApiFirewall\Security\Login\Recaptcha;
+use Bromate\SecurityApiFirewall\Security\Login\TOTPRepository;
 use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
+use Bromate\SecurityApiFirewall\Security\WordPress\HttpHeaders;
 
 final class SettingsConfig {
 
@@ -332,11 +335,11 @@ final class SettingsConfig {
 				'info'              => esc_html__( 'Minimum score (0.0–1.0) required to pass verification.', 'bromate-security-api-firewall' ),
 				'default_value'     => 0.5,
 				'type'              => 'float',
-				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_recaptcha_threshold' ),
+				'sanitize_callback' => array( Recaptcha::class, 'sanitize_recaptcha_threshold' ),
 				'group'             => 'login-hardening',
 			),
 
-			'login_2fa_enabled'                        => array(
+			'login_totp_enabled'                        => array(
 				'label'             => esc_html__( 'Enable Two-Factor Authentication', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Require a TOTP code in addition to the password on login.', 'bromate-security-api-firewall' ),
 				'default_value'     => false,
@@ -345,7 +348,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_2fa_enabled_timestamp'              => array(
+			'login_totp_enabled_timestamp'              => array(
 				'label'             => esc_html__( 'Two-Factor Authentication Activation Timestamp', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Internal: records when 2FA was globally enabled, used to compute the grace period.', 'bromate-security-api-firewall' ),
 				'default_value'     => 0,
@@ -354,7 +357,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_2fa_issuer'                         => array(
+			'login_totp_issuer'                         => array(
 				'label'             => esc_html__( '2FA issuer name', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Organization name shown in authenticator apps.', 'bromate-security-api-firewall' ),
 				'default_value'     => sanitize_text_field( get_bloginfo( 'sitename' ) ),
@@ -363,21 +366,21 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_2fa_policy'                         => array(
+			'login_totp_policy'                         => array(
 				'label'             => esc_html__( '2FA Enforcement Policy', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Determines how users are required to set up two-factor authentication.', 'bromate-security-api-firewall' ),
 				'default_value'     => 'grace',
 				'type'              => 'string',
-				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_2fa_policy' ),
+				'sanitize_callback' => array( TOTPRepository::class, 'sanitize_totp_policy' ),
 				'group'             => 'login-hardening',
 			),
 
-			'login_2fa_grace_period'                   => array(
+			'login_totp_grace_period'                   => array(
 				'label'             => esc_html__( '2FA Grace Period (days)', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Number of days users have to enable 2FA before it becomes mandatory.', 'bromate-security-api-firewall' ),
 				'default_value'     => 7,
 				'type'              => 'integer',
-				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_2fa_grace_period' ),
+				'sanitize_callback' => array( TOTPRepository::class, 'sanitize_totp_grace_period' ),
 				'group'             => 'login-hardening',
 			),
 
@@ -561,6 +564,140 @@ final class SettingsConfig {
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'wordpress',
+			),
+
+			'http_headers_secure_options' => array(
+				'default_value'     => false,
+				'type'              => 'array',
+				'sanitize_callback' => array(HttpHeaders::class, 'sanitize_secure_headers'),
+				'options'           => [
+					'x_powered_by' => [
+						'type' => 'boolean',
+						'label' => __('Remove X-Powered-By', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'server' => [
+						'type' => 'boolean',
+						'label' => __('Remove Server', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'x_generator' => [
+						'type' => 'boolean',
+						'label' => __('Remove X-Generator', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'referrer_policy' => [
+						'type' => 'string',
+						'label' => __('Referrer Policy', 'bromate-security-api-firewall'),
+						'default' => 'strict-origin-when-cross-origin',
+						'options' => [
+							'no-referrer',
+							'no-referrer-when-downgrade',
+							'origin',
+							'origin-when-cross-origin',
+							'same-origin',
+							'strict-origin',
+							'strict-origin-when-cross-origin',
+							'unsafe-url',
+						],
+					],
+					'cross_origin_resource_policy' => [
+						'type' => 'string',
+						'label' => __('Cross-Origin Resource Policy', 'bromate-security-api-firewall'),
+						'default' => 'same-site',
+						'options' => [
+							'same-origin',
+							'same-site',
+							'cross-origin',
+						],
+					],
+					'x_content_type_options' => [
+						'type' => 'boolean',
+						'label' => __('Enable X-Content-Type-Options', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'x_frame_options' => [
+						'type' => 'boolean',
+						'label' => __('Enable X-Frame-Options', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'strict_transport_security' => [
+						'type' => 'boolean',
+						'label' => __('Enable Strict-Transport-Security', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'content_security_policy' => [
+						'type' => 'string',
+						'label' => __('Content Security Policy', 'bromate-security-api-firewall'),
+						'default' => '',
+					],
+					'permissions_policy' => [
+						'type' => 'string',
+						'label' => __('Permissions Policy', 'bromate-security-api-firewall'),
+						'default' => '',
+					],
+				],
+				'group'             => 'wordpress',
+			),
+
+			'http_headers_caching'                      => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'wordpress',
+			),
+
+			'http_headers_caching_options' => array(
+				'default_value'     => false,
+				'type'              => 'array',
+				'sanitize_callback' => array(HttpHeaders::class, 'sanitize_caching_headers'),
+				'options'           => [
+					'no_cache' => [
+						'type' => 'boolean',
+						'label' => __('No-Cache', 'bromate-security-api-firewall'),
+						'default' => false,
+					],
+					'no_store' => [
+						'type' => 'boolean',
+						'label' => __('No-Store', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'must_revalidate' => [
+						'type' => 'boolean',
+						'label' => __('Must-Revalidate', 'bromate-security-api-firewall'),
+						'default' => false,
+					],
+					'public' => [
+						'type' => 'boolean',
+						'label' => __('Public', 'bromate-security-api-firewall'),
+						'default' => false,
+					],
+					'private' => [
+						'type' => 'boolean',
+						'label' => __('Private', 'bromate-security-api-firewall'),
+						'default' => false,
+					],
+					'max_age' => [
+						'type' => 'integer',
+						'label' => __('Max Age (seconds)', 'bromate-security-api-firewall'),
+						'default' => 0,
+						'min' => 0,
+						'max' => 31536000,
+					],
+					'pragma_no_cache' => [
+						'type' => 'boolean',
+						'label' => __('Pragma: No-Cache', 'bromate-security-api-firewall'),
+						'default' => true,
+					],
+					'expires' => [
+						'type' => 'integer',
+						'label' => __('Expires (seconds)', 'bromate-security-api-firewall'),
+						'default' => 0,
+						'min' => 0,
+						'max' => 31536000,
+					]
+				],
 				'group'             => 'wordpress',
 			),
 
