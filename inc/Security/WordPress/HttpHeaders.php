@@ -16,41 +16,40 @@ class HttpHeaders {
     }
     
     private function __construct() {
-        add_action('wp_headers', [$this, 'remove_wp_headers'], 10, 1);
 
-		add_filter('rest_pre_serve_request', [$this, 'add_headers_to_rest'], 10, 3);
+        add_action('wp_headers', [self::class, 'remove_wp_headers'], 10, 1);
         
-        add_action('template_redirect', [$this, 'send_headers_early'], 1);
+        add_action('template_redirect', [self::class, 'send_headers_early'], 1);
         
-        add_action('admin_init', [$this, 'send_headers_early'], 1);
+        add_action('admin_init', [self::class, 'send_headers_early'], 1);
         
-        add_action('login_init', [$this, 'send_headers_early'], 1);
+        add_action('login_init', [self::class, 'send_headers_early'], 1);
         
-        add_action('do_feed', [$this, 'send_headers_early'], 1);
-        add_action('do_feed_rss', [$this, 'send_headers_early'], 1);
-        add_action('do_feed_rss2', [$this, 'send_headers_early'], 1);
-        add_action('do_feed_atom', [$this, 'send_headers_early'], 1);
+        add_action('do_feed', [self::class, 'send_headers_early'], 1);
+        add_action('do_feed_rss', [self::class, 'send_headers_early'], 1);
+        add_action('do_feed_rss2', [self::class, 'send_headers_early'], 1);
+        add_action('do_feed_atom', [self::class, 'send_headers_early'], 1);
         
-        add_action('wp', [$this, 'send_headers_on_404'], 1);
+        add_action('wp', [self::class, 'send_headers_on_404'], 1);
     }
 
-    public function send_headers_early(): void {
+    public static function send_headers_early(): void {
         if (headers_sent()) {
             return;
         }
         
-        $this->send_security_headers();
-        $this->send_compression_headers();
-        $this->send_caching_headers();
+        self::send_security_headers();
+        self::send_compression_headers();
+        self::send_caching_headers();
     }
 
-    public function send_headers_on_404(): void {
+    public static function send_headers_on_404(): void {
         if (is_404() && !headers_sent()) {
-            $this->send_headers_early();
+            self::send_headers_early();
         }
     }
     
-    public function remove_wp_headers($headers): array {
+    public static function remove_wp_headers($headers): array {
 
         if (SettingsRepository::read_option('http_headers_secure')) {
             $header_options = SettingsRepository::read_option('http_headers_secure_options');
@@ -71,14 +70,14 @@ class HttpHeaders {
         return $headers;
     }
     
-    public function add_headers_to_rest($served, $result, $request): bool {
+    public static function add_headers_to_rest($served, $result, $request): bool {
         if (!headers_sent()) {
-            $this->send_headers_early();
+            self::send_headers_early();
         }
         return $served;
     }
 
-    private function send_security_headers(): void {
+    private static function send_security_headers(): void {
         if (!SettingsRepository::read_option('http_headers_secure')) {
             return;
         }
@@ -102,39 +101,33 @@ class HttpHeaders {
         if (!empty($header_options['referrer_policy'])) {
             header('Referrer-Policy: ' . esc_attr($header_options['referrer_policy']));
         }
-        
-        // Cross-Origin Resource Policy
+ 
         if (!empty($header_options['cross_origin_resource_policy'])) {
             header('Cross-Origin-Resource-Policy: ' . esc_attr($header_options['cross_origin_resource_policy']));
         }
-        
-        // X-Content-Type-Options
+
         if (!empty($header_options['x_content_type_options'])) {
             header('X-Content-Type-Options: nosniff');
         }
-        
-        // X-Frame-Options
+
         if (!empty($header_options['x_frame_options'])) {
             header('X-Frame-Options: SAMEORIGIN');
         }
         
-        // Strict-Transport-Security (only for SSL and non-REST requests to avoid duplication)
-        if (!empty($header_options['strict_transport_security']) && is_ssl() && !$this->is_rest_request()) {
+        if (!empty($header_options['strict_transport_security']) && is_ssl() && !self::is_rest_request()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
         
-        // Content Security Policy
         if (!empty($header_options['content_security_policy'])) {
             header('Content-Security-Policy: ' . $header_options['content_security_policy']);
         }
         
-        // Permissions Policy
         if (!empty($header_options['permissions_policy'])) {
             header('Permissions-Policy: ' . $header_options['permissions_policy']);
         }
     }
     
-    private function send_caching_headers(): void {
+    private static function send_caching_headers(): void {
         if (!SettingsRepository::read_option('http_headers_caching')) {
             return;
         }
@@ -182,7 +175,7 @@ class HttpHeaders {
         }
     }
 
-	private function send_compression_headers(): void {
+	private static function send_compression_headers(): void {
         if (!SettingsRepository::read_option('http_headers_compression')) {
             return;
         }
@@ -193,7 +186,7 @@ class HttpHeaders {
         }
     }
     
-    private function is_rest_request(): bool {
+    private static function is_rest_request(): bool {
         return defined('REST_REQUEST') && REST_REQUEST;
     }
 

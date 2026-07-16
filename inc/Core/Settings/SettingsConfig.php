@@ -297,7 +297,7 @@ final class SettingsConfig {
 			'login_rate_limit_promote_after'           => array(
 				'label'             => esc_html__( 'Permanent blacklist threshold', 'bromate-security-api-firewall' ),
 				'info'              => esc_html__( 'Number of temporary blocks before promoting an IP to the blacklist.', 'bromate-security-api-firewall' ),
-				'default_value'     => 0,
+				'default_value'     => 3,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
