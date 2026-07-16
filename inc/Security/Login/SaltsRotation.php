@@ -168,7 +168,10 @@ class SaltsRotation {
 		return base64_encode( random_bytes( 64 ) );
 	}
 
-	public static function sanitize_recurrence( string $value ): string {
+	public static function sanitize_recurrence( $value ): string {
+		if( empty( $value )) {
+			return '';
+		}
 		return in_array( $value, array(
 			'day',
 			'week',
@@ -176,7 +179,10 @@ class SaltsRotation {
 		), true ) ? sanitize_text_field( $value ) : 'weekly';
 	}
 
-	public static function sanitize_time( string $value ): string {
+	public static function sanitize_time( $value ): string {
+		if( empty( $value )) {
+			return '';
+		}
 		if ( preg_match( '/^([01]\d|2[0-3]):([0-5]\d)$/', $value ) ) {
 			return $value;
 		}
