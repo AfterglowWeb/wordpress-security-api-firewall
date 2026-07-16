@@ -21,6 +21,7 @@ type FileStatus = {
 	wpconfig_secure: boolean;
 	wpconfig_perms?: string;
 	uploads_protected: boolean;
+	theme_editor_disabled: boolean;
 	nginx_snippet?: string;
 };
 
@@ -223,7 +224,7 @@ export default function FileHardening() {
 					</Typography>
 					<FormHelperText>
 						{__(
-							'Add the following constant to your wp-config.php to disable the theme editor in WordPress admin.',
+							'Add the following constant to wp-config.php or theme functions.php to disable the file editor in WordPress admin.',
 							'security-api-firewall'
 						)}
 					</FormHelperText>
@@ -240,7 +241,7 @@ export default function FileHardening() {
 							{"define('DISALLOW_FILE_EDIT', true);"}
 						</Typography>
 					</Box>
-					{disableThemeEditor ? (
+					{fileStatus && fileStatus.theme_editor_disabled ? (
 						<Alert severity="success" sx={{ fontSize: '0.75rem' }}>
 							{__('DISALLOW_FILE_EDIT is defined and active.', 'security-api-firewall')}
 						</Alert>

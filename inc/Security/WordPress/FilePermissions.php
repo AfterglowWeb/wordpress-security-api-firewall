@@ -92,6 +92,7 @@ class FilePermissions {
 				'wpconfig_secure'   => $wpconfig_secure,
 				'wpconfig_perms'    => $wpconfig_perms ? $wpconfig_perms : null,
 				'uploads_protected' => $uploads_protected,
+				'theme_editor_disabled' => self::theme_editor_disabled(),
 				'nginx_snippet'     => $this->get_uploads_nginx_snippet( $upload_dir['baseurl'] ),
 			)
 		);
@@ -170,5 +171,9 @@ HTACCESS;
 			rtrim( $uploads_path_rel, '/' ),
 			rtrim( $uploads_path_rel, '/' )
 		);
+	}
+
+	private function theme_editor_disabled(): bool {
+		return defined('DISALLOW_FILE_EDIT') && true === DISALLOW_FILE_EDIT;
 	}
 }

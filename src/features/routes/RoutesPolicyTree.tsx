@@ -145,18 +145,12 @@ function normalizeTree(tree: RouteNode): TreeState {
 }
 
 export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, onChange }: RoutesPolicyTreeProps): JSX.Element {
-	// Only the tree's STRUCTURE (ids/paths/methods/children) affects this —
-	// resolveNaturalState strips every setting before resolving, so this is
-	// a pure function of "what routes exist", not of their current values.
+
 	const naturalValues = useMemo(
 		() => collectNaturalValues(resolveNaturalState(tree)),
 		[tree]
 	);
 
-	// Resolves inheritance AND computes `.custom` in one pass, so both the
-	// initial render and any later re-resolve (globals/defaultHiddenRoutes
-	// changing) correctly flag routes that are custom purely because of a
-	// global rule cascading down — not just ones touched by a toggle.
 	const buildResolvedState = useCallback(
 		(currentTree: RouteNode[]): TreeState => {
 			const resolved = resolveInheritance(currentTree, globals, defaultHiddenRoutes);
@@ -170,11 +164,6 @@ export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, o
 
 	useEffect(() => {
 		setState(buildResolvedState(tree));
-		// Deliberately NOT depending on `tree` here: `tree` round-trips through
-		// onChange on every toggle, and reacting to it would wipe in-progress
-		// local edits on every single click. This only re-resolves from
-		// scratch when the GLOBAL inputs change.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [globals, defaultHiddenRoutes]);
 
 	const [version, setVersion] = useState(0);
@@ -191,9 +180,6 @@ export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, o
 		return build(state.rootId);
 	}, [state]);
 
-	// Own overrides only (see countOwnOverrides) — computed from the locally
-	// resolved `memoTree`, not the raw `tree` prop, so it's correct on the
-	// very first render rather than only after the first toggle.
 	const customCount = useMemo(
 		() => (memoTree.children ?? []).reduce((acc, node) => acc + countOwnOverrides(node), 0),
 		[memoTree]
@@ -222,16 +208,9 @@ export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, o
 
 				const toggledRoot = updateNode(rawRoot, id, (n) => ({
 					...n,
-					// Any explicit toggle — ON or OFF — is a new custom rule for
-					// this route, and it must win over whatever this subtree's
-					// descendants had customized before for the SAME setting.
 					children: n.children?.map((child) => clearOverridesForKey(child, key)),
 					settings: {
 						...n.settings,
-						// `overridden: true` regardless of newValue: an explicit
-						// "off" is just as much a deliberate override as an
-						// explicit "on" — it must persist and cascade the same
-						// way, not silently fall back to being re-inherited.
 						[key]: { value: newValue, inherited: false, overridden: true },
 					},
 				}));
@@ -254,12 +233,6 @@ export default function RoutesPolicyTree({ tree, globals, defaultHiddenRoutes, o
 		[globals, defaultHiddenRoutes, naturalValues]
 	);
 
-	// Clears BOTH keys' local override on a single route (not its
-	// descendants — they were never touched by this route's own override
-	// in the first place, they just inherit whatever this route resolves
-	// to next). This is what the Undo icon next to the "custom" chip calls;
-	// it only makes sense — and is only shown — when the route actually has
-	// an override of its own to remove (see RouteTreeItem).
 	const resetSetting = useCallback(
 		(id: string) => {
 			setState((prev) => {
