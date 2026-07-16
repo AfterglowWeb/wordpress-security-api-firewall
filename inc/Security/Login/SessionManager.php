@@ -14,7 +14,7 @@ class SessionManager {
 		add_action(
 			'wp_login',
 			static function ( $user_login, WP_User $user ) {
-				$max = SettingsRepository::read_option( 'max_concurrent_sessions' );
+				$max = SettingsRepository::read_option( 'cookie_hardening_max_concurrent_sessions' );
 				if ( empty( $max ) ) {
 					return;
 				}

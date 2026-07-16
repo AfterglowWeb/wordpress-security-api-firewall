@@ -170,7 +170,7 @@ class RoutesResolver {
 		}
 
 		return array(
-			'disabled' => ! $final['disabled'],
+			'disabled' => $final['disabled'],
 			'protect'  => $final['protect'],
 		);
 	}

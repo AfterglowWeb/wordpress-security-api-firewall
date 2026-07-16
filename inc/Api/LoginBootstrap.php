@@ -9,7 +9,7 @@ use Bromate\SecurityApiFirewall\Security\Login\TOTPController;
 use Bromate\SecurityApiFirewall\Security\Login\Recaptcha;
 use Bromate\SecurityApiFirewall\Security\Login\SameSiteCookies;
 use Bromate\SecurityApiFirewall\Security\Login\SessionManager;
-use Bromate\SecurityApiFirewall\Security\Login\SaltRotation;
+use Bromate\SecurityApiFirewall\Security\Login\SaltsRotation;
 
 
 final class LoginBootstrap {
@@ -19,7 +19,7 @@ final class LoginBootstrap {
 		LoginRateLimiter::get_instance();
 		Recaptcha::get_instance();
 		TOTPLoginService::register();
-		SaltRotation::register();
+		SaltsRotation::register();
 		SameSiteCookies::register();
 		SessionManager::register();
 

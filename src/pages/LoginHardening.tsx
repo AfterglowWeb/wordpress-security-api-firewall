@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { SettingsAPI } from '@services/settings';
-import { UserSessionsAPI, SaltRotationStatus } from '@services/user-sessions';
+import { UserSessionsAPI, SaltsRotationStatus } from '@services/user-sessions';
 import { useNavigation } from '@contexts/NavigationContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
@@ -50,9 +50,9 @@ interface LoginSettings {
   cookie_hardening_samesite_enabled: boolean;
   cookie_hardening_samesite_mode: 'Strict' | 'Lax';
 
-  salt_rotation_enabled: boolean;
-  salt_rotation_recurrence: 'day' | 'week' | 'month';
-  salt_rotation_time: string;
+  salts_rotation_enabled: boolean;
+  salts_rotation_recurrence: 'day' | 'week' | 'month';
+  salts_rotation_time: string;
 
   max_concurrent_sessions: number;
 }
@@ -77,9 +77,9 @@ const DEFAULT_SETTINGS: LoginSettings = {
   cookie_hardening_samesite_enabled: false,
   cookie_hardening_samesite_mode: 'Strict',
 
-  salt_rotation_enabled: false,
-  salt_rotation_recurrence: 'week',
-  salt_rotation_time: '03:00',
+  salts_rotation_enabled: false,
+  salts_rotation_recurrence: 'week',
+  salts_rotation_time: '03:00',
 
   max_concurrent_sessions: 0,
 };
@@ -106,7 +106,7 @@ export default function LoginHardening(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const [rotationStatus, setRotationStatus] = useState<SaltRotationStatus | null>(null);
+  const [rotationStatus, setRotationStatus] = useState<SaltsRotationStatus | null>(null);
   const [rotatingNow, setRotatingNow] = useState(false);
   const [revokingAll, setRevokingAll] = useState(false);
 
@@ -141,7 +141,7 @@ export default function LoginHardening(): JSX.Element {
 
   const loadRotationStatus = useCallback(async () => {
     try {
-      const status = await UserSessionsAPI.getSaltRotationStatus();
+      const status = await UserSessionsAPI.getSaltsRotationStatus();
       setRotationStatus(status);
     } catch (err) {
       setRotationStatus(null);
@@ -149,7 +149,7 @@ export default function LoginHardening(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if(! settings.salt_rotation_enabled) {
+    if(! settings.salts_rotation_enabled) {
       return;
     }
     loadRotationStatus();
@@ -561,9 +561,9 @@ export default function LoginHardening(): JSX.Element {
                 }
                 control={
                   <Switch
-                    checked={settings.salt_rotation_enabled}
+                    checked={settings.salts_rotation_enabled}
                     onChange={(e) =>
-                      updateSetting('salt_rotation_enabled', e.target.checked)
+                      updateSetting('salts_rotation_enabled', e.target.checked)
                     }
                   />
                 }
@@ -584,10 +584,10 @@ export default function LoginHardening(): JSX.Element {
                     slotProps={{select:{MenuProps:{container:portalContainer}}}}
                     label={__('Recurrence', 'bromate-security-api-firewall')}
                     size="small"
-                    value={settings.salt_rotation_recurrence}
+                    value={settings.salts_rotation_recurrence}
                     onChange={(e) =>
                       updateSetting(
-                        'salt_rotation_recurrence',
+                        'salts_rotation_recurrence',
                         e.target.value as 'day' | 'week' | 'month'
                       )
                     }
@@ -602,9 +602,9 @@ export default function LoginHardening(): JSX.Element {
                     label={__('Rotation Time', 'bromate-security-api-firewall')}
                     type="time"
                     size="small"
-                    value={settings.salt_rotation_time}
+                    value={settings.salts_rotation_time}
                     onChange={(e) =>
-                      updateSetting('salt_rotation_time', e.target.value)
+                      updateSetting('salts_rotation_time', e.target.value)
                     }
                     sx={{ minWidth: 150 }}
                   />

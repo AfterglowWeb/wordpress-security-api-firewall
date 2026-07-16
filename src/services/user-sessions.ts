@@ -1,6 +1,6 @@
 import { apiRequest } from '@services/api';
 
-export interface SaltRotationStatus {
+export interface SaltsRotationStatus {
   last_rotation: string | null;
   next_rotation: string | null;
 }
@@ -11,14 +11,14 @@ export interface RevokeAllUsersResult {
 }
 
 export const UserSessionsAPI = {
-  getSaltRotationStatus: () =>
-    apiRequest<SaltRotationStatus>(
-      'bromate_security_api_firewall_salt_rotation_status'
+  getSaltsRotationStatus: () =>
+    apiRequest<SaltsRotationStatus>(
+      'bromate_security_api_firewall_salts_rotation_status'
     ),
 
   rotateSaltsNow: () =>
-    apiRequest<SaltRotationStatus>(
-      'bromate_security_api_firewall_rotate_salt_now'
+    apiRequest<SaltsRotationStatus>(
+      'bromate_security_api_firewall_rotate_salts_now'
     ),
 
   revokeAllTrustedDevices: () =>
