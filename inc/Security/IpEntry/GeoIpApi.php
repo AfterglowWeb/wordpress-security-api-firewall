@@ -78,6 +78,14 @@ class GeoIpApi {
 		return array();
 	}
 
+	public static function sanitize_country_codes( array $country_codes ): array {
+		$country_codes = array_filter($country_codes, function($country_code){
+			preg_match('/^[A-Z]{2}$/i', sanitize_key($country_code), $matches);
+			return !empty( $matches );
+		});
+		return $country_codes;
+	}
+
 	private static function build_api_url( string $ip ): string {
 		$ip = CidrMatcher::cidr_to_ip($ip);
 		if($ip) {

@@ -448,37 +448,30 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
     if (errors.length === 0) setEntryDialogOpen(false);
     return errors;
   };
-/*
-  const handleDeleteSelected = useCallback(async (rows: Map<GridRowId, IpEntry>) => {
-    if (rows.size === 0) return;
-    const ids = Array.from(rows.keys()).map(Number);
-    await IpAPI.deleteEntries(ids);
-    setSelection({ type: 'include', ids: new Set() });
-    await load();
-  }, [load]);*/
+
 
   const handleDeleteSelected = useCallback(async (rows: Map<GridRowId, IpEntry>) => {
-  if (rows.size === 0) return;
+    if (rows.size === 0) return;
+    
+    const ipList = Array.from(rows.values()).map(r => r.ip).join(', ');
+    const count = rows.size;
+    
+    openDialog({
+      type: DIALOG_TYPES.CONFIRM,
+      title: __('Remove selected entries?', 'bromate-security-api-firewall'),
+      content: __(`Are you sure you want to remove ${count} IP entr${count > 1 ? 'ies' : 'y'}? ${ipList}`, 'bromate-security-api-firewall'),
+      confirmLabel: __('Remove all', 'bromate-security-api-firewall'),
+      cancelLabel: __('Cancel', 'bromate-security-api-firewall'),
+      onConfirm: async () => {
   
-  const ipList = Array.from(rows.values()).map(r => r.ip).join(', ');
-  const count = rows.size;
-  
-  openDialog({
-    type: DIALOG_TYPES.CONFIRM,
-    title: __('Remove selected entries?', 'bromate-security-api-firewall'),
-    content: __(`Are you sure you want to remove ${count} IP entr${count > 1 ? 'ies' : 'y'}? (${ipList})`, 'bromate-security-api-firewall'),
-    confirmLabel: __('Remove all', 'bromate-security-api-firewall'),
-    cancelLabel: __('Cancel', 'bromate-security-api-firewall'),
-    onConfirm: async () => {
- 
-        const ids = Array.from(rows.keys()).map(Number);
-        await IpAPI.deleteEntries(ids);
-        setSelection({ type: 'include', ids: new Set() });
-        await load();
-      
-    },
-  });
-}, [openDialog, load]);
+          const ids = Array.from(rows.keys()).map(Number);
+          await IpAPI.deleteEntries(ids);
+          setSelection({ type: 'include', ids: new Set() });
+          await load();
+        
+      },
+    });
+  }, [openDialog, load]);
 
   const handleEditIp = useCallback((ip: IpEntry) => {
     setEditingIp(ip);
