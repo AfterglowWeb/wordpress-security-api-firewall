@@ -128,7 +128,6 @@ function wrapTree(nodes: RouteNode[]): RouteNode {
     settings: {
       protect: { ...defaultSetting },
       disabled: { ...defaultSetting },
-      tags: [],
     },
     children: nodes,
   };

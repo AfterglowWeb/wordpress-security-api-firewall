@@ -29,13 +29,14 @@ export default function Routes(): JSX.Element {
 		routes_policy_auth_enforce: false,
 		routes_policy_hidden_routes_redirect_option:  '404',
 		routes_policy_hidden_routes_redirect_user_url: '',
-
 	});
 	const [loadedSettings, setLoadedSettings] = useState<RoutesSettings>(settings);
 	
 	const isDirty = useMemo(
-	() => JSON.stringify(settings) !== JSON.stringify(loadedSettings),
-	[settings, loadedSettings]
+		() =>
+			JSON.stringify(settings) !== JSON.stringify(loadedSettings) ||
+			JSON.stringify(tree) !== JSON.stringify(loadedTree),
+		[settings, loadedSettings, tree, loadedTree]
 	);
 
 	const saveMessages: SaveButtonMessages = {

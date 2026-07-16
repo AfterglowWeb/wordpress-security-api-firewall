@@ -19,7 +19,6 @@ class SettingsAjaxController {
 		add_action( 'wp_ajax_bromate_security_api_firewall_flush_rewrite_rules', array( $self, 'ajax_flush_rewrite_rules' ) );
 		add_action( 'wp_ajax_bromate_get_routes_settings', array( $self, 'ajax_get_routes_settings' ) );
 		add_action( 'wp_ajax_bromate_get_routes_policy_tree', array( $self, 'ajax_get_routes_policy_tree' ) );
-		add_action( 'wp_ajax_bromate_save_routes_policy_tree', array( $self, 'ajax_save_routes_policy_tree' ) );
 		add_action( 'wp_ajax_bromate_save_all_routes_settings', array( $self, 'ajax_save_all_routes_settings' ) );
 		add_action( 'wp_ajax_bromate_wordpress_objects_options', array( $self, 'ajax_wordpress_objects_options' ) );
 		add_action( 'wp_ajax_bromate_get_headers_options', array( $self, 'ajax_get_headers_options' ) );
@@ -109,7 +108,7 @@ class SettingsAjaxController {
 		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
-		
+
 		wp_send_json_success( HttpHeaders::get_all_headers_options() );
 	}
 
@@ -180,7 +179,7 @@ class SettingsAjaxController {
 		if ( false === $result ) {
 			wp_send_json_error(
 				array(
-					'message' => __( 'Failed to save settings', 'bromate-security-api-firewall' ),
+					'message' => __( 'Failed to save route settings', 'bromate-security-api-firewall' ),
 				),
 				500
 			);
@@ -189,53 +188,6 @@ class SettingsAjaxController {
 		wp_send_json_success(
 			array(
 				'message' => __( 'Settings saved successfully', 'bromate-security-api-firewall' ),
-			),
-			200
-		);
-	}
-
-	public function ajax_save_routes_policy_tree(): void {
-		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		if ( ! isset( $_POST['tree'] ) ) {
-			wp_send_json_error(
-				array(
-					'message' => __( 'Bad request error', 'bromate-security-api-firewall' ),
-				),
-				400
-			);
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		$tree_payload = isset( $_POST['tree'] ) ? sanitize_text_field( wp_unslash( $_POST['tree'] ) ) : '';
-		$tree         = json_decode( $tree_payload, true );
-
-		if ( ! is_array( $tree ) ) {
-			wp_send_json_error(
-				array(
-					'message' => __( 'Bad request error', 'bromate-security-api-firewall' ),
-				),
-				400
-			);
-		}
-
-		$saved = RoutesTreeRepository::save_routes_policy_tree( $tree );
-
-		if ( ! $saved ) {
-			wp_send_json_error(
-				array(
-					'message' => __( 'Failed to save policy', 'bromate-security-api-firewall' ),
-				),
-				500
-			);
-		}
-
-		wp_send_json_success(
-			array(
-				'message' => __( 'Policy saved successfully', 'bromate-security-api-firewall' ),
 			),
 			200
 		);

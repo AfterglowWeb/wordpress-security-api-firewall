@@ -101,23 +101,23 @@ final class RestRequestBootstrap {
 
 	public static function disabled_routes_response() {
 
-		$response = RoutesPolicyRepository::disabled_routes_response();
-		$redirect_url = isset( $response['redirect_url'] ) ? $response['redirect_url'] : '';
-		$response_code = isset($response['redirect_option']) && is_numeric($response['redirect_option']) ? (int) $response['redirect_option'] : 403;
-		$response_code_message = isset($response['code_message']) ? $response['code_message'] : '';
-		
-		if (! empty( $redirect_url ) ) {
+		$response              = RoutesPolicyRepository::disabled_routes_response();
+		$redirect_url          = isset( $response['redirect_url'] ) ? $response['redirect_url'] : '';
+		$response_code         = isset( $response['redirect_option'] ) && is_numeric( $response['redirect_option'] ) ? (int) $response['redirect_option'] : 403;
+		$response_code_message = isset( $response['code_message'] ) ? $response['code_message'] : '';
+
+		if ( ! empty( $redirect_url ) ) {
 			return new WP_REST_Response(
-				[],
+				array(),
 				302,
-				['Location' => $redirect_url]
+				array( 'Location' => $redirect_url )
 			);
 		}
 
 		return new WP_Error(
 			'rest_firewall_route_disabled',
 			$response_code_message,
-			['status' => $response_code]
+			array( 'status' => $response_code )
 		);
 	}
 

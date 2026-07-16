@@ -20,19 +20,16 @@ class SettingsRepository {
 	}
 
 	public static function read_option_settings( string $option_key ): array {
-		$option_key = sanitize_key( $option_key );
+		$option_key     = sanitize_key( $option_key );
 		$options_config = SettingsConfig::options_config();
-		return isset( $options_config[ $option_key ] ) ? $options_config[ $option_key ] : [];
+		return isset( $options_config[ $option_key ] ) ? $options_config[ $option_key ] : array();
 	}
 
 	public static function update_options( array $new_options ): array {
 
-		$old_options       = self::read_options();
 		$sanitized_options = self::sanitize_options( $new_options, false );
 
 		update_option( 'bromate_security_api_firewall_options', $sanitized_options );
-
-		do_action( 'rest_firewall_admin_options_updated', $sanitized_options, $old_options );
 
 		return $sanitized_options;
 	}
@@ -191,5 +188,4 @@ class SettingsRepository {
 			'expires_at'   => sanitize_text_field( $user['expires_at'] ?? '' ),
 		);
 	}
-
 }
