@@ -8,7 +8,6 @@ export type InheritableSetting = {
 export type RouteSettings = {
   disabled: InheritableSetting;
   protect:  InheritableSetting;
-  tags:     string[];
   custom?:  boolean;
 };
 
@@ -39,7 +38,7 @@ export type RoutesSettings = {
 export type RoutesPolicyTreeProps = {
   tree:     RouteNode[];
   baselineTree: RouteNode[];
-  globals:  RoutesSettings;   // ← ajout
+  globals:  RoutesSettings;
   onChange: (tree: RouteNode[]) => void;
   defaultHiddenRoutes: string[];
 };

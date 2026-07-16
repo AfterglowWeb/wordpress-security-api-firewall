@@ -32,14 +32,14 @@ class SaltsRotation {
 			return $schedules;
 		}
 
-		if ( ! isset( $schedules[ 'bromate_security_api_firewall_weekly' ] ) ) {
-			$schedules[ 'bromate_security_api_firewall_weekly' ] = array(
+		if ( ! isset( $schedules['bromate_security_api_firewall_weekly'] ) ) {
+			$schedules['bromate_security_api_firewall_weekly'] = array(
 				'interval' => WEEK_IN_SECONDS,
 				'display'  => __( 'Once Weekly (Bromate)', 'bromate-security-api-firewall' ),
 			);
 		}
-		if ( ! isset( $schedules[ 'bromate_security_api_firewall_monthly' ] ) ) {
-			$schedules[ 'bromate_security_api_firewall_monthly' ] = array(
+		if ( ! isset( $schedules['bromate_security_api_firewall_monthly'] ) ) {
+			$schedules['bromate_security_api_firewall_monthly'] = array(
 				'interval' => 30 * DAY_IN_SECONDS,
 				'display'  => __( 'Once Monthly (Bromate)', 'bromate-security-api-firewall' ),
 			);
@@ -169,18 +169,22 @@ class SaltsRotation {
 	}
 
 	public static function sanitize_recurrence( $value ): string {
-		if( empty( $value )) {
+		if ( empty( $value ) ) {
 			return '';
 		}
-		return in_array( $value, array(
-			'day',
-			'week',
-			'month',
-		), true ) ? sanitize_text_field( $value ) : 'weekly';
+		return in_array(
+			$value,
+			array(
+				'day',
+				'week',
+				'month',
+			),
+			true
+		) ? sanitize_text_field( $value ) : 'weekly';
 	}
 
 	public static function sanitize_time( $value ): string {
-		if( empty( $value )) {
+		if ( empty( $value ) ) {
 			return '';
 		}
 		if ( preg_match( '/^([01]\d|2[0-3]):([0-5]\d)$/', $value ) ) {

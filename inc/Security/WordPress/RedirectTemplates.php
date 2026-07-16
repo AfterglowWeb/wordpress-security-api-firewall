@@ -53,7 +53,7 @@ class RedirectTemplates {
 				status_header( 404 );
 				nocache_headers();
 				global $wp_query;
-				if( $wp_query instanceof WP_Query) {
+				if ( $wp_query instanceof WP_Query ) {
 					$wp_query->set_404();
 				}
 				add_filter( 'pre_handle_404', '__return_true' );

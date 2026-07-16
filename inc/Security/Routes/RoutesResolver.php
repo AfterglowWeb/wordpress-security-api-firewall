@@ -58,12 +58,11 @@ class RoutesResolver {
 
 		if ( isset( $effective['disabled'] ) ) {
 
-			$opts        = SettingsRepository::read_options();
-			$dis_methods = isset( $opts['disabled_methods'] ) ? (array) $opts['disabled_methods'] : array();
+			$opts = SettingsRepository::read_options();
 
 			if ( ! empty( $opts['routes_policy_default_hidden_routes'] ) ) {
 
-				$default_hidden_routes = RoutesPolicyRepository::get_default_hidden_routes();
+				$default_hidden_routes = RoutesTreeRepository::get_default_hidden_routes();
 				if ( empty( $default_hidden_routes ) ) {
 					return $effective;
 				}
@@ -81,8 +80,25 @@ class RoutesResolver {
 				}
 			}
 
+			$dis_methods = isset( $opts['routes_policy_hidden_methods'] )
+				? (array) $opts['routes_policy_hidden_methods']
+				: array();
+
 			if ( ! empty( $dis_methods ) && in_array( strtolower( $method ), $dis_methods, true ) ) {
 				$effective['disabled'] = true;
+			}
+
+			$hidden_objects = isset( $opts['routes_policy_hidden_wp_objects'] )
+				? (array) $opts['routes_policy_hidden_wp_objects']
+				: array();
+
+			if ( ! empty( $hidden_objects ) ) {
+				foreach ( $hidden_objects as $hidden_object ) {
+					if ( '' !== $hidden_object && false !== strpos( $route, '/' . $hidden_object ) ) {
+						$effective['disabled'] = true;
+						break;
+					}
+				}
 			}
 		}
 
@@ -152,7 +168,7 @@ class RoutesResolver {
 	protected static function resolve_settings( array $node_settings_chain, array $route_settings, bool $is_core_route = true ): array {
 
 		$firewall_options    = SettingsRepository::read_options();
-		$global_enforce_auth = (bool) ( $firewall_options['enforce_auth'] ?? false );
+		$global_enforce_auth = (bool) ( $firewall_options['routes_policy_auth_enforce'] ?? false );
 
 		$resolved = array(
 			'disabled' => false,
@@ -190,9 +206,7 @@ class RoutesResolver {
 			}
 
 			if ( is_array( $value ) && isset( $value['value'] ) ) {
-				if ( ! ( $value['inherited'] ?? false ) || isset( $base[ $key ] ) === false ) {
-					$base[ $key ] = $value['value'];
-				}
+				$base[ $key ] = $value['value'];
 			} elseif ( is_array( $value ) && 'tags' === $key ) {
 				$base[ $key ] = array_values(
 					array_unique(

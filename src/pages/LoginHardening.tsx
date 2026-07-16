@@ -49,12 +49,12 @@ interface LoginSettings {
 
   cookie_hardening_samesite_enabled: boolean;
   cookie_hardening_samesite_mode: 'Strict' | 'Lax';
+  cookie_hardening_max_concurrent_sessions: number;
 
   salts_rotation_enabled: boolean;
   salts_rotation_recurrence: 'day' | 'week' | 'month';
   salts_rotation_time: string;
 
-  max_concurrent_sessions: number;
 }
 
 const DEFAULT_SETTINGS: LoginSettings = {
@@ -81,7 +81,7 @@ const DEFAULT_SETTINGS: LoginSettings = {
   salts_rotation_recurrence: 'week',
   salts_rotation_time: '03:00',
 
-  max_concurrent_sessions: 0,
+  cookie_hardening_max_concurrent_sessions: 0,
 };
 
 function formatDateTime(value: string | null): string {
@@ -494,7 +494,7 @@ export default function LoginHardening(): JSX.Element {
                       {__('Mandatory', 'bromate-security-api-firewall')}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {__('All users must enable 2FA. No cancellation allowed.', 'bromate-security-api-firewall')}
+                      {__('All users must enable 2FA. The 2FA enrollement dialog cannot be cancelled.', 'bromate-security-api-firewall')}
                     </Typography>
                   </Stack>
                 }
@@ -505,12 +505,9 @@ export default function LoginHardening(): JSX.Element {
         </Stack>
       </Paper>
 
-      {/* Cookie & Session Protection Section */}
       <Paper sx={{ p: 2 }} elevation={0}>
-        <Stack flexDirection="column" gap={2} maxWidth={500}>
-          
-          {/* SameSite */}
-          <Stack gap={1}>
+        <Stack gap={1}>
+            
             <FormControlLabel
               label={
                 <Stack direction="column" alignItems="center" gap={1}>
@@ -527,7 +524,6 @@ export default function LoginHardening(): JSX.Element {
               }
             />
             
-
               <Box sx={{ pl: 4 }}>
                 <FormControl 
                 disabled={!settings.cookie_hardening_samesite_enabled}
@@ -547,9 +543,30 @@ export default function LoginHardening(): JSX.Element {
                   </RadioGroup>
                 </FormControl>
                 
+                <Stack gap={1} >
+                    <TextField
+                      label={__('Limit Sessions Per User', 'bromate-security-api-firewall')}
+                      type="number"
+                      size="small"
+                      value={settings.cookie_hardening_max_concurrent_sessions}
+                      onChange={(e) =>
+                        updateSetting('cookie_hardening_max_concurrent_sessions', Number(e.target.value))
+                      }
+                      helperText={__('0 = unlimited. Oldest session is closed automatically beyond this number.', 'bromate-security-api-firewall')}
+                      slotProps={{ htmlInput: { min: 0 } }}
+                      sx={{ maxWidth: 250 }}
+                    />
+                  </Stack>
               </Box>
      
           </Stack>
+      </Paper>
+      {/* Cookie & Session Protection Section */}
+      <Paper sx={{ p: 2 }} elevation={0}>
+        <Stack flexDirection="column" gap={2} maxWidth={500}>
+          
+          {/* SameSite */}
+          
 
           {/* Salt Rotation */}
           <Stack gap={1}>
@@ -645,23 +662,7 @@ export default function LoginHardening(): JSX.Element {
        
           </Stack>
 
-          <Stack gap={1} >
-            <Typography >
-              {__('Limit Sessions Per User', 'bromate-security-api-firewall')}
-            </Typography>
-            <TextField
-              label={__('Max Concurrent Sessions', 'bromate-security-api-firewall')}
-              type="number"
-              size="small"
-              value={settings.max_concurrent_sessions}
-              onChange={(e) =>
-                updateSetting('max_concurrent_sessions', Number(e.target.value))
-              }
-              helperText={__('0 = unlimited. Oldest session is closed automatically beyond this number.', 'bromate-security-api-firewall')}
-              slotProps={{ htmlInput: { min: 0 } }}
-              sx={{ maxWidth: 250 }}
-            />
-          </Stack>
+        
 
           
         </Stack>

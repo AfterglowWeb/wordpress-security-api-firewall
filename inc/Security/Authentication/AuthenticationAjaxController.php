@@ -105,21 +105,21 @@ class AuthenticationAjaxController {
 	}
 
 	public function ajax_generate_jwt_subclaim(): void {
-		if (false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps()) {
-			wp_send_json_error(array('message' => esc_html__('Unauthorized', 'bromate-security-api-firewall')), 401);
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
- 
-		$user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;
-		if ($user_id <= 0 || !get_userdata($user_id)) {
-			wp_send_json_error(array('message' => esc_html__('Invalid user', 'bromate-security-api-firewall')), 400);
+
+		$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+		if ( $user_id <= 0 || ! get_userdata( $user_id ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid user', 'bromate-security-api-firewall' ) ), 400 );
 		}
- 
-		$subclaim = JwtAuthenticator::create_user_subclaim($user_id);
- 
-		if (empty($subclaim)) {
-			wp_send_json_error(array('message' => esc_html__('Failed to generate subclaim', 'bromate-security-api-firewall')), 500);
+
+		$subclaim = JwtAuthenticator::create_user_subclaim( $user_id );
+
+		if ( empty( $subclaim ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Failed to generate subclaim', 'bromate-security-api-firewall' ) ), 500 );
 		}
- 
-		wp_send_json_success(array('subclaim' => $subclaim));
+
+		wp_send_json_success( array( 'subclaim' => $subclaim ) );
 	}
 }

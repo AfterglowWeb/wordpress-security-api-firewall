@@ -89,11 +89,11 @@ class FilePermissions {
 
 		wp_send_json_success(
 			array(
-				'wpconfig_secure'   => $wpconfig_secure,
-				'wpconfig_perms'    => $wpconfig_perms ? $wpconfig_perms : null,
-				'uploads_protected' => $uploads_protected,
+				'wpconfig_secure'       => $wpconfig_secure,
+				'wpconfig_perms'        => $wpconfig_perms ? $wpconfig_perms : null,
+				'uploads_protected'     => $uploads_protected,
 				'theme_editor_disabled' => self::theme_editor_disabled(),
-				'nginx_snippet'     => $this->get_uploads_nginx_snippet( $upload_dir['baseurl'] ),
+				'nginx_snippet'         => $this->get_uploads_nginx_snippet( $upload_dir['baseurl'] ),
 			)
 		);
 	}
@@ -125,8 +125,6 @@ class FilePermissions {
 		} else {
 			$errors[] = esc_html__( 'Apache: could not write .htaccess — check directory permissions.', 'bromate-security-api-firewall' );
 		}
-
-		
 
 		$results[] = esc_html__( 'Nginx: .htaccess files are ignored by Nginx. Add the following block to your server configuration:', 'bromate-security-api-firewall' );
 
@@ -174,6 +172,6 @@ HTACCESS;
 	}
 
 	private function theme_editor_disabled(): bool {
-		return defined('DISALLOW_FILE_EDIT') && true === DISALLOW_FILE_EDIT;
+		return defined( 'DISALLOW_FILE_EDIT' ) && true === DISALLOW_FILE_EDIT;
 	}
 }

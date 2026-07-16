@@ -3,7 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 class RouteParser {
-    
+
 	public static function build_route_entry( array $route ): array {
 
 		return array(
@@ -14,7 +14,6 @@ class RouteParser {
 			'settings'   => array(
 				'protect'  => false,
 				'disabled' => false,
-				'tags'     => array(),
 			),
 			'callback'   => $route['callback'],
 			'permission' => array(
@@ -133,7 +132,7 @@ class RouteParser {
 		return $params;
 	}
 
-    public static function normalize_callable( $callback_name ) {
+	public static function normalize_callable( $callback_name ) {
 
 		if ( is_string( $callback_name ) ) {
 			return $callback_name;
