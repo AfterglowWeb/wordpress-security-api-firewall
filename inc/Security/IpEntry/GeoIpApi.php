@@ -92,7 +92,7 @@ class GeoIpApi {
 	private static function fetch_from_api( string $ip ): array {
 		$url = self::build_api_url( $ip );
 
-		if(empty($url)) {
+		if ( empty( $url ) ) {
 			return [];
 		}
 
@@ -105,14 +105,27 @@ class GeoIpApi {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			return array();
+			return [];
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+		if ( $response_code !== 200 ) {
+			return [];
 		}
 
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 
 		if ( ! is_array( $data ) ) {
-			return array();
+			return [];
+		}
+
+		if ( isset( $data['error'] ) && $data['error'] === true ) {
+			return [];
+		}
+
+		if ( empty( $data['country_code'] ) && empty( $data['country_name'] ) && empty( $data['city'] ) ) {
+			return [];
 		}
 
 		return array(
