@@ -12,7 +12,7 @@ class IpAccessControl {
 
 	public static function inspect() {
 
-		if ( empty( SettingsRepository::read_option( 'firewall_enabled' ) ) ) {
+		if ( empty( SettingsRepository::read_option( 'rate_limit_enabled' ) ) ) {
 			return true;
 		}
 
@@ -26,7 +26,7 @@ class IpAccessControl {
 		if ( GeoIpApi::is_country_blocked( $ip ) ) {
 			FirewallLogger::ip_blocked( $ip, 'blacklist' );
 			return new WP_Error(
-				'rest_firewall_country_blocked',
+				'bromate_security_api_firewall_country_blocked',
 				__( 'Access from your country is not allowed.', 'bromate-security-api-firewall' ),
 				array( 'status' => 403 )
 			);
@@ -36,7 +36,7 @@ class IpAccessControl {
 			FirewallLogger::ip_blocked( $ip, 'blacklist' );
 
 			return new WP_Error(
-				'rest_firewall_ip_in_blacklist',
+				'bromate_security_api_firewall_ip_in_blacklist',
 				__( 'Your IP address is blocked.', 'bromate-security-api-firewall' ),
 				array( 'status' => 403 )
 			);
@@ -46,7 +46,7 @@ class IpAccessControl {
 			FirewallLogger::ip_blocked( $ip, 'blacklist' );
 
 			return new WP_Error(
-				'rest_firewall_ip_blacklisted',
+				'bromate_security_api_firewall_ip_blacklisted',
 				__( 'Your IP has been temporarily blocked.', 'bromate-security-api-firewall' ),
 				array( 'status' => 403 )
 			);

@@ -123,13 +123,6 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_whitelist'                        => array(
-				'default_value'     => array(),
-				'type'              => 'array',
-				'sanitize_callback' => array( CidrMatcher::class, 'sanitize_ip_array' ),
-				'group'             => 'firewall',
-			),
-
 			'rate_limit_countries'                        => array(
 				'default_value'     => array(),
 				'type'              => 'array',

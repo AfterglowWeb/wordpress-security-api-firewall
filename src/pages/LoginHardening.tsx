@@ -506,165 +506,152 @@ export default function LoginHardening(): JSX.Element {
       </Paper>
 
       <Paper sx={{ p: 2 }} elevation={0}>
-        <Stack gap={1}>
-            
+        <Stack gap={0}>
+          
+          <Stack flexDirection="row" gap={1} alignItems="center">
             <FormControlLabel
-              label={
-                <Stack direction="column" alignItems="center" gap={1}>
-                  <Typography>{__('Protect Session Cookie', 'bromate-security-api-firewall')}</Typography>
-                </Stack>
-              }
+              label={__('Enable', 'bromate-security-api-firewall')}
               control={
                 <Switch
-                  checked={settings.cookie_hardening_samesite_enabled}
+                checked={settings.cookie_hardening_samesite_enabled}
                   onChange={(e) =>
                     updateSetting('cookie_hardening_samesite_enabled', e.target.checked)
                   }
                 />
               }
+              sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
             />
-            
-              <Box sx={{ pl: 4 }}>
-                <FormControl 
-                disabled={!settings.cookie_hardening_samesite_enabled}
-                component="fieldset">
-                  <RadioGroup
-                    row
-                    value={settings.cookie_hardening_samesite_mode}
-                    onChange={(e) =>
-                      updateSetting(
-                        'cookie_hardening_samesite_mode',
-                        e.target.value as 'Strict' | 'Lax'
-                      )
-                    }
-                  >
-                    <FormControlLabel value="Strict" control={<Radio size="small" />} label={__('Strict', 'bromate-security-api-firewall')} />
-                    <FormControlLabel value="Lax" control={<Radio size="small" />} label={__('Lax', 'bromate-security-api-firewall')} />
-                  </RadioGroup>
-                </FormControl>
-                
-                <Stack gap={1} >
-                    <TextField
-                      label={__('Limit Sessions Per User', 'bromate-security-api-firewall')}
-                      type="number"
-                      size="small"
-                      value={settings.cookie_hardening_max_concurrent_sessions}
-                      onChange={(e) =>
-                        updateSetting('cookie_hardening_max_concurrent_sessions', Number(e.target.value))
-                      }
-                      helperText={__('0 = unlimited. Oldest session is closed automatically beyond this number.', 'bromate-security-api-firewall')}
-                      slotProps={{ htmlInput: { min: 0 } }}
-                      sx={{ maxWidth: 250 }}
-                    />
-                  </Stack>
-              </Box>
-     
+            <Divider orientation="vertical" variant="middle" flexItem />
+            <Typography variant="h6">{__('Protect Session Cookie', 'bromate-security-api-firewall')}</Typography>
           </Stack>
+            
+          <Stack gap={1} sx={{ pl: 4 }}>
+            <FormControl 
+            disabled={!settings.cookie_hardening_samesite_enabled}
+            component="fieldset">
+              <RadioGroup
+                row
+                value={settings.cookie_hardening_samesite_mode}
+                onChange={(e) =>
+                  updateSetting(
+                    'cookie_hardening_samesite_mode',
+                    e.target.value as 'Strict' | 'Lax'
+                  )
+                }
+              >
+                <FormControlLabel value="Strict" control={<Radio size="small" />} label={__('Strict', 'bromate-security-api-firewall')} />
+                <FormControlLabel value="Lax" control={<Radio size="small" />} label={__('Lax', 'bromate-security-api-firewall')} />
+              </RadioGroup>
+            </FormControl>
+            
+            <TextField
+              label={__('Limit Sessions Per User', 'bromate-security-api-firewall')}
+              type="number"
+              size="small"
+              value={settings.cookie_hardening_max_concurrent_sessions}
+              onChange={(e) =>
+                updateSetting('cookie_hardening_max_concurrent_sessions', Number(e.target.value))
+              }
+              helperText={__('0 = unlimited. Oldest session is closed automatically beyond this number.', 'bromate-security-api-firewall')}
+              slotProps={{ htmlInput: { min: 0 } }}
+              sx={{ maxWidth: 250 }}
+            />
+          </Stack>
+     
+        </Stack>
       </Paper>
-      {/* Cookie & Session Protection Section */}
+
+      {/* Salt Rotation Section */}
       <Paper sx={{ p: 2 }} elevation={0}>
         <Stack flexDirection="column" gap={2} maxWidth={500}>
-          
-          {/* SameSite */}
-          
-
-          {/* Salt Rotation */}
-          <Stack gap={1}>
-              <FormControlLabel
-                label={
-                  <Stack direction="row" alignItems="center" gap={1}>
-                    <Typography>{__('Rotate Salt Keys', 'bromate-security-api-firewall')}</Typography>
-                  </Stack>
-                }
-                control={
-                  <Switch
-                    checked={settings.salts_rotation_enabled}
-                    onChange={(e) =>
-                      updateSetting('salts_rotation_enabled', e.target.checked)
-                    }
-                  />
-                }
-              />
-
-              <Stack flexDirection={"column"} gap={1} sx={{ pl: 4 }}>
-                
-                <Typography variant="body2" color="text.secondary">
-                  {__(
-                    'The rotation will be triggered once after saving, this will log you out.',
-                    'bromate-security-api-firewall'
-                  )}
-                </Typography>
-
-                <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
-                  <TextField
-                    select
-                    slotProps={{select:{MenuProps:{container:portalContainer}}}}
-                    label={__('Recurrence', 'bromate-security-api-firewall')}
-                    size="small"
-                    value={settings.salts_rotation_recurrence}
-                    onChange={(e) =>
-                      updateSetting(
-                        'salts_rotation_recurrence',
-                        e.target.value as 'day' | 'week' | 'month'
-                      )
-                    }
-                    sx={{ minWidth: 150 }}
-                  >
-                    <MenuItem value="day">{__('Every day', 'bromate-security-api-firewall')}</MenuItem>
-                    <MenuItem value="week">{__('Every week', 'bromate-security-api-firewall')}</MenuItem>
-                    <MenuItem value="month">{__('Every month', 'bromate-security-api-firewall')}</MenuItem>
-                  </TextField>
-
-                  <TextField
-                    label={__('Rotation Time', 'bromate-security-api-firewall')}
-                    type="time"
-                    size="small"
-                    value={settings.salts_rotation_time}
-                    onChange={(e) =>
-                      updateSetting('salts_rotation_time', e.target.value)
-                    }
-                    sx={{ minWidth: 150 }}
-                  />
-                </Stack>
-
-                <Alert severity="info" elevation={0}>
-                  {__(
-                    'Rotation signs out every logged-in user.',
-                    'bromate-security-api-firewall'
-                  )}
-                </Alert>
-
-                <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                  <Stack>
-                    <Typography variant="caption" color="text.secondary">
-                      {__('Last rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.last_rotation ?? null)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {__('Next rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.next_rotation ?? null)}
-                    </Typography>
-                  </Stack>
-
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="primary"
-                    disabled={rotatingNow}
-                    startIcon={rotatingNow ? <CircularProgress size={16} /> : undefined}
-                    onClick={handleRotateSaltsConfirm}
-                  >
-                    {rotatingNow
-                      ? __('Rotating...', 'bromate-security-api-firewall')
-                      : __('Rotate now', 'bromate-security-api-firewall')}
-                  </Button>
-                </Stack>
-
-              </Stack>
-       
+              
+          <Stack flexDirection="row" gap={1} alignItems="center">
+            <FormControlLabel
+              label={__('Enable', 'bromate-security-api-firewall')}
+              control={
+                <Switch
+                checked={settings.salts_rotation_enabled}
+                  onChange={(e) =>
+                    updateSetting('salts_rotation_enabled', e.target.checked)
+                  }
+                />
+              }
+              sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
+            />
+            <Divider orientation="vertical" variant="middle" flexItem />
+            <Stack>
+            <Typography variant="h6">{__('Rotate Salt Keys', 'bromate-security-api-firewall')}</Typography>
+            <Typography variant="caption" color="text.secondary">{__('The rotation will be triggered once after saving, this will log you out.', 'bromate-security-api-firewall')}</Typography>
+            </Stack>
           </Stack>
 
-        
+          <Stack flexDirection={"column"} gap={1} sx={{ pl: 4 }}>
 
-          
+            <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
+              <TextField
+                select
+                slotProps={{select:{MenuProps:{container:portalContainer}}}}
+                label={__('Recurrence', 'bromate-security-api-firewall')}
+                size="small"
+                value={settings.salts_rotation_recurrence}
+                onChange={(e) =>
+                  updateSetting(
+                    'salts_rotation_recurrence',
+                    e.target.value as 'day' | 'week' | 'month'
+                  )
+                }
+                sx={{ minWidth: 150 }}
+              >
+                <MenuItem value="day">{__('Every day', 'bromate-security-api-firewall')}</MenuItem>
+                <MenuItem value="week">{__('Every week', 'bromate-security-api-firewall')}</MenuItem>
+                <MenuItem value="month">{__('Every month', 'bromate-security-api-firewall')}</MenuItem>
+              </TextField>
+
+              <TextField
+                label={__('Rotation Time', 'bromate-security-api-firewall')}
+                type="time"
+                size="small"
+                value={settings.salts_rotation_time}
+                onChange={(e) =>
+                  updateSetting('salts_rotation_time', e.target.value)
+                }
+                sx={{ minWidth: 150 }}
+              />
+            </Stack>
+
+            <Alert severity="info" elevation={0}>
+              {__(
+                'Rotation signs out every logged-in user.',
+                'bromate-security-api-firewall'
+              )}
+            </Alert>
+
+            <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+              <Stack>
+                <Typography variant="caption" color="text.secondary">
+                  {__('Last rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.last_rotation ?? null)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {__('Next rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.next_rotation ?? null)}
+                </Typography>
+              </Stack>
+
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                disabled={rotatingNow}
+                startIcon={rotatingNow ? <CircularProgress size={16} /> : undefined}
+                onClick={handleRotateSaltsConfirm}
+              >
+                {rotatingNow
+                  ? __('Rotating...', 'bromate-security-api-firewall')
+                  : __('Rotate now', 'bromate-security-api-firewall')}
+              </Button>
+            </Stack>
+
+          </Stack>
+
         </Stack>
       </Paper>
 
