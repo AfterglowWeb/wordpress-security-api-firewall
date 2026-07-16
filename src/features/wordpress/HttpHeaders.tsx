@@ -16,6 +16,8 @@ import Grid from '@mui/material/Grid';
 import Divider from '@mui/material/Divider';
 
 import { apiRequest } from '@services/api';
+import { usePortalContainer } from '@contexts/PortalContainerContext';
+
 
 type HeaderOption = {
 	type: 'boolean' | 'string' | 'integer';
@@ -99,8 +101,8 @@ export default function HttpHeaders({
 		pragma_no_cache: true,
 		expires: 0,
 	});
+	const portalContainer = usePortalContainer();
 
-	// Load headers options
 	useEffect(() => {
 		const loadOptions = async () => {
 			try {
@@ -185,6 +187,7 @@ export default function HttpHeaders({
 				onChange={onChange}
 				name={key}
 				size="small"
+				MenuProps={{container:portalContainer}}
 			>
 				{option.options?.map((opt) => (
 					<MenuItem key={opt} value={opt}>

@@ -83,7 +83,9 @@ export default function Routes(): JSX.Element {
 	if (loading) {
 		return (
 			<Stack spacing={3}>
-				<Skeleton variant="rounded" width={'100%'} height={50} />
+				<Stack flexDirection={"row"} justifyContent={"flex-end"}>
+				  <Skeleton variant="rounded" width={65} height={35} />
+        		</Stack>
 				<Skeleton variant="rounded" width={'100%'} height={680} />
 				<Skeleton variant="rounded" width={'100%'} height={420} />
 			</Stack>

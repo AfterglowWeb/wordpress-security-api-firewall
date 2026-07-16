@@ -98,7 +98,7 @@ final class LoginRateLimiter {
 			'attempts'       => max( 1, (int) ( $opts['login_rate_limit_attempts'] ?? 5 ) ),
 			'window'         => max( 1, (int) ( $opts['login_rate_limit_window'] ?? 300 ) ),
 			'blacklist_time' => max( 1, (int) ( $opts['login_rate_limit_blacklist_time'] ?? 3600 ) ),
-			'promote_after'  => max( 0, (int) ( $opts['login_rate_limit_promote_after'] ?? 0 ) ),
+			'promote_after'  => max( 0, (int) ( $opts['login_rate_limit_promote_after'] ?? 3 ) ),
 		);
 	}
 

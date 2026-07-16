@@ -4,7 +4,7 @@ import { __ } from '@wordpress/i18n';
 import {
   Box, Paper, Typography, Switch,
   Stack, TextField, Button, FormControlLabel,
-  Divider
+  Divider, Skeleton
 } from '@mui/material';
 
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
@@ -82,6 +82,19 @@ export default function Firewall(): JSX.Element {
     saveLabel: __('Save', 'bromate-security-api-firewall'),
     savingLabel: __('Saving…', 'bromate-security-api-firewall'),
   };
+
+  if (settingsLoading) {
+		return (
+			<Stack spacing={3}>
+        <Stack flexDirection={"row"} justifyContent={"flex-end"}>
+				  <Skeleton variant="rounded" width={65} height={35} />
+        </Stack>
+				<Skeleton variant="rectangular" width={'100%'} height={200} />
+        <Skeleton variant="rounded" width={'100%'} height={120} />
+				<Skeleton variant="rectangular" width={'100%'} height={600} />
+			</Stack>
+		);
+	}
 
   return (
     <Stack spacing={3}>

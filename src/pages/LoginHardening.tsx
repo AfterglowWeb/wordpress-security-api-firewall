@@ -62,7 +62,7 @@ const DEFAULT_SETTINGS: LoginSettings = {
   login_rate_limit_attempts: 5,
   login_rate_limit_window: 300,
   login_rate_limit_blacklist_time: 3600,
-  login_rate_limit_promote_after: 0,
+  login_rate_limit_promote_after: 3,
 
   login_recaptcha_enabled: false,
   login_recaptcha_site_key: '',
@@ -232,7 +232,9 @@ export default function LoginHardening(): JSX.Element {
   if (loading) {
 		return (
 			<Stack spacing={3}>
-				<Skeleton variant="rounded" width={'100%'} height={50} />
+				<Stack flexDirection={"row"} justifyContent={"flex-end"}>
+				  <Skeleton variant="rounded" width={65} height={35} />
+        </Stack>
 				<Skeleton variant="rounded" width={'100%'} height={120} />
 				<Skeleton variant="rectangular" width={'100%'} height={200} />
 				<Skeleton variant="rectangular" width={'100%'} height={600} />
