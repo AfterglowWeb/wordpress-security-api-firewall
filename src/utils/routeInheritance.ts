@@ -98,3 +98,44 @@ export function resolveInheritance(
     resolveNode(node, noInheritance, noInheritance, globals, defaultHiddenNamespaces)
   );
 }
+
+// A completely rule-free globals object: no hidden namespaces, no hidden
+// methods, no hidden WP objects. Used only to compute the "natural" tree
+// below — what every route would look like with zero policy applied.
+const NEUTRAL_GLOBALS: RoutesSettings = {
+  routes_policy_enabled: false,
+  routes_policy_default_hidden_routes: false,
+  routes_policy_hidden_methods: [],
+  routes_policy_hidden_wp_objects: [],
+  routes_policy_auth_enforce: false,
+  routes_policy_hidden_routes_redirect_option: '404',
+  routes_policy_hidden_routes_redirect_user_url: '',
+};
+
+function stripToUnresolved(node: RouteNode): RouteNode {
+  return {
+    ...node,
+    settings: {
+      ...node.settings,
+      disabled: { value: false, inherited: false },
+      protect: { value: false, inherited: false },
+    },
+    children: node.children?.map(stripToUnresolved),
+  };
+}
+
+/**
+ * Resolves the tree as if NO policy existed at all: no global rules, no
+ * route-level overrides anywhere. This is the reference point a route's
+ * current state is compared against to decide whether it's "custom" —
+ * whether that deviation comes from a global setting cascading down or
+ * from an explicit override on the route itself makes no difference to
+ * the admin looking at the tree, so it shouldn't make a difference here.
+ *
+ * Only the tree's STRUCTURE matters (ids/paths/methods/children) — any
+ * existing settings are stripped before resolving, so this is safe to
+ * call with the live, edited tree at any point.
+ */
+export function resolveNaturalState(tree: RouteNode[]): RouteNode[] {
+  return resolveInheritance(tree.map(stripToUnresolved), NEUTRAL_GLOBALS, []);
+}

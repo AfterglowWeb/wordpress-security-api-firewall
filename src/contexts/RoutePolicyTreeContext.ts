@@ -3,6 +3,7 @@ import type { RouteNode, ToggleableSettingKey } from '@app-types/routes';
 
 export type RoutePolicyTreeContextType = {
   toggleSetting: (id: string, key: ToggleableSettingKey) => void;
+  resetSetting:  (id: string) => void;
   getNode:       (id: string) => RouteNode | undefined;
 };
 

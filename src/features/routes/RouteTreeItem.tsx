@@ -3,12 +3,13 @@ import { useRoutePolicyTreeContext } from '@contexts/RoutePolicyTreeContext';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
-import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
 
 import BlockIcon  from '@mui/icons-material/Block';
 import LockIcon   from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import ShieldIcon from '@mui/icons-material/Shield';
+import UndoIcon   from '@mui/icons-material/Undo';
 
 import { useTreeItem } from '@mui/x-tree-view/useTreeItem';
 import {
@@ -22,20 +23,26 @@ import {
 import { TreeItemIcon } from '@mui/x-tree-view/TreeItemIcon';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
-function PermissionBadge({ type }: { type?: string }) {
+function PermissionBadge({ type, isProtect }: { type?: string, isProtect: boolean }) {
   if (!type) return null;
     const portalContainer = usePortalContainer();
 
-  if (type === 'public')    return <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Public route"><PublicIcon fontSize="inherit" sx={{ color: 'success.main' }} /></Tooltip>;
-  if (type === 'forbidden') return <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Always forbidden"><BlockIcon fontSize="inherit" sx={{ color: 'error.main' }} /></Tooltip>;
-  return <Tooltip slotProps={{ popper: { container: portalContainer } }} title={`${type} route`}><ShieldIcon fontSize="inherit" sx={{ color: 'warning.main' }} /></Tooltip>;
+  if (type === 'public') {
+    return isProtect ? 
+    <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Protected route"><ShieldIcon fontSize="inherit" sx={{ color: 'warning.light' }} /></Tooltip>
+    :
+    <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Public route"><PublicIcon fontSize="inherit" sx={{ color: 'success.light' }} /></Tooltip>
+    ;
+  }
+  if (type === 'forbidden') return <Tooltip slotProps={{ popper: { container: portalContainer } }} title="Always forbidden"><BlockIcon fontSize="inherit" sx={{ color: 'error.light' }} /></Tooltip>;
+  return <Tooltip slotProps={{ popper: { container: portalContainer } }} title={`${type} route`}><ShieldIcon fontSize="inherit" sx={{ color: 'warning.light' }} /></Tooltip>;
 }
 
 export default function RouteTreeItem(props: TreeItemProps) {
   const { id, itemId, label, disabled, children } = props;
   const portalContainer = usePortalContainer();
 
-  const { toggleSetting, getNode } = useRoutePolicyTreeContext();
+  const { toggleSetting, resetSetting, getNode } = useRoutePolicyTreeContext();
   const node = getNode(itemId);
 
   const {
@@ -56,6 +63,10 @@ export default function RouteTreeItem(props: TreeItemProps) {
   const isInheritedProtect  = node.settings?.protect?.inherited  ?? false;
   const isCustom            = node.settings?.custom ?? false;
 
+  const hasOwnOverride =
+    !!node.settings?.disabled?.overridden ||
+    !!node.settings?.protect?.overridden;
+
   return (
     <TreeItemRoot {...getRootProps()}>
       <TreeItemContent
@@ -72,11 +83,26 @@ export default function RouteTreeItem(props: TreeItemProps) {
 
         <TreeItemLabel {...getLabelProps()} sx={{ flexGrow: 1}} />
 
-        {isMethod && <PermissionBadge type={node.permission?.type} />}
+        {isMethod && <PermissionBadge type={node.permission?.type} isProtect={isProtect} />}
 
         {isCustom && (
-          <Chip label="custom" size="small" variant="outlined"
-            sx={{ height: 16, ml: 0.5 }} />
+          <Stack
+            direction="row" alignItems="center" spacing={0}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {hasOwnOverride && (
+              <Tooltip
+                slotProps={{ popper: { container: portalContainer } }}
+                disableInteractive
+                followCursor
+                title="Reset to inherited"
+              >
+                <IconButton sx={{p:'2px'}} size="small" onClick={() => resetSetting(itemId)}>
+                  <UndoIcon fontSize="inherit" sx={{ color: 'text.secondary' }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
         )}
 
         <Stack

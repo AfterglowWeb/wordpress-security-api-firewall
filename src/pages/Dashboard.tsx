@@ -103,7 +103,7 @@ export default function Dashboard(): JSX.Element {
 					'login_rate_limit_enabled',
 					'login_recaptcha_enabled',
 					'login_totp_enabled',
-					'salt_rotation_enabled',
+					'salts_rotation_enabled',
 					'redirect_front_enabled'
 				]),
 			},

@@ -113,7 +113,6 @@ class FilePermissions {
 		$results = array();
 		$errors  = array();
 
-		// Apache.
 		$htaccess_path     = $uploads_path . '.htaccess';
 		$htaccess_content  = $this->get_uploads_htaccess();
 		$htaccess_existing = FileUtils::read_file( $htaccess_path );
@@ -126,18 +125,7 @@ class FilePermissions {
 			$errors[] = esc_html__( 'Apache: could not write .htaccess — check directory permissions.', 'bromate-security-api-firewall' );
 		}
 
-		// IIS.
-		$webconfig_path     = $uploads_path . 'web.config';
-		$webconfig_content  = $this->get_uploads_webconfig();
-		$webconfig_existing = FileUtils::read_file( $webconfig_path );
-
-		if ( false !== strpos( (string) $webconfig_existing, 'WP Security & API Firewall' ) ) {
-			$results[] = esc_html__( 'IIS: web.config rules already present.', 'bromate-security-api-firewall' );
-		} elseif ( FileUtils::write_file( $webconfig_path, $webconfig_content ) ) {
-			$results[] = esc_html__( 'IIS: web.config created successfully.', 'bromate-security-api-firewall' );
-		} else {
-			$results[] = esc_html__( 'IIS: web.config could not be written (non-fatal if not running IIS).', 'bromate-security-api-firewall' );
-		}
+		
 
 		$results[] = esc_html__( 'Nginx: .htaccess files are ignored by Nginx. Add the following block to your server configuration:', 'bromate-security-api-firewall' );
 
@@ -173,30 +161,6 @@ class FilePermissions {
 # Disable directory listing.
 Options -Indexes
 HTACCESS;
-	}
-
-	private function get_uploads_webconfig(): string {
-		return <<<'WEBCONFIG'
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- WP Security & API Firewall — uploads directory protection -->
-<configuration>
-  <system.webServer>
-    <directoryBrowse enabled="false" />
-    <security>
-      <requestFiltering>
-        <fileExtensions>
-          <add fileExtension=".php"   allowed="false" />
-          <add fileExtension=".phtml" allowed="false" />
-          <add fileExtension=".phar"  allowed="false" />
-          <add fileExtension=".asp"   allowed="false" />
-          <add fileExtension=".aspx"  allowed="false" />
-          <add fileExtension=".jsp"   allowed="false" />
-        </fileExtensions>
-      </requestFiltering>
-    </security>
-  </system.webServer>
-</configuration>
-WEBCONFIG;
 	}
 
 	private function get_uploads_nginx_snippet( string $uploads_url ): string {

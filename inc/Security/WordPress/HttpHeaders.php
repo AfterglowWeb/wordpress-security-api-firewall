@@ -281,13 +281,13 @@ class HttpHeaders {
 	private static function sanitize_referrer_policies( $policy ) {
 		$options = self::get_secure_headers_options();
 		$policy = sanitize_text_field( $policy );
-		return in_array($policy, $options['referrer_policy']['options']) ? $policy : '';
+		return in_array($policy, $options['referrer_policy']['options'], true) ? $policy : '';
 	}
 
 	private static function sanitize_cross_origin_policies( $policy ) {
 		$options = self::get_secure_headers_options();
 		$policy = sanitize_text_field( $policy );
-		return in_array($policy, $options['cross_origin_policies']['options']) ? $policy : '';
+		return in_array($policy, $options['cross_origin_policies']['options'], true) ? $policy : '';
 	}
 
 	private static function sanitize_content_security_policy(string $value): string {
