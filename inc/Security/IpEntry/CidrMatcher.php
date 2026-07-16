@@ -107,4 +107,22 @@ final class CidrMatcher {
 
 		return false;
 	}
+
+	public static function cidr_to_ip( string $entry ): string {
+		if ( strpos( $entry, '/' ) !== false &&  self::is_valid_cidr( $entry ) ) {
+			$parts = explode( '/', $entry );
+
+			if ( count( $parts ) !== 2 ) {
+				return '';
+			}
+
+			return $parts[0];
+		}
+
+		if ( filter_var( $entry, FILTER_VALIDATE_IP ) ) {
+			return $entry;
+		}
+
+		return '';
+	}
 }

@@ -79,14 +79,22 @@ class GeoIpApi {
 	}
 
 	private static function build_api_url( string $ip ): string {
-		return sprintf(
-			self::API_ENDPOINT,
-			rawurlencode( $ip )
-		);
+		$ip = CidrMatcher::cidr_to_ip($ip);
+		if($ip) {
+			return sprintf(
+				self::API_ENDPOINT,
+				rawurlencode( $ip )
+			);
+		}
+		return '';
 	}
 
 	private static function fetch_from_api( string $ip ): array {
 		$url = self::build_api_url( $ip );
+
+		if(empty($url)) {
+			return [];
+		}
 
 		$response = wp_remote_get(
 			$url,
