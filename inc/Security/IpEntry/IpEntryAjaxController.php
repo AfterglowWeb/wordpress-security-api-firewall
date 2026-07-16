@@ -15,12 +15,14 @@ class IpEntryAjaxController {
 		$self = new self();
 		add_action( 'wp_ajax_bromate_get_ip_entries', array( $self, 'ajax_get_ip_entries' ) );
 		add_action( 'wp_ajax_bromate_add_ip_entry', array( $self, 'ajax_add_ip_entry' ) );
+		add_action( 'wp_ajax_bromate_update_ip_entry', array( $self, 'ajax_update_ip_entry' ) );
 		add_action( 'wp_ajax_bromate_delete_ip_entry', array( $self, 'ajax_delete_ip_entry' ) );
 		add_action( 'wp_ajax_bromate_delete_ip_entries', array( $self, 'ajax_delete_ip_entries' ) );
 		add_action( 'wp_ajax_bromate_get_country_stats', array( $self, 'ajax_get_country_stats' ) );
 		add_action( 'wp_ajax_bromate_toggle_country_block', array( $self, 'ajax_toggle_country_block' ) );
 		add_action( 'wp_ajax_bromate_get_user_ip_entries', array( $self, 'ajax_get_user_ip_entries' ) );
 		add_action( 'wp_ajax_bromate_get_login_ip_entries', array( $self, 'ajax_get_login_ip_entries' ) );
+		add_action( 'wp_ajax_bromate_get_current_user_ip', array( $self, 'ajax_get_current_user_ip' ) );
 	}
 
 	public function ajax_get_ip_entries(): void {
@@ -213,6 +215,18 @@ class IpEntryAjaxController {
 
 		$entries = IpEntryRepository::find_by_user( $user_id );
 		wp_send_json_success( array( 'entries' => $entries ), 200 );
+	}
+
+	public function ajax_get_current_user_ip(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
+
+		$current_user_ip = ClientIpResolver::get_client_ip();
+		if( empty( $current_user_ip ) ) {
+			wp_send_json_error( array( 'message' => 'Could not resolve your IP.' ), 400 );
+		}
+		wp_send_json_success( array( 'current_user_ip' => $current_user_ip ), 200 );
 	}
 
 	public function ajax_get_country_stats(): void {

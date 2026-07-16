@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 import {
-  Box, Paper, Typography, Switch,
+  Box, Paper, Typography,
   Stack, TextField, Button,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Alert, CircularProgress, List, ListItem, ListItemText,
@@ -16,6 +16,7 @@ import {
   Toolbar, GridFilterModel, GridActionsCellItem
 } from '@mui/x-data-grid';
 
+import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -27,6 +28,7 @@ import { useNavigation } from '@contexts/NavigationContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import { IpAPI, type IpEntry, type ListType, type AddEntryForm, type LineResult } from '@services/ip';
 import type { AuthorizedUser } from '@app-types/auth';
+import { apiRequest } from '@services/api';
 
 const EMPTY_FORM: AddEntryForm = {
   value: '',
@@ -59,6 +61,7 @@ function AddEntryDialog({
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<LineResult[]>([]);
   const portalContainer = usePortalContainer();
+  const [currentUserIp, setCurrentUserIp] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -88,6 +91,23 @@ function AddEntryDialog({
     if (lineErrors.length > 0) setErrors(lineErrors);
   };
 
+  const fetchUserIp = async () => {
+    const data = await apiRequest<{ current_user_ip: string }>('bromate_get_current_user_ip');
+    if(data?.current_user_ip) {
+      setCurrentUserIp(data?.current_user_ip);
+    }
+  }
+
+  useEffect(() => {
+    fetchUserIp();
+  }, [fetchUserIp]);
+
+  const handleAddUserIp = async () => {
+    if(currentUserIp) {
+      update('value', currentUserIp);
+    }
+  }
+
   return (
     <Dialog
       container={portalContainer} 
@@ -96,7 +116,7 @@ function AddEntryDialog({
       fullWidth 
       maxWidth="xs"
     >
-      <DialogTitle>{editingEntry ? 'Edit entry' : 'Add access control entries'}</DialogTitle>
+      <DialogTitle>{editingEntry ? __('Edit IP Entry', 'bromate-security-api-firewall') : __('Add IP Entries', 'bromate-security-api-firewall') }</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 0.5 }}>
           <FormControl>
@@ -111,14 +131,17 @@ function AddEntryDialog({
             </RadioGroup>
           </FormControl>
 
+          {form.list_type === 'whitelist' && (
+            <Stack flexDirection={"row"}>
+            <Button variant="text" size="small" endIcon={<AddIcon />} onClick={handleAddUserIp} >{__('Add my IP')}</Button>
+            </Stack>
+          )}
+
           <TextField
-            label="IPs / CIDRs (one per line)"
-            placeholder={'203.0.113.1\n203.0.113.2\n203.0.113.0/24'}
+            label="IP / CIDR"
+            placeholder={'203.0.113.1'}
             value={form.value}
             onChange={(e) => update('value', e.target.value)}
-            multiline 
-            minRows={4} 
-            maxRows={10}
             fullWidth 
             size="small" 
             disabled={saving}

@@ -30,8 +30,7 @@ class RoutesTreeRepository {
 
 	public static function save_routes_policy_tree( array $tree ): bool {
 		try {
-			$sanitized_tree = self::sanitize_routes_policy_tree( $tree );
-			return false !== SettingsRepository::update_option( 'routes_policy_tree', $sanitized_tree );
+			return false !== SettingsRepository::update_option( 'routes_policy_tree', $tree );
 		} catch ( Throwable $e ) {
 			return false;
 		}
@@ -295,8 +294,6 @@ class RoutesTreeRepository {
 
 	private static function sanitize_node( array $node ): array {
 		$sanitized = array();
-
-		error_log( print_r( $node, true ) );
 
 		foreach ( $node as $key => $value ) {
 			switch ( $key ) {
