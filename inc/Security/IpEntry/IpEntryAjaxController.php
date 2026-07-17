@@ -80,7 +80,7 @@ class IpEntryAjaxController {
 		}
 
 		$data = array(
-			'ip'           => CidrMatcher::sanitize_ip_array( $ip ),
+			'ip'           => CidrMatcher::sanitize_ip_or_cidr( $ip ),
 			'list_type'    => 'blacklist' === $list_type ? 'blacklist' : 'whitelist',
 			'entry_origin' => 'manual',
 			'user_id'      => ! empty( $user_id ) ? $user_id : null,
