@@ -7,15 +7,15 @@ use Exception;
 
 final class TOTPRepository {
 
-	private const PENDING_META_KEY       = '_bromate_totp_secret_pending';
-	private const PENDING_TIME_META_KEY  = '_bromate_totp_secret_pending_time';
-	private const SECRET_META_KEY        = '_bromate_totp_secret';
+	private const PENDING_META_KEY       = '_bromate_security_api_firewall_totp_secret_pending';
+	private const PENDING_TIME_META_KEY  = '_bromate_security_api_firewall_totp_secret_pending_time';
+	private const SECRET_META_KEY        = '_bromate_security_api_firewall_totp_secret';
 	private const USER_ENROLLED_META_KEY = '_bromate_security_api_firewall_totp_user_enrolled';
 	private const ENABLED_TIME_META_KEY  = '_bromate_security_api_firewall_totp_user_is_enrolled_time';
-	private const BACKUP_CODES_META_KEY  = '_bromate_backup_codes';
-	private const DIGITS_META_KEY        = '_bromate_totp_digits';
-	private const PERIOD_META_KEY        = '_bromate_totp_period';
-	private const ALGORITHM_META_KEY     = '_bromate_totp_algorithm';
+	private const BACKUP_CODES_META_KEY  = '_bromate_security_api_firewall_backup_codes';
+	private const DIGITS_META_KEY        = '_bromate_security_api_firewall_totp_digits';
+	private const PERIOD_META_KEY        = '_bromate_security_api_firewall_totp_period';
+	private const ALGORITHM_META_KEY     = '_bromate_security_api_firewall_totp_algorithm';
 
 	private const TOTP_DIGITS       = 6;
 	private const TOKEN_EXPIRY_DAYS = 30;
