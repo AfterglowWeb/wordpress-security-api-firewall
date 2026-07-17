@@ -55,12 +55,10 @@ final class CidrMatcher {
 			return '';
 		}
 
-		// Plain IP address (IPv4 or IPv6).
 		if ( filter_var( $value, FILTER_VALIDATE_IP ) ) {
 			return $value;
 		}
 
-		// CIDR notation: validate network address and prefix length.
 		if ( strpos( $value, '/' ) !== false ) {
 			[ $ip, $prefix ] = explode( '/', $value, 2 );
 			$prefix          = (int) $prefix;
