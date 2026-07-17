@@ -12,6 +12,7 @@ export interface FirewallSettings extends RedirectFrontSettings {
 	rate_limit_time: number;
 	rate_limit_block_duration: number;
 	rate_limit_blacklist_threshold: number;
+	rate_limit_violation_window: number;
 	rate_limit_countries: string[];
 }
 
@@ -28,5 +29,6 @@ export const DEFAULT_FIREWALL_SETTINGS: FirewallSettings = {
 	rate_limit_time: 60,
 	rate_limit_block_duration: 60,
 	rate_limit_blacklist_threshold: 5,
+	rate_limit_violation_window:300,
 	rate_limit_countries: [],
 };

@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
 use Bromate\SecurityApiFirewall\Security\Firewall\AutoBlacklist;
 use Bromate\SecurityApiFirewall\Security\Firewall\ViolationTracker;
 use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
@@ -12,7 +13,7 @@ use WP_Error;
 
 class RateLimiter {
 
-	private const REQUEST_KEY_PREFIX = 'rest_firewall_requests_';
+	private const REQUEST_KEY_PREFIX = 'bromate_security_api_firewall_requests_';
 
 	public static function inspect() {
 
@@ -23,12 +24,15 @@ class RateLimiter {
 		}
 
 		$client_ip = ClientIpResolver::get_client_ip();
+		if ( IpEntryRepository::ip_in_list( $client_ip, 'whitelist' ) ) {
+			return true;
+		}
 
-		$max_requests     = (int) $options['rate_limit'];
+		$max_requests     = (int) $options['rate_limit_max'];
 		$time_window      = (int) $options['rate_limit_time'];
-		$max_violations   = (int) $options['rate_limit_blacklist'];
+		$max_violations   = (int) $options['rate_limit_blacklist_threshold'];
 		$violation_window = (int) $options['rate_limit_violation_window'];
-		$blacklist_time   = (int) $options['rate_limit_blacklist_time'];
+		$blacklist_time   = (int) $options['rate_limit_block_duration'];
 
 		$count = self::increment_request_count(
 			$client_ip,
@@ -55,8 +59,8 @@ class RateLimiter {
 				$client_ip
 			);
 
-			FirewallLogger::log( 'ip_banned', 'error', [
-				'reason' => __( 'IP too many violations.', 'bromate-security-api-firewall' ), 
+			FirewallLogger::log( 'ip_banned', 'warning', [
+				'reason' => __( 'Too many violations. IP has been temporarily blocked.', 'bromate-security-api-firewall' ), 
 				'extra' => $violations
 			], $client_ip );
 
@@ -85,18 +89,26 @@ class RateLimiter {
 		int $window
 	): int {
 
-		$key = self::REQUEST_KEY_PREFIX . md5( $client_id );
+		$key  = self::REQUEST_KEY_PREFIX . md5( $client_id );
+		$data = get_transient( $key );
+		$now  = time();
 
-		$count = (int) get_transient( $key );
+		if (
+			! is_array( $data )
+			|| ! isset( $data['count'], $data['window_start'] )
+			|| ( $now - (int) $data['window_start'] ) >= $window
+		) {
+			$data = array(
+				'count'        => 1,
+				'window_start' => $now,
+			);
+		} else {
+			++$data['count'];
+		}
 
-		++$count;
+		$remaining = max( 1, $window - ( $now - $data['window_start'] ) );
+		set_transient( $key, $data, $remaining );
 
-		set_transient(
-			$key,
-			$count,
-			$window
-		);
-
-		return $count;
+		return $data['count'];
 	}
 }

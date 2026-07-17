@@ -4,17 +4,15 @@ defined( 'ABSPATH' ) || exit;
 
 class ViolationTracker {
 
-	private const VIOLATIONS_KEY_PREFIX = 'rest_firewall_violations_';
-	private const VIOLATION_LOCK_PREFIX = 'rest_firewall_violation_lock_';
+	private const VIOLATIONS_KEY_PREFIX = 'bromate_security_api_firewall_violations_';
+	private const VIOLATION_LOCK_PREFIX = 'bromate_security_api_firewall_violation_lock_';
 
 	public static function record_violation( string $client_ip, int $window ): int {
 
 		$lock_key = self::VIOLATION_LOCK_PREFIX . md5( $client_ip );
 
 		if ( get_transient( $lock_key ) ) {
-			return self::get_violation_count(
-				$client_ip
-			);
+			return self::get_violation_count( $client_ip );
 		}
 
 		set_transient(
@@ -23,26 +21,34 @@ class ViolationTracker {
 			$window
 		);
 
-		$key = self::VIOLATIONS_KEY_PREFIX . md5( $client_ip );
+		$key  = self::VIOLATIONS_KEY_PREFIX . md5( $client_ip );
+		$data = get_transient( $key );
+		$now  = time();
 
-		$count = (int) get_transient( $key );
+		if (
+			! is_array( $data )
+			|| ! isset( $data['count'], $data['window_start'] )
+			|| ( $now - (int) $data['window_start'] ) >= $window
+		) {
+			$data = array(
+				'count'        => 1,
+				'window_start' => $now,
+			);
+		} else {
+			++$data['count'];
+		}
 
-		++$count;
+		$remaining = max( 1, $window - ( $now - $data['window_start'] ) );
+		set_transient( $key, $data, $remaining );
 
-		set_transient(
-			$key,
-			$count,
-			$window
-		);
-
-		return $count;
+		return $data['count'];
 	}
 
 	public static function get_violation_count( string $client_ip ): int {
 
-		return (int) get_transient(
-			self::VIOLATIONS_KEY_PREFIX . md5( $client_ip )
-		);
+		$data = get_transient( self::VIOLATIONS_KEY_PREFIX . md5( $client_ip ) );
+
+		return is_array( $data ) ? (int) ( $data['count'] ?? 0 ) : 0;
 	}
 
 	public static function clear_violations( string $client_ip ): void {

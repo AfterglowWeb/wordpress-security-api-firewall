@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 class AutoBlacklist {
 
-	private const AUTO_BLACKLIST_KEY_PREFIX = 'rest_firewall_auto_blacklist_';
+	private const AUTO_BLACKLIST_KEY_PREFIX = 'bromate_security_api_firewall_auto_blacklist_';
 
 	public static function is_auto_blacklisted( string $ip ): bool {
 		return (bool) get_transient(

@@ -165,7 +165,14 @@ export default function Firewall(): JSX.Element {
                     disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_blacklist_threshold}
                     onChange={(e) => updateSetting('rate_limit_blacklist_threshold', Number(e.target.value))}
-                    helperText="Violations before auto-ban"
+                    helperText="Violations before ban"
+                  />
+                  <TextField
+                    label={__('Violations time window (seconds)', 'bromate-security-api-firewall')}
+                    type="number"
+                    disabled={!settings.rate_limit_enabled}
+                    value={settings.rate_limit_violation_window}
+                    onChange={(e) => updateSetting('rate_limit_violation_window', Number(e.target.value))}
                   />
                 </Stack>
               </Stack>
