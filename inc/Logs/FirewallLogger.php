@@ -9,7 +9,7 @@ final class FirewallLogger {
 		string $severity = 'info',
 		array $details = array(),
 		string $ip = '',
-		array $context = array(),
+		array $context = array()
 	): bool {
 
 		$result = false;
