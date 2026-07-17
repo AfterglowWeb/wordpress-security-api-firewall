@@ -98,6 +98,8 @@ export default function TOTPEnrollment({
   const [isEnabled, setIsEnabled] = useState(false);
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
   const [statusChecked, setStatusChecked] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [secretGenerated, setSecretGenerated] = useState(false);
 
   const portalContainer = usePortalContainer();
 
@@ -137,22 +139,25 @@ export default function TOTPEnrollment({
     setConfirmLoading(false);
   };
 
-  const resetSetupState = () => {
-    setActiveStep(0);
-    setTotpData(null);
-    setVerificationCode('');
-    setShowBackupCodes(false);
-    setBackupCodes(null);
-    setError(null);
-    setSuccess(null);
-  };
+  useEffect(() => {
+
+    if (!statusChecked || isEnabled || mode === 'verify' || isEnrolling || secretGenerated || loading) {
+      return;
+    }
+
+    if (activeStep === 0 && !totpData) {
+      generateTOTPSecret();
+      setSecretGenerated(true); 
+    }
+  }, [statusChecked, isEnabled, mode, isEnrolling, secretGenerated, loading, activeStep, totpData]);
+
 
   useEffect(() => {
     const checkStatus = async () => {
       try {
         const result = await apiRequest<TwoFAStatus>('bromate_get_totp_status');
         setStatus(result);
-        setIsEnabled(result.enabled);
+        setIsEnabled(!!result.enabled);
 
         if (!result.enabled) {
           resetSetupState();
@@ -172,19 +177,78 @@ export default function TOTPEnrollment({
       }
     };
 
-    if (mode === 'inline' || open) {
       checkStatus();
-    } else {
-      setStatusChecked(true);
-    }
+    
   }, [mode, open]);
 
-  useEffect(() => {
-    if (!statusChecked) return;
-    if (activeStep === 0 && !isEnabled && mode !== 'verify') {
-      generateTOTPSecret();
+  const resetSetupState = () => {
+    setActiveStep(0);
+    setTotpData(null);
+    setVerificationCode('');
+    setShowBackupCodes(false);
+    setBackupCodes(null);
+    setError(null);
+    setSuccess(null);
+    setSecretGenerated(false);
+    setIsEnrolling(false);
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setError('Please enter a valid 6-digit verification code.');
+      return;
     }
-  }, [statusChecked, activeStep, isEnabled, mode]);
+
+    setVerifying(true);
+    setIsEnrolling(true);
+    setError(null);
+
+    try {
+      const action = mode === 'verify' ? 'bromate_verify_login_code' : 'bromate_verify_totp_enrollment';
+      const result = await apiRequest<VerifyResult>(action, { code: verificationCode });
+
+      if (!result.verified) {
+        setError(result.message || 'Invalid verification code. Please try again.');
+        setIsEnrolling(false);
+        return;
+      }
+
+      setIsEnabled(true);
+      setIsEnrolling(false);
+      setSecretGenerated(false);
+
+    } catch (err: any) {
+      setError(err.message);
+      setIsEnrolling(false);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleDisable2FA = () => {
+    showConfirm({
+      title: __('Disable Two-Factor Authentication', 'bromate-security-api-firewall'),
+      message: __('Are you sure you want to disable 2FA? This will remove all 2FA protection and make your account less secure.', 'bromate-security-api-firewall'),
+      confirmLabel: __('Disable 2FA', 'bromate-security-api-firewall'),
+      confirmColor: 'error',
+      onConfirm: async () => {
+        try {
+          await apiRequest('bromate_disable_totp');
+          setSuccess('2FA disabled successfully');
+          setIsEnabled(false);
+          setSecretGenerated(false);
+          resetSetupState();
+          
+          setTimeout(() => {
+            onSetupComplete?.();
+            if (mode === 'dialog') onClose?.();
+          }, 2000);
+        } catch (err: any) {
+          setError(err.message);
+        }
+      },
+    });
+  };
 
   const generateTOTPSecret = async () => {
     setLoading(true);
@@ -203,136 +267,6 @@ export default function TOTPEnrollment({
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!verificationCode || verificationCode.length !== 6) {
-      setError('Please enter a valid 6-digit verification code.');
-      return;
-    }
-
-    setVerifying(true);
-    setError(null);
-
-    try {
-      const action = mode === 'verify' ? 'bromate_verify_login_code' : 'bromate_verify_totp_enrollment';
-      const result = await apiRequest<VerifyResult>(action, { code: verificationCode });
-
-      if (!result.verified) {
-        setError(result.message || 'Invalid verification code. Please try again.');
-        return;
-      }
-
-      if (mode === 'verify') {
-        setSuccess('Verified!');
-        setTimeout(() => {
-          onSetupComplete?.();
-          onClose?.();
-        }, 800);
-        return;
-      }
-
-      // Enrollment successful
-      setSuccess('2FA successfully enabled!');
-      setIsEnabled(true);
-
-      if (result.backup_codes) {
-        setBackupCodes(result.backup_codes);
-        setTotpData((prev) => (prev ? { ...prev, backup_codes: result.backup_codes } : null));
-        setShowBackupCodes(true);
-        
-        const backupCodesRemaining = result?.backup_codes ? result.backup_codes.length : 0;
-        setStatus((prev) => ({
-          enabled: true,
-          enabled_time: prev?.enabled_time || null,
-          has_backup_codes: true,
-          backup_codes_remaining: backupCodesRemaining,
-        }));
-      }
-
-      // Show success confirm dialog
-      const successMessage = (
-        <Stack spacing={2}>
-          <Typography variant="body1">
-            {__('Your account is now protected with two-factor authentication.', 'bromate-security-api-firewall')}
-          </Typography>
-          
-          {backupCodes && backupCodes.length > 0 && (
-            <Alert severity="info">
-              <Typography variant="subtitle2" gutterBottom>
-                {__('Save your backup codes', 'bromate-security-api-firewall')}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                {__('These codes can be used to access your account if you lose your authenticator device. Store them securely.', 'bromate-security-api-firewall')}
-              </Typography>
-              <Box 
-                sx={{ 
-                  bgcolor: 'grey.50', 
-                  p: 2, 
-                  borderRadius: 1, 
-                  my: 2,
-                  fontFamily: 'monospace',
-                  fontSize: '0.875rem',
-                  position: 'relative'
-                }}
-              >
-                {backupCodes.map((code, index) => (
-                  <div key={index}>{code}</div>
-                ))}
-                <Box sx={{ position: 'absolute', right: 6, top: 6, zIndex: 10 }}>
-                  <CopyButton toCopy={backupCodes.join('\n')} sx={{ fontSize: '18px' }} />
-                </Box>
-              </Box>
-            </Alert>
-          )}
-
-          <Typography variant="caption" color="text.secondary" align="center">
-            {__('You can manage your 2FA settings anytime from your profile page.', 'bromate-security-api-firewall')}
-          </Typography>
-        </Stack>
-      );
-
-      showConfirm({
-        title: __('Two-Factor Authentication Enabled!', 'bromate-security-api-firewall'),
-        message: successMessage,
-        confirmLabel: __('Done', 'bromate-security-api-firewall'),
-        confirmColor: 'success',
-        onConfirm: () => {
-          onSetupComplete?.();
-          if (mode === 'dialog') {
-            onClose?.();
-          }
-        },
-      });
-
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleDisable2FA = () => {
-    showConfirm({
-      title: __('Disable Two-Factor Authentication', 'bromate-security-api-firewall'),
-      message: __('Are you sure you want to disable 2FA? This will remove all 2FA protection and make your account less secure.', 'bromate-security-api-firewall'),
-      confirmLabel: __('Disable 2FA', 'bromate-security-api-firewall'),
-      confirmColor: 'error',
-      onConfirm: async () => {
-        try {
-          await apiRequest('bromate_disable_totp');
-          setSuccess('2FA disabled successfully');
-          setIsEnabled(false);
-          resetSetupState();
-          
-          setTimeout(() => {
-            onSetupComplete?.();
-            if (mode === 'dialog') onClose?.();
-          }, 2000);
-        } catch (err: any) {
-          setError(err.message);
-        }
-      },
-    });
-  };
 
   const handleRegenerateBackupCodes = () => {
     showConfirm({
@@ -377,6 +311,11 @@ export default function TOTPEnrollment({
       console.error('Failed to persist 2FA reminder dismissal', err);
     }
   };
+
+
+
+
+
 
   const handleCloseDialog = () => {
     if (policy === 'mandatory') {

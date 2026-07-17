@@ -94,31 +94,37 @@ export default function RedirectFront({
 						value="404"
 						control={<Radio size="small" />}
 						label={__('404 Not Found', TEXT_DOMAIN)}
+						sx={{maxWidth:200}}
 					/>
 					<FormControlLabel
 						value="403"
 						control={<Radio size="small" />}
 						label={__('403 Forbidden', TEXT_DOMAIN)}
+						sx={{maxWidth:200}}
 					/>
 					<FormControlLabel
 						value="401"
 						control={<Radio size="small" />}
 						label={__('401 Unauthorized', TEXT_DOMAIN)}
+						sx={{maxWidth:200}}
 					/>
 					<FormControlLabel
 						value="front"
 						control={<Radio size="small" />}
 						label={__('Front Page', TEXT_DOMAIN)}
+						sx={{maxWidth:200}}
 					/>
 					<FormControlLabel
 						value="login"
 						control={<Radio size="small" />}
 						label={__('Login Form', TEXT_DOMAIN)}
+						sx={{maxWidth:200}}
 					/>
 					<FormControlLabel
 						value="custom"
 						control={<Radio size="small" />}
 						label={__('Custom URL', TEXT_DOMAIN)}
+						sx={{maxWidth:200}}
 					/>
 					<Stack sx={{ pl: 4, mt: 1 }}>
 						<TextField
