@@ -39,20 +39,24 @@ class AuthenticationManager {
 			$auth_result = JwtAuthenticator::validate_bearer_jwt( $auth_config );
 
 			if ( $auth_result ) {
-				FirewallLogger::auth_success( true );
+				FirewallLogger::log( 'auth_success', 'info', array( 'reason' => 'Successfull Authentication with JWT', 'extra' => $auth_result ) );
 				return true;
 			}
 
-			FirewallLogger::auth_failed( 'invalid_jwt' );
+			FirewallLogger::log( 'invalid_jwt', 'warning', [
+				'reason' => __( 'Authentication failed because of invalid JWT.', 'bromate-security-api-firewall' ), 
+			] );
 			return false;
 		}
 
 		$auth_result = WordPressApplicationPassword::validate_wp_application_password();
 
 		if ( true === $auth_result ) {
-			FirewallLogger::auth_success( true );
+			FirewallLogger::log( 'auth_success', 'info', array( 'reason' => 'Successfull Authentication with WordPress Application Password', 'extra' => $auth_result ) );
 		} else {
-			FirewallLogger::auth_failed( 'invalid_application_password' );
+			FirewallLogger::log( 'invalid_application_password', 'warning', [
+				'reason' => __( 'Authentication failed because of invalid application password.', 'bromate-security-api-firewall' ), 
+			] );
 		}
 
 		return $auth_result;

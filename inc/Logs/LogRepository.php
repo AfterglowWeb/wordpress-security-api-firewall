@@ -13,22 +13,15 @@ final class LogRepository {
 		global $wpdb;
 
 		$row = array(
-			'event'       => sanitize_text_field( $data['event'] ?? '' ),
-			'severity'    => self::sanitize_severity( $data['severity'] ?? 'info' ),
-			'ip'          => sanitize_text_field( $data['ip'] ?? self::current_ip() ),
-			'user_agent'  => isset( $data['user_agent'] )
-				? substr( sanitize_text_field( $data['user_agent'] ), 0, 512 )
-				: self::current_user_agent(),
-			'referrer'    => isset( $data['referrer'] )
-				? substr( sanitize_text_field( $data['referrer'] ), 0, 512 )
-				: self::current_referrer(),
-			'method'      => sanitize_text_field( $data['method'] ?? self::current_method() ),
-			'uri'         => isset( $data['uri'] )
-				? substr( sanitize_text_field( $data['uri'] ), 0, 1024 )
-				: self::current_uri(),
-			'user_id'     => ! empty( $data['user_id'] ) ? (int) $data['user_id'] : ( get_current_user_id() ? get_current_user_id() : null ),
-			'object_type' => isset( $data['object_type'] ) ? sanitize_text_field( $data['object_type'] ) : null,
-			'object_id'   => isset( $data['object_id'] ) ? (int) $data['object_id'] : null,
+			'event'       => isset($data['event']) ? sanitize_text_field( $data['event'] ) : '',
+			'severity'    => isset($data['severity']) ? self::sanitize_severity( $data['severity'] ) : 'info',
+			'details'     => isset($data['details']) ? wp_json_encode( array_map('sanitize_text_field', $data['details']) ) : null,
+			'ip'          => isset($data['ip']) ? sanitize_text_field( $data['ip'] ) : self::current_ip(),
+			'user_agent'  => self::current_user_agent(),
+			'referrer'    => self::current_referrer(),
+			'method'      => self::current_method(),
+			'uri'         => self::current_uri(),
+			'user_id'     => get_current_user_id() ? get_current_user_id() : null,
 			'context'     => isset( $data['context'] ) ? wp_json_encode( $data['context'] ) : null,
 			'created_at'  => current_time( 'mysql' ),
 		);
@@ -164,14 +157,13 @@ final class LogRepository {
 			'id'          => (int) $row['id'],
 			'event'       => $row['event'],
 			'severity'    => $row['severity'],
+			'details'    => $row['details'],
 			'ip'          => $row['ip'],
 			'user_agent'  => $row['user_agent'],
 			'referrer'    => $row['referrer'],
 			'method'      => $row['method'],
 			'uri'         => $row['uri'],
 			'user_id'     => null !== $row['user_id'] ? (int) $row['user_id'] : null,
-			'object_type' => $row['object_type'],
-			'object_id'   => null !== $row['object_id'] ? (int) $row['object_id'] : null,
 			'context'     => null !== $row['context'] ? json_decode( $row['context'], true ) : null,
 			'created_at'  => $row['created_at'],
 		);

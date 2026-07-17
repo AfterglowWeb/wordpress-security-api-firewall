@@ -65,6 +65,7 @@ final class SchemaManager {
 			"CREATE TABLE {$table} (
 			id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			event       VARCHAR(64)     NOT NULL,
+			details     LONGTEXT        DEFAULT NULL,
 			severity    ENUM('debug','info','warning','error','critical') NOT NULL DEFAULT 'info',
 			ip          VARCHAR(45)     DEFAULT NULL,
 			user_agent  VARCHAR(512)    DEFAULT NULL,
@@ -72,8 +73,6 @@ final class SchemaManager {
 			method      VARCHAR(10)     DEFAULT NULL,
 			uri         VARCHAR(1024)   DEFAULT NULL,
 			user_id     BIGINT UNSIGNED DEFAULT NULL,
-			object_type VARCHAR(64)     DEFAULT NULL,
-			object_id   BIGINT UNSIGNED DEFAULT NULL,
 			context     LONGTEXT        DEFAULT NULL,
 			created_at  DATETIME        NOT NULL,
 			PRIMARY KEY (id),
