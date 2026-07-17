@@ -9,7 +9,7 @@ final class FirewallLogger {
 		string $severity = 'info',
 		array $details = array(),
 		string $ip = '',
-		array $context = array()
+		array $context = array(),
 	): bool {
 
 		$result = false;
@@ -32,7 +32,7 @@ final class FirewallLogger {
 			'plugin_settings_changed',
 
 		])) {
-			$result = LogRepository::insert(
+			return LogRepository::insert(
 				array(
 					'event'    => $event,
 					'severity' => $severity,
