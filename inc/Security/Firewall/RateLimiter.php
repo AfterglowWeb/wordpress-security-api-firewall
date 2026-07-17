@@ -55,16 +55,23 @@ class RateLimiter {
 				$client_ip
 			);
 
-			FirewallLogger::ip_banned( $client_ip, $violations );
+			FirewallLogger::log( 'ip_banned', 'error', [
+				'reason' => __( 'IP too many violations.', 'bromate-security-api-firewall' ), 
+				'extra' => $violations
+			], $client_ip );
+
 
 			return new WP_Error(
 				'rest_firewall_ip_blacklisted',
-				__( 'Your IP has been temporarily blocked.', 'bromate-security-api-firewall' ),
+				__( 'Too many violations, your IP has been temporarily blocked.', 'bromate-security-api-firewall' ),
 				array( 'status' => 403 )
 			);
 		}
 
-		FirewallLogger::ip_rate_limited( $client_ip, $count, $violation_window );
+		FirewallLogger::log( 'ip_rate_limited', 'error', [
+				'reason' => __( 'IP rate limited.', 'bromate-security-api-firewall' ), 
+				'extra' => $count
+			], $client_ip );
 
 		return new WP_Error(
 			'rest_firewall_rate_limited',

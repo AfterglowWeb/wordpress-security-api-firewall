@@ -19,12 +19,12 @@ class IpAccessControl {
 		$ip = ClientIpResolver::get_client_ip();
 
 		if ( IpEntryRepository::ip_in_list( $ip, 'whitelist' ) ) {
-			FirewallLogger::ip_whitelist_bypass( $ip, __( 'IP found in whitelist.', 'bromate-security-api-firewall' ) );
+			FirewallLogger::log( 'ip_whitelist_bypass', 'info', ['reason' => __( 'IP found in whitelist.', 'bromate-security-api-firewall' )], $ip );
 			return true;
 		}
 
 		if ( GeoIpApi::is_country_blocked( $ip ) ) {
-			FirewallLogger::ip_blocked( $ip, __( 'IP in blocked countries.', 'bromate-security-api-firewall' ) );
+			FirewallLogger::log( 'ip_blocked', 'warning', ['reason' => __( 'IP in blocked countries.', 'bromate-security-api-firewall' )], $ip );
 			return new WP_Error(
 				'bromate_security_api_firewall_country_blocked',
 				__( 'Access from your country is not allowed.', 'bromate-security-api-firewall' ),
@@ -33,7 +33,7 @@ class IpAccessControl {
 		}
 
 		if ( IpEntryRepository::ip_in_list( $ip, 'blacklist' ) ) {
-			FirewallLogger::ip_blocked( $ip, __( 'IP found in blacklist.', 'bromate-security-api-firewall' ) );
+			FirewallLogger::log( 'ip_blocked', 'warning', ['reason' => __( 'IP found in blacklist.', 'bromate-security-api-firewall' )], $ip );
 
 			return new WP_Error(
 				'bromate_security_api_firewall_ip_in_blacklist',
@@ -43,7 +43,7 @@ class IpAccessControl {
 		}
 
 		if ( AutoBlacklist::is_auto_blacklisted( $ip ) ) {
-			FirewallLogger::ip_blocked( $ip, __( 'IP autoblacklisted.', 'bromate-security-api-firewall' ) );
+			FirewallLogger::log( 'ip_blocked', 'warning', ['reason' => __( 'IP autoblacklisted.', 'bromate-security-api-firewall' )], $ip );
 
 			return new WP_Error(
 				'bromate_security_api_firewall_ip_blacklisted',
