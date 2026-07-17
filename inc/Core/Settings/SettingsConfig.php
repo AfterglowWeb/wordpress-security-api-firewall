@@ -123,6 +123,13 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
+			'rate_limit_violation_window'                   => array(
+				'default_value'     => 600,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'firewall',
+			),
+
 			'rate_limit_countries'                        => array(
 				'default_value'     => array(),
 				'type'              => 'array',
