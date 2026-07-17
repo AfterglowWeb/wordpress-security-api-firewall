@@ -5,47 +5,50 @@ defined( 'ABSPATH' ) || exit;
 final class CidrMatcher {
 
 	public static function ip_matches( string $ip, string $entry ): bool {
-		// Plain IP — exact match.
-		if ( strpos( $entry, '/' ) === false ) {
-			return $ip === $entry;
-		}
+			if ( strpos( $entry, '/' ) === false ) {
+				$ip_bin = inet_pton( $ip );
+				$entry_bin = inet_pton( $entry );
+				
+				if ( false === $ip_bin || false === $entry_bin || strlen( $ip_bin ) !== strlen( $entry_bin ) ) {
+					return false;
+				}
+				
+				return $ip_bin === $entry_bin;
+			}
 
-		[ $network, $prefix ] = explode( '/', $entry, 2 );
-		$prefix               = (int) $prefix;
-		$ip_bin               = inet_pton( $ip );
-		$net_bin              = inet_pton( $network );
+			[ $network, $prefix ] = explode( '/', $entry, 2 );
+			$prefix               = (int) $prefix;
+			$ip_bin               = inet_pton( $ip );
+			$net_bin              = inet_pton( $network );
 
-		// Both must be valid and the same address family.
-		if ( false === $ip_bin || false === $net_bin || strlen( $ip_bin ) !== strlen( $net_bin ) ) {
-			return false;
-		}
-
-		if ( $prefix <= 0 ) {
-			return true; // /0 matches everything.
-		}
-
-		$max_bits    = strlen( $ip_bin ) * 8;
-		$prefix      = min( $prefix, $max_bits );
-		$full_bytes  = intdiv( $prefix, 8 );
-		$remain_bits = $prefix % 8;
-
-		// Compare the unambiguous full bytes.
-		if ( $full_bytes > 0 && substr( $ip_bin, 0, $full_bytes ) !== substr( $net_bin, 0, $full_bytes ) ) {
-			return false;
-		}
-
-		// Compare the partial byte at the boundary (if any).
-		if ( $remain_bits > 0 ) {
-			$mask = 0xFF & ( 0xFF << ( 8 - $remain_bits ) );
-			if ( ( ord( $ip_bin[ $full_bytes ] ) & $mask ) !== ( ord( $net_bin[ $full_bytes ] ) & $mask ) ) {
+			if ( false === $ip_bin || false === $net_bin || strlen( $ip_bin ) !== strlen( $net_bin ) ) {
 				return false;
 			}
-		}
 
-		return true;
+			if ( $prefix <= 0 ) {
+				return true;
+			}
+
+			$max_bits    = strlen( $ip_bin ) * 8;
+			$prefix      = min( $prefix, $max_bits );
+			$full_bytes  = intdiv( $prefix, 8 );
+			$remain_bits = $prefix % 8;
+
+			if ( $full_bytes > 0 && substr( $ip_bin, 0, $full_bytes ) !== substr( $net_bin, 0, $full_bytes ) ) {
+				return false;
+			}
+
+			if ( $remain_bits > 0 ) {
+				$mask = 0xFF & ( 0xFF << ( 8 - $remain_bits ) );
+				if ( ( ord( $ip_bin[ $full_bytes ] ) & $mask ) !== ( ord( $net_bin[ $full_bytes ] ) & $mask ) ) {
+					return false;
+				}
+			}
+
+			return true;
 	}
 
-	public static function sanitize_ip_array( $value ): string {
+	public static function sanitize_ip_or_cidr( $value ): string {
 		$value = trim( (string) $value );
 
 		if ( '' === $value ) {

@@ -1,7 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Schema;
 
 defined( 'ABSPATH' ) || exit;
-use WP_Filesystem_Base;
 
 final class SchemaManager {
 
@@ -14,10 +13,7 @@ final class SchemaManager {
 			return;
 		}
 
-		$wp_filesystem = new WP_Filesystem_Base();
-		$abspath       = $wp_filesystem->abspath();
-
-		require_once realpath( $abspath . 'wp-admin/includes/upgrade.php' );
+		require_once realpath( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		global $wpdb;
 
 		self::create_ip_entries( $wpdb );
