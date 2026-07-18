@@ -25,7 +25,7 @@ export const DEFAULT_REDIRECT_FRONT_SETTINGS: RedirectFrontSettings = {
 export const DEFAULT_FIREWALL_SETTINGS: FirewallSettings = {
 	...DEFAULT_REDIRECT_FRONT_SETTINGS,
 	rate_limit_enabled: false,
-	rate_limit_max: 120,
+	rate_limit_max: 300,
 	rate_limit_time: 60,
 	rate_limit_block_duration: 60,
 	rate_limit_blacklist_threshold: 5,
