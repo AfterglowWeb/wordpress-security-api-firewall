@@ -24,6 +24,7 @@ class RateLimiter {
 		}
 
 		$client_ip = ClientIpResolver::get_client_ip();
+
 		if ( IpEntryRepository::ip_in_list( $client_ip, 'whitelist' ) ) {
 			return true;
 		}
@@ -45,7 +46,8 @@ class RateLimiter {
 
 		$violations = ViolationTracker::record_violation(
 			$client_ip,
-			$violation_window
+			$violation_window,
+			$time_window
 		);
 
 		if ( $violations >= $max_violations ) {

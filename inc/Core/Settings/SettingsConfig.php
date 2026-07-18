@@ -94,15 +94,13 @@ final class SettingsConfig {
 			),
 
 			'rate_limit_max'                              => array(
-				'default_value'     => 30,
+				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
 			'rate_limit_time'                             => array(
-				'label'             => esc_html__( 'Time window (seconds)', 'bromate-security-api-firewall' ),
-				'info'              => esc_html__( 'Period used to count requests before the limit resets.', 'bromate-security-api-firewall' ),
 				'default_value'     => 60,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
