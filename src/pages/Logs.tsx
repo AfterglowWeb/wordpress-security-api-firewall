@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import Stack from '@mui/material/Stack';
 
-import { type LogsSettings } from '@app-types/logs';
+import { type LogSeverity, type LogsSettings, type LogEvent } from '@app-types/logs';
 import { LogAPI } from '@services/logs';
 import LogsOptions from '@features/logs/LogsOptions';
 import LogsDataGrid from '@features/logs/LogsDataGrid';
@@ -10,8 +10,8 @@ import SaveButton from '@components/SaveButton';
 
 const DEFAULT_LOGS_SETTINGS:LogsSettings = {
   logs_enabled: false,
-  logs_keep_severities: [],
-  logs_keep_events: [],
+  logs_keep_severities: ['info', 'warning', 'error'] as LogSeverity[],
+  logs_keep_events: [] as LogEvent[],
   logs_rotation_time: 30,
 }
 

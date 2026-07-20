@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import {
   Box, Paper, Typography, Button, Chip, Stack, Tooltip,
   ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import {
   DataGrid, GridColDef, GridRowId,
-  GridRowSelectionModel, useGridApiContext, Toolbar,
+  GridRowSelectionModel, useGridApiContext, Toolbar
 } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { type LogEntry, type LogSeverity, type LogsSettings } from '@app-types/logs';
@@ -49,7 +50,14 @@ function LogsToolbar({
   const [selectedCount, setSelectedCount] = useState(0);
   const [selectedRows, setSelectedRows] = useState<Map<GridRowId, LogEntry>>(new Map());
   
-  const severitiesKept = logsSettings?.logs_keep_severities ?? [];
+  const severitiesKept = useMemo(() => {
+    const kept = logsSettings?.logs_keep_severities;
+    return Array.isArray(kept) ? kept : [];
+  }, [logsSettings?.logs_keep_severities]);
+
+  const isSeverityEnabled = (severity: LogSeverity): boolean => {
+    return Array.isArray(severitiesKept) && severitiesKept.includes(severity);
+  };
 
   useEffect(() => {
     const update = () => {
@@ -83,24 +91,29 @@ function LogsToolbar({
           size="small"
           onChange={(_, v) => { if (v !== null && onSeverityChange) onSeverityChange(v); }}
         >
-          <ToggleButton value="all">All</ToggleButton>
+          {severitiesKept.length > 1 && (
+          <ToggleButton 
+          value="all"
+          >
+            {__('All', 'bromate-security-api-firewall')}
+          </ToggleButton>)}
           <ToggleButton 
             value="info" 
-            disabled={!severitiesKept.includes('info')}
+            disabled={!isSeverityEnabled('info')}
           >
-            Info
+            {__('Info', 'bromate-security-api-firewall')}
           </ToggleButton>
           <ToggleButton 
             value="warning" 
-            disabled={!severitiesKept.includes('warning')}
+            disabled={!isSeverityEnabled('warning')}
           >
-            Warning
+            {__('Warning', 'bromate-security-api-firewall')}
           </ToggleButton>
           <ToggleButton 
             value="error" 
-            disabled={!severitiesKept.includes('error')}
+            disabled={!isSeverityEnabled('error')}
           >
-            Error
+            {__('Error', 'bromate-security-api-firewall')}
           </ToggleButton>
         </ToggleButtonGroup>
       </Stack>
@@ -166,6 +179,8 @@ export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element 
     type: 'include',
     ids: new Set(),
   });
+
+  const portalContainer = usePortalContainer();
 
   const load = useCallback(async (p = page, ps = pageSize, sev = severityFilter) => {
     setLoading(true);
@@ -239,6 +254,7 @@ export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element 
               logsSettings: settings,
             } as any,
           }}
+
         />
       </Paper>
       <ConfirmDialog />

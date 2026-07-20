@@ -1,3 +1,4 @@
+import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
@@ -42,7 +43,6 @@ const LOGS_EVENTS_OPTIONS: Array<{
   // System Events
   { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall'), groupLabel: __('System', 'bromate-security-api-firewall') },
   { value: 'plugin_settings_changed', label: __('Plugin Settings Changed', 'bromate-security-api-firewall') },
-  { value: 'unknown', label: __('Unknown Event', 'bromate-security-api-firewall') }
 ];
 
 type Props = {
@@ -52,16 +52,25 @@ type Props = {
 
 export default function LogsOptions({ settings, onChange }: Props): JSX.Element {
   const enabled = settings.logs_enabled ?? false;
+  const severitiesKept = useMemo(() => {
+    const kept = settings?.logs_keep_severities;
+    return Array.isArray(kept) ? kept : [];
+  }, [settings?.logs_keep_severities]);
 
-  const toggleSeverities = (severity: LogSeverity) => {
-    const current = settings.logs_keep_severities ?? [];
-    onChange(
-      'logs_keep_severities',
-      current.includes(severity) ? current.filter((m) => m !== severity) : [...current, severity]
-    );
+  const isSeverityEnabled = (severity: LogSeverity): boolean => {
+    return Array.isArray(severitiesKept) && severitiesKept.includes(severity);
   };
 
-  // Now this handler is properly typed with LogEvent
+  const toggleSeverities = (severity: LogSeverity) => {
+    const current = Array.isArray(settings.logs_keep_severities) ? settings.logs_keep_severities : [];
+    const isEnabled = current.includes(severity);
+    const newValue = isEnabled 
+      ? current.filter((m: LogSeverity) => m !== severity)
+      : [...current, severity];
+    
+    onChange('logs_keep_severities', newValue as LogSeverity[]);
+  };
+
   const handleEventsChange = (events: LogEvent[]) => {
     onChange('logs_keep_events', events);
   };
@@ -115,7 +124,7 @@ export default function LogsOptions({ settings, onChange }: Props): JSX.Element 
                   label={severity}
                   control={
                     <Switch
-                      checked={settings.logs_keep_severities?.includes(severity) ?? false}
+                      checked={isSeverityEnabled(severity) ?? false}
                       onChange={() => toggleSeverities(severity)}
                       disabled={!enabled}
                     />
@@ -125,8 +134,8 @@ export default function LogsOptions({ settings, onChange }: Props): JSX.Element 
             </Stack>
           </Stack>
 
-          <Stack spacing={1} maxWidth={300}>
-            <Typography variant="body1">{__('Logs Type', 'bromate-security-api-firewall')}</Typography>
+          <Stack spacing={2}>
+            <Typography variant="body1">{__('Logs Types', 'bromate-security-api-firewall')}</Typography>
             <Stack direction="row" gap={1} flexWrap="wrap">
               <MultipleSelect<LogEvent>
                 label={__('Select Logs Types', 'bromate-security-api-firewall')}
