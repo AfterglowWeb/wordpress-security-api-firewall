@@ -15,7 +15,7 @@ final class LogRepository {
 		$row = array(
 			'event'       => isset($data['event']) ? sanitize_text_field( $data['event'] ) : '',
 			'severity'    => isset($data['severity']) ? self::sanitize_severity( $data['severity'] ) : 'info',
-			'details'     => isset($data['details']) ? wp_json_encode( array_map('sanitize_text_field', $data['details']) ) : null,
+			'details'     => isset($data['details']) ? wp_json_encode( $data['details'] ) : null,
 			'ip'          => isset($data['ip']) ? sanitize_text_field( $data['ip'] ) : self::current_ip(),
 			'user_agent'  => self::current_user_agent(),
 			'referrer'    => self::current_referrer(),

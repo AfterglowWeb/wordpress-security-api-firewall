@@ -13,7 +13,7 @@ final class FirewallLogger {
 	): bool {
 
 		$result = false;
-		if(in_array($event, [
+		$event = in_array($event, [
 			'ip_blocked',
 			'ip_rate_limited',
 			'ip_banned',
@@ -31,17 +31,20 @@ final class FirewallLogger {
 			'emergency_token_used',
 			'plugin_settings_changed',
 
-		])) {
-			return LogRepository::insert(
-				array(
-					'event'    => $event,
-					'severity' => $severity,
-					'details' => $details,
-					'ip'      => $ip,
-					'context'  => ! empty( $context ) ? $context : null,
-				)
-			);
-		}
+		]) ? sanitize_key( $event ) : 'unknown_event';
+
+		$severity = in_array($severity, ['debug','info','warning','error','critical']) ? sanitize_key( $severity ) : 'info';
+		
+		return LogRepository::insert(
+			array(
+				'event'    => $event,
+				'severity' => $severity,
+				'details' => $details,
+				'ip'      => $ip,
+				'context'  => ! empty( $context ) ? $context : null,
+			)
+		);
+		
 		return $result;
 	}
 
