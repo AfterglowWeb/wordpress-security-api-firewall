@@ -14,12 +14,12 @@ class WordPressApplicationPassword {
 		}
 
 		$user_id = absint( $user_id );
-		if ( $user_id === 0 ) {
+		if ( ! $user_id || 0 === $user_id ) {
 			return false;
 		}
 
 		$user = get_userdata( $user_id );
-		if ( ! $user ) {
+		if ( ! $user instanceof WP_User ) {
 			return false;
 		}
 
@@ -31,11 +31,11 @@ class WordPressApplicationPassword {
 
 		$has_valid = false;
 		foreach ( $passwords as $password ) {
-			if ( isset( $password['revoked_at'] ) && $password['revoked_at'] !== null ) {
+			if ( isset( $password['revoked_at'] ) && null !== $password['revoked_at'] ) {
 				continue;
 			}
 
-			if ( isset( $password['expires'] ) && $password['expires'] !== null ) {
+			if ( isset( $password['expires'] ) && null !== $password['expires'] ) {
 				if ( $password['expires'] <= time() ) {
 					continue;
 				}

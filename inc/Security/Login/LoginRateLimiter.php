@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
-use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpUtils;
 use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 
 final class LoginRateLimiter {
@@ -28,6 +28,7 @@ final class LoginRateLimiter {
 	}
 
 	public function check_before_auth( $user ) {
+
 		if ( ! $this->is_enabled() ) {
 			return $user;
 		}
@@ -130,7 +131,7 @@ final class LoginRateLimiter {
 		$whitelist = array_filter( (array) SettingsRepository::read_option( 'absolute_whitelist' ) );
 
 		foreach ( $whitelist as $entry ) {
-			if ( CidrMatcher::ip_matches( $ip, (string) $entry ) ) {
+			if ( IpUtils::ip_matches( $ip, (string) $entry ) ) {
 				return true;
 			}
 		}

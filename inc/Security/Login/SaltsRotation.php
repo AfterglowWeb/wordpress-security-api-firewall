@@ -14,6 +14,7 @@ class SaltsRotation {
 	const CONFIG_OPTION_KEY = 'bromate_security_api_firewall_salts_rotation_config';
 	const LAST_ROTATION_KEY = 'bromate_security_api_firewall_last_salts_rotation';
 	const CRON_HOOK_KEY     = 'bromate_security_api_firewall_salts_rotation_cron_hook';
+	const SALT_API_ENDPOINT = 'https://api.wordpress.org/secret-key/1.1/salt/';
 
 	public static function register(): void {
 
@@ -165,7 +166,7 @@ class SaltsRotation {
 	}
 
 	private static function generate_salt(): string {
-		return base64_encode( random_bytes( 64 ) );
+		return wp_generate_password( 64, true, true );
 	}
 
 	public static function sanitize_recurrence( $value ): string {

@@ -24,7 +24,7 @@ final class RestRequestBootstrap {
 			'rest_pre_serve_request',
 			array( HttpHeaders::class, 'add_headers_to_rest' ),
 			10,
-			3
+			1
 		);
 
 		add_filter(

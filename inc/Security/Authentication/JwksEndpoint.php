@@ -3,7 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
+use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthentication;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -39,7 +39,7 @@ class JwksEndpoint {
 	}
 
 	public static function get_jwks( WP_REST_Request $request ): WP_REST_Response {
-		$jwks = JwtAuthenticator::build_jwks( true );
+		$jwks = JwtAuthentication::build_jwks( true );
 
 		if ( empty( $jwks['keys'] ) ) {
 			return new WP_REST_Response( array( 'keys' => array() ), 404 );
@@ -48,8 +48,8 @@ class JwksEndpoint {
 		if ( $request->get_param( 'format' ) === 'pem' ) {
 			return new WP_REST_Response(
 				array(
-					'pem'  => JwtAuthenticator::get_public_key() ?? '',
-					'kid'  => JwtAuthenticator::get_active_kid() ?? '',
+					'pem'  => JwtAuthentication::get_public_key() ?? '',
+					'kid'  => JwtAuthentication::get_active_kid() ?? '',
 					'jwks' => $jwks,
 				),
 				200

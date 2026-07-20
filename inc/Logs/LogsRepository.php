@@ -4,7 +4,7 @@ use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 
 defined( 'ABSPATH' ) || exit;
 
-final class LogRepository {
+final class LogsRepository {
 
 	protected static function table(): string {
 		global $wpdb;
@@ -15,17 +15,17 @@ final class LogRepository {
 		global $wpdb;
 
 		$row = array(
-			'event'       => isset($data['event']) ? sanitize_text_field( $data['event'] ) : '',
-			'severity'    => isset($data['severity']) ? self::sanitize_severity( $data['severity'] ) : 'info',
-			'details'     => isset($data['details']) ? wp_json_encode( $data['details'] ) : null,
-			'ip'          => isset($data['ip']) ? sanitize_text_field( $data['ip'] ) : ClientIpResolver::get_client_ip(),
-			'user_agent'  => self::current_user_agent(),
-			'referrer'    => self::current_referrer(),
-			'method'      => self::current_method(),
-			'uri'         => self::current_uri(),
-			'user_id'     => get_current_user_id() ? get_current_user_id() : null,
-			'context'     => isset( $data['context'] ) ? wp_json_encode( $data['context'] ) : null,
-			'created_at'  => current_time( 'mysql' ),
+			'event'      => isset( $data['event'] ) ? sanitize_text_field( $data['event'] ) : '',
+			'severity'   => isset( $data['severity'] ) ? self::sanitize_severity( $data['severity'] ) : 'info',
+			'details'    => isset( $data['details'] ) ? wp_json_encode( $data['details'] ) : null,
+			'ip'         => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : ClientIpResolver::get_client_ip(),
+			'user_agent' => self::current_user_agent(),
+			'referrer'   => self::current_referrer(),
+			'method'     => self::current_method(),
+			'uri'        => self::current_uri(),
+			'user_id'    => get_current_user_id() ? get_current_user_id() : null,
+			'context'    => isset( $data['context'] ) ? wp_json_encode( $data['context'] ) : null,
+			'created_at' => current_time( 'mysql' ),
 		);
 
 		if ( empty( $row['event'] ) ) {
@@ -156,8 +156,8 @@ final class LogRepository {
 
 	public static function sanitize_severity( string $raw_value ): string {
 
-		$value = sanitize_key($raw_value);
-		$allowed = [
+		$value   = sanitize_key( $raw_value );
+		$allowed = array(
 			'ip_blocked',
 			'ip_rate_limited',
 			'ip_banned',
@@ -174,31 +174,31 @@ final class LogRepository {
 			'admin_login_banned',
 			'emergency_token_used',
 			'plugin_settings_changed',
-			'unknown'
-		];
+			'unknown',
+		);
 		return in_array( $value, $allowed, true ) ? $value : 'unknown';
 	}
 
 	public static function sanitize_event( string $raw_value ): string {
-		$value = sanitize_key($raw_value);
+		$value   = sanitize_key( $raw_value );
 		$allowed = array( 'debug', 'info', 'warning', 'error', 'critical' );
 		return in_array( $value, $allowed, true ) ? $value : 'info';
 	}
 
 	private static function normalize( array $row ): array {
 		return array(
-			'id'          => (int) $row['id'],
-			'event'       => $row['event'],
-			'severity'    => $row['severity'],
-			'details'     => $row['details'],
-			'ip'          => $row['ip'],
-			'user_agent'  => $row['user_agent'],
-			'referrer'    => $row['referrer'],
-			'method'      => $row['method'],
-			'uri'         => $row['uri'],
-			'user_id'     => null !== $row['user_id'] ? (int) $row['user_id'] : null,
-			'context'     => null !== $row['context'] ? json_decode( $row['context'], true ) : null,
-			'created_at'  => $row['created_at'],
+			'id'         => (int) $row['id'],
+			'event'      => $row['event'],
+			'severity'   => $row['severity'],
+			'details'    => $row['details'],
+			'ip'         => $row['ip'],
+			'user_agent' => $row['user_agent'],
+			'referrer'   => $row['referrer'],
+			'method'     => $row['method'],
+			'uri'        => $row['uri'],
+			'user_id'    => null !== $row['user_id'] ? (int) $row['user_id'] : null,
+			'context'    => null !== $row['context'] ? json_decode( $row['context'], true ) : null,
+			'created_at' => $row['created_at'],
 		);
 	}
 

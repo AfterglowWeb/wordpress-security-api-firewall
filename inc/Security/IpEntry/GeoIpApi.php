@@ -79,16 +79,19 @@ class GeoIpApi {
 	}
 
 	public static function sanitize_country_codes( array $country_codes ): array {
-		$country_codes = array_filter($country_codes, function($country_code){
-			preg_match('/^[A-Z]{2}$/i', sanitize_key($country_code), $matches);
-			return !empty( $matches );
-		});
+		$country_codes = array_filter(
+			$country_codes,
+			function ( $country_code ) {
+				preg_match( '/^[A-Z]{2}$/i', sanitize_key( $country_code ), $matches );
+				return ! empty( $matches );
+			}
+		);
 		return $country_codes;
 	}
 
 	private static function build_api_url( string $ip ): string {
-		$ip = CidrMatcher::cidr_to_ip($ip);
-		if($ip) {
+		$ip = IpUtils::cidr_to_ip( $ip );
+		if ( $ip ) {
 			return sprintf(
 				self::API_ENDPOINT,
 				rawurlencode( $ip )
@@ -101,7 +104,7 @@ class GeoIpApi {
 		$url = self::build_api_url( $ip );
 
 		if ( empty( $url ) ) {
-			return [];
+			return array();
 		}
 
 		$response = wp_remote_get(
@@ -113,27 +116,27 @@ class GeoIpApi {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			return [];
+			return array();
 		}
 
 		$response_code = wp_remote_retrieve_response_code( $response );
-		if ( $response_code !== 200 ) {
-			return [];
+		if ( 200 !== $response_code ) {
+			return array();
 		}
 
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 
 		if ( ! is_array( $data ) ) {
-			return [];
+			return array();
 		}
 
-		if ( isset( $data['error'] ) && $data['error'] === true ) {
-			return [];
+		if ( isset( $data['error'] ) && true === $data['error'] ) {
+			return array();
 		}
 
 		if ( empty( $data['country_code'] ) && empty( $data['country_name'] ) && empty( $data['city'] ) ) {
-			return [];
+			return array();
 		}
 
 		return array(

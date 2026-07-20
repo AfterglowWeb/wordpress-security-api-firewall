@@ -2,7 +2,7 @@
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
-use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
+use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthentication;
 
 class AuthenticationAjaxController {
 
@@ -45,7 +45,7 @@ class AuthenticationAjaxController {
 				throw new \Exception( 'OpenSSL extension is not loaded. Please enable it in your PHP configuration.' );
 			}
 
-			$key_pair = JwtAuthenticator::create_key_pair( true );
+			$key_pair = JwtAuthentication::create_key_pair( true );
 
 			wp_send_json_success(
 				array(
@@ -53,7 +53,7 @@ class AuthenticationAjaxController {
 					'public_key'         => $key_pair['public'],
 					'private_key_stored' => true,
 					'message'            => __( 'Key pair generated and stored securely.', 'bromate-security-api-firewall' ),
-					'summary'            => JwtAuthenticator::get_key_pair_summary(),
+					'summary'            => JwtAuthentication::get_key_pair_summary(),
 				)
 			);
 		} catch ( \Throwable $e ) {
@@ -75,8 +75,8 @@ class AuthenticationAjaxController {
 
 		wp_send_json_success(
 			array(
-				'has_key' => JwtAuthenticator::has_key_pair(),
-				'summary' => JwtAuthenticator::get_key_pair_summary(),
+				'has_key' => JwtAuthentication::has_key_pair(),
+				'summary' => JwtAuthentication::get_key_pair_summary(),
 			)
 		);
 	}
@@ -86,7 +86,7 @@ class AuthenticationAjaxController {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
-		$deleted = JwtAuthenticator::delete_key_pair();
+		$deleted = JwtAuthentication::delete_key_pair();
 
 		if ( $deleted ) {
 			wp_send_json_success(
@@ -109,12 +109,13 @@ class AuthenticationAjaxController {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
-		$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_validate_has_firewall_admin_caps()
+		$user_id = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
 		if ( $user_id <= 0 || ! get_userdata( $user_id ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid user', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
-		$subclaim = JwtAuthenticator::create_user_subclaim( $user_id );
+		$subclaim = JwtAuthentication::create_user_subclaim( $user_id );
 
 		if ( empty( $subclaim ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Failed to generate subclaim', 'bromate-security-api-firewall' ) ), 500 );

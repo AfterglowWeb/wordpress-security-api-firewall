@@ -70,7 +70,7 @@ class HttpHeaders {
 		return $headers;
 	}
 
-	public static function add_headers_to_rest( $served, $result, $request ): bool {
+	public static function add_headers_to_rest( $served ): bool {
 		if ( ! headers_sent() ) {
 			self::send_headers_early();
 		}

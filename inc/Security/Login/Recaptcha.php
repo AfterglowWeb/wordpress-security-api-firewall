@@ -196,8 +196,9 @@ final class Recaptcha {
 			return new WP_Error(
 				'recaptcha_verification_failed',
 				sprintf(
+					/* translators: %s is a json encoded string containing the error codes returned by reCaptcha API */
 					__( 'reCAPTCHA verification failed. Error: %s', 'bromate-security-api-firewall' ),
-					$error_codes
+					wp_json_encode( $error_codes )
 				)
 			);
 		}

@@ -55,9 +55,9 @@ deptrac:
       - WordPress
 
     Logs:
-     - FirewallLogger
-     - LogEntryAjaxController
-     - LogRepository
+     - Logger
+     - LogsAjaxController
+     - LogsRepository
 
   formatters:
     graphviz:
@@ -66,6 +66,6 @@ deptrac:
           - Admin
         Runtime:
           - Api
-          - FirewallLogger
+          - Logger
         Features:
           - Security

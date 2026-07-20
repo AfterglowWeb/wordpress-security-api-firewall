@@ -2,7 +2,7 @@
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Firewall\AutoBlacklist;
-use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
+use Bromate\SecurityApiFirewall\Logs\Logger;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
 use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
@@ -19,12 +19,12 @@ class IpAccessControl {
 		$ip = ClientIpResolver::get_client_ip();
 
 		if ( IpEntryRepository::ip_in_list( $ip, 'whitelist' ) ) {
-			FirewallLogger::log( 'ip_whitelist_bypass', 'info', ['reason' => __( 'IP found in whitelist.', 'bromate-security-api-firewall' )], $ip );
+			Logger::log( 'ip_whitelist_bypass', 'info', array( 'reason' => __( 'IP found in whitelist.', 'bromate-security-api-firewall' ) ), $ip );
 			return true;
 		}
 
 		if ( GeoIpApi::is_country_blocked( $ip ) ) {
-			FirewallLogger::log( 'ip_blocked', 'warning', ['reason' => __( 'IP in blocked countries.', 'bromate-security-api-firewall' )], $ip );
+			Logger::log( 'ip_blocked', 'warning', array( 'reason' => __( 'IP in blocked countries.', 'bromate-security-api-firewall' ) ), $ip );
 			return new WP_Error(
 				'bromate_security_api_firewall_country_blocked',
 				__( 'Access from your country is not allowed.', 'bromate-security-api-firewall' ),
@@ -33,7 +33,7 @@ class IpAccessControl {
 		}
 
 		if ( IpEntryRepository::ip_in_list( $ip, 'blacklist' ) ) {
-			FirewallLogger::log( 'ip_blocked', 'warning', ['reason' => __( 'IP found in blacklist.', 'bromate-security-api-firewall' )], $ip );
+			Logger::log( 'ip_blocked', 'warning', array( 'reason' => __( 'IP found in blacklist.', 'bromate-security-api-firewall' ) ), $ip );
 
 			return new WP_Error(
 				'bromate_security_api_firewall_ip_in_blacklist',
@@ -43,7 +43,7 @@ class IpAccessControl {
 		}
 
 		if ( AutoBlacklist::is_auto_blacklisted( $ip ) ) {
-			FirewallLogger::log( 'ip_blocked', 'warning', ['reason' => __( 'IP autoblacklisted.', 'bromate-security-api-firewall' )], $ip );
+			Logger::log( 'ip_blocked', 'warning', array( 'reason' => __( 'IP autoblacklisted.', 'bromate-security-api-firewall' ) ), $ip );
 
 			return new WP_Error(
 				'bromate_security_api_firewall_ip_blacklisted',
