@@ -8,7 +8,7 @@ import TextField from '@mui/material/TextField';
 import { Paper } from '@mui/material';
 
 import MultipleSelect from '@components/MultipleSelect';
-import type { LogSettings, LogSeverity, LogEvent } from '@app-types/logs';
+import type { LogsSettings, LogSeverity, LogEvent } from '@app-types/logs';
 
 const LOGS_SEVERITIES: LogSeverity[] = ['info', 'warning', 'error'];
 
@@ -46,8 +46,8 @@ const LOGS_EVENTS_OPTIONS: Array<{
 ];
 
 type Props = {
-  settings: LogSettings;
-  onChange: <K extends keyof LogSettings>(key: K, value: LogSettings[K]) => void;
+  settings: LogsSettings;
+  onChange: <K extends keyof LogsSettings>(key: K, value: LogsSettings[K]) => void;
 };
 
 export default function LogsOptions({ settings, onChange }: Props): JSX.Element {

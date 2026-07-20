@@ -1,13 +1,16 @@
 import { apiRequest } from '@services/api';
-import { LogQueryArgs, LogPage, LogSettings } from '@app-types/logs';
+import { LogsQueryArgs, LogsPage, LogsSettings } from '@app-types/logs';
 
 
 export const LogAPI = {
   getSettings: () =>
-    apiRequest<LogSettings>('bromate_get_log_settings'),
+    apiRequest<LogsSettings>('bromate_get_logs_settings'),
 
-  getEntries: (args: LogQueryArgs = {}) =>
-    apiRequest<LogPage>('bromate_get_log_entries', args as Record<string, unknown>),
+  updateSettings: (args: LogsSettings) =>
+    apiRequest<LogsSettings>('bromate_update_logs_settings'),
+
+  getEntries: (args: LogsQueryArgs = {}) =>
+    apiRequest<LogsPage>('bromate_get_log_entries', args as Record<string, unknown>),
 
   deleteEntry: (id: number) =>
     apiRequest<{ deleted: boolean }>('bromate_delete_log_entry', { id }),

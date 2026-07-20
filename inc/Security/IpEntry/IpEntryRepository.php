@@ -272,7 +272,7 @@ class IpEntryRepository {
 		$cidrs = $wpdb->get_col( $wpdb->prepare( $sql, $list_type, '%/%' ) );
 
 		foreach ( $cidrs as $cidr ) {
-			if ( CidrMatcher::ip_matches( $ip, $cidr ) ) {
+			if ( IpUtils::ip_matches( $ip, $cidr ) ) {
 				return true;
 			}
 		}
@@ -418,7 +418,7 @@ class IpEntryRepository {
 			$sanitized[ $key ] = $value;
 		}
 
-		if ( $require_ip && ( empty( $sanitized['ip'] ) || ! CidrMatcher::is_valid_ip_or_cidr( $sanitized['ip'] ) ) ) {
+		if ( $require_ip && ( empty( $sanitized['ip'] ) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) ) {
 			return null;
 		}
 

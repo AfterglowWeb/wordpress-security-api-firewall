@@ -1,6 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
-use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
+use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthentication;
 use Bromate\SecurityApiFirewall\Security\Authentication\WordPressApplicationPassword;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
 use WP_User;
@@ -132,7 +132,7 @@ class SettingsRepository {
 					'current_user'        => $current_user_id === $user->ID ? true : false,
 					'admin_url'           => sanitize_url( get_edit_user_link( $user->ID ) ),
 					'roles'               => array_map( 'sanitize_key', $user->roles ),
-					'jwt_subclaim'        => JwtAuthenticator::create_user_subclaim( $user->ID ),
+					'jwt_subclaim'        => JwtAuthentication::create_user_subclaim( $user->ID ),
 					'status'              => '',
 					'expires_at'          => '',
 					'ip_entries'          => IpEntryRepository::find_by_user( $user->ID ),

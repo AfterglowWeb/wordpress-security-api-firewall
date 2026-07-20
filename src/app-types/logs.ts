@@ -36,7 +36,7 @@ export interface LogEntry {
   created_at: string;
 }
 
-export interface LogQueryArgs {
+export interface LogsQueryArgs {
   event?: LogEvent[];
   severity?: LogSeverity;
   ip?: string;
@@ -50,7 +50,7 @@ export interface LogQueryArgs {
   order?: 'ASC' | 'DESC';
 }
 
-export interface LogPage {
+export interface LogsPage {
   entries: LogEntry[];
   total: number;
   page: number;
@@ -58,7 +58,7 @@ export interface LogPage {
   total_pages: number;
 }
 
-export interface LogSettings {
+export interface LogsSettings {
     logs_enabled: boolean;
     logs_keep_severities: LogSeverity[];
     logs_keep_events: LogEvent[];

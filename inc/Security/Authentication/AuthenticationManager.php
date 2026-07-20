@@ -4,8 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Security\Authentication\WordPressApplicationPassword;
-use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthenticator;
-use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
+use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthentication;
+use Bromate\SecurityApiFirewall\Logs\Logger;
 
 class AuthenticationManager {
 
@@ -36,27 +36,49 @@ class AuthenticationManager {
 				'cache_duration' => $options['firewall_jwt_cache_duration'] ?? 3600,
 			);
 
-			$auth_result = JwtAuthenticator::validate_bearer_jwt( $auth_config );
+			$auth_result = JwtAuthentication::validate_bearer_jwt( $auth_config );
 
 			if ( $auth_result ) {
-				FirewallLogger::log( 'auth_success', 'info', array( 'reason' => 'Successfull Authentication with JWT', 'extra' => $auth_result ) );
+				Logger::log(
+					'auth_success',
+					'info',
+					array(
+						'reason' => 'Successfull Authentication with JWT',
+						'extra'  => $auth_result,
+					)
+				);
 				return true;
 			}
 
-			FirewallLogger::log( 'invalid_jwt', 'warning', [
-				'reason' => __( 'Authentication failed because of invalid JWT.', 'bromate-security-api-firewall' ), 
-			] );
+			Logger::log(
+				'invalid_jwt',
+				'warning',
+				array(
+					'reason' => __( 'Authentication failed because of invalid JWT.', 'bromate-security-api-firewall' ),
+				)
+			);
 			return false;
 		}
 
 		$auth_result = WordPressApplicationPassword::validate_wp_application_password();
 
 		if ( true === $auth_result ) {
-			FirewallLogger::log( 'auth_success', 'info', array( 'reason' => 'Successfull Authentication with WordPress Application Password', 'extra' => $auth_result ) );
+			Logger::log(
+				'auth_success',
+				'info',
+				array(
+					'reason' => 'Successfull Authentication with WordPress Application Password',
+					'extra'  => $auth_result,
+				)
+			);
 		} else {
-			FirewallLogger::log( 'invalid_application_password', 'warning', [
-				'reason' => __( 'Authentication failed because of invalid application password.', 'bromate-security-api-firewall' ), 
-			] );
+			Logger::log(
+				'invalid_application_password',
+				'warning',
+				array(
+					'reason' => __( 'Authentication failed because of invalid application password.', 'bromate-security-api-firewall' ),
+				)
+			);
 		}
 
 		return $auth_result;

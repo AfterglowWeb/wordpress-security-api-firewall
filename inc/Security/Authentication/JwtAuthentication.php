@@ -3,12 +3,14 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Throwable;
+use Bromate\SecurityApiFirewall\Logs\Logger;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\JWK;
+use Throwable;
+use Exception;
 
-class JwtAuthenticator {
+class JwtAuthentication {
 
 	const USER_SUBCLAIM_METAKEY    = 'jwt_subclaim';
 	const JWKS_KEYS_OPTION         = 'bromate_security_api_firewall_jwt_keys';
@@ -31,37 +33,30 @@ class JwtAuthenticator {
 
 		$decoded = null;
 
-		if ( ! empty( $jwks_url ) ) {
-			try {
+		try {
+			if ( ! empty( $jwks_url ) ) {
 				$jwks = self::get_remote_jwks( $jwks_url );
 
 				if ( ! empty( $jwks ) ) {
 					$keys    = JWK::parseKeySet( $jwks, $algorithm );
 					$decoded = JWT::decode( $token, $keys );
 				}
-			} catch ( Throwable $e ) {
-				// Fall through.
 			}
-		}
 
-		if ( null === $decoded && ! empty( $public_key ) ) {
-			try {
+			if ( null === $decoded && ! empty( $public_key ) ) {
 				$decoded = JWT::decode( $token, new Key( $public_key, $algorithm ) );
-			} catch ( Throwable $e ) {
-				// Fall through.
 			}
-		}
 
-		if ( null === $decoded ) {
-			try {
+			if ( null === $decoded ) {
 				$jwks = self::build_jwks( true );
 				if ( ! empty( $jwks['keys'] ) ) {
 					$keys    = JWK::parseKeySet( $jwks, $algorithm );
 					$decoded = JWT::decode( $token, $keys );
 				}
-			} catch ( Throwable $e ) {
-				// Last failed too.
 			}
+		} catch ( Throwable $e ) {
+			Logger::log( 'jwt_auth_failed', 'warning', (array) $e );
+			return false;
 		}
 
 		if ( null === $decoded ) {
@@ -161,6 +156,11 @@ class JwtAuthenticator {
 		return $subclaim;
 	}
 
+	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation.functions.base64_encode -- Required by RFC 7518 for JWK modulus/exponent encoding;
+	private static function base64url_encode( string $data ): string {
+		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
+	}
+
 	private static function extract_bearer_token(): string {
 
 		$auth = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) ) : '';
@@ -225,12 +225,12 @@ class JwtAuthenticator {
 
 	public static function create_key_pair( bool $keep_previous_for_grace_period = true ): array {
 		if ( ! extension_loaded( 'openssl' ) ) {
-			throw new \Exception( 'OpenSSL extension is not loaded. Please enable it in your PHP configuration.' );
+			throw new Exception( 'OpenSSL extension is not loaded. Please enable it in your PHP configuration.' );
 		}
 
 		$openssl_version = OPENSSL_VERSION_TEXT;
 		if ( empty( $openssl_version ) ) {
-			throw new \Exception( 'OpenSSL is not properly configured.' );
+			throw new Exception( 'OpenSSL is not properly configured.' );
 		}
 
 		$config = array(
@@ -246,19 +246,19 @@ class JwtAuthenticator {
 			$message = sanitize_text_field( openssl_error_string() );
 			$error   = $message ? $message : '';
 
-			throw new \Exception( 'Failed to generate key pair: ' . esc_attr( $error ) );
+			throw new Exception( 'Failed to generate key pair: ' . esc_attr( $error ) );
 		}
 
 		$private_key_pem = '';
 		if ( ! openssl_pkey_export( $private_key_resource, $private_key_pem, null, $config ) ) {
 			$error = sanitize_text_field( openssl_error_string() );
-			throw new \Exception( 'Failed to export private key: ' . esc_attr( $error ? $error : 'Unknown error' ) );
+			throw new Exception( 'Failed to export private key: ' . esc_attr( $error ? $error : 'Unknown error' ) );
 		}
 
 		$key_details = openssl_pkey_get_details( $private_key_resource );
 		if ( false === $key_details || ! isset( $key_details['key'] ) ) {
 			$error = sanitize_text_field( openssl_error_string() );
-			throw new \Exception( 'Failed to extract public key: ' . esc_attr( $error ? $error : 'Unknown error' ) );
+			throw new Exception( 'Failed to extract public key: ' . esc_attr( $error ? $error : 'Unknown error' ) );
 		}
 
 		$public_key_pem    = $key_details['key'];
@@ -301,7 +301,7 @@ class JwtAuthenticator {
 
 		$updated = update_option( self::JWKS_KEYS_OPTION, $keys );
 		if ( ! $updated ) {
-			throw new \Exception( 'Failed to store key pair in database.' );
+			throw new Exception( 'Failed to store key pair in database.' );
 		}
 
 		return array(
@@ -360,7 +360,7 @@ class JwtAuthenticator {
 
 		$iv = openssl_random_pseudo_bytes( 16 );
 		if ( false === $iv ) {
-			throw new \Exception( 'Failed to generate encryption IV.' );
+			throw new Exception( 'Failed to generate encryption IV.' );
 		}
 
 		$encrypted_private = openssl_encrypt(
@@ -373,17 +373,17 @@ class JwtAuthenticator {
 
 		if ( false === $encrypted_private ) {
 			$openssl_error = sanitize_text_field( openssl_error_string() );
-			throw new \Exception( 'Failed to encrypt private key: ' . esc_attr( $openssl_error ) );
+			throw new Exception( 'Failed to encrypt private key: ' . esc_attr( $openssl_error ) );
 		}
 
-		return base64_encode( $iv . $encrypted_private );
+		return bin2hex( $iv . $encrypted_private );
 	}
 
 	private static function decrypt_private_key_pem( string $encrypted_data ): ?string {
 		$encryption_key = wp_salt( 'auth' ) . wp_salt( 'secure_auth' );
 		$encryption_key = hash( 'sha256', $encryption_key, true );
 
-		$decoded = base64_decode( $encrypted_data );
+		$decoded = hex2bin( $encrypted_data );
 		if ( false === $decoded || strlen( $decoded ) < 16 ) {
 			return null;
 		}
@@ -514,9 +514,5 @@ class JwtAuthenticator {
 			'n'   => self::base64url_encode( $details['rsa']['n'] ),
 			'e'   => self::base64url_encode( $details['rsa']['e'] ),
 		);
-	}
-
-	private static function base64url_encode( string $data ): string {
-		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
 	}
 }

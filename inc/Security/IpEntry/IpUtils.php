@@ -2,48 +2,48 @@
 
 defined( 'ABSPATH' ) || exit;
 
-final class CidrMatcher {
+final class IpUtils {
 
 	public static function ip_matches( string $ip, string $entry ): bool {
-			if ( strpos( $entry, '/' ) === false ) {
-				$ip_bin = inet_pton( $ip );
-				$entry_bin = inet_pton( $entry );
-				
-				if ( false === $ip_bin || false === $entry_bin || strlen( $ip_bin ) !== strlen( $entry_bin ) ) {
-					return false;
-				}
-				
-				return $ip_bin === $entry_bin;
+		if ( strpos( $entry, '/' ) === false ) {
+			$ip_bin    = inet_pton( $ip );
+			$entry_bin = inet_pton( $entry );
+
+			if ( false === $ip_bin || false === $entry_bin || strlen( $ip_bin ) !== strlen( $entry_bin ) ) {
+				return false;
 			}
+
+			return $ip_bin === $entry_bin;
+		}
 
 			[ $network, $prefix ] = explode( '/', $entry, 2 );
 			$prefix               = (int) $prefix;
 			$ip_bin               = inet_pton( $ip );
 			$net_bin              = inet_pton( $network );
 
-			if ( false === $ip_bin || false === $net_bin || strlen( $ip_bin ) !== strlen( $net_bin ) ) {
-				return false;
-			}
+		if ( false === $ip_bin || false === $net_bin || strlen( $ip_bin ) !== strlen( $net_bin ) ) {
+			return false;
+		}
 
-			if ( $prefix <= 0 ) {
-				return true;
-			}
+		if ( $prefix <= 0 ) {
+			return true;
+		}
 
 			$max_bits    = strlen( $ip_bin ) * 8;
 			$prefix      = min( $prefix, $max_bits );
 			$full_bytes  = intdiv( $prefix, 8 );
 			$remain_bits = $prefix % 8;
 
-			if ( $full_bytes > 0 && substr( $ip_bin, 0, $full_bytes ) !== substr( $net_bin, 0, $full_bytes ) ) {
+		if ( $full_bytes > 0 && substr( $ip_bin, 0, $full_bytes ) !== substr( $net_bin, 0, $full_bytes ) ) {
+			return false;
+		}
+
+		if ( $remain_bits > 0 ) {
+			$mask = 0xFF & ( 0xFF << ( 8 - $remain_bits ) );
+			if ( ( ord( $ip_bin[ $full_bytes ] ) & $mask ) !== ( ord( $net_bin[ $full_bytes ] ) & $mask ) ) {
 				return false;
 			}
-
-			if ( $remain_bits > 0 ) {
-				$mask = 0xFF & ( 0xFF << ( 8 - $remain_bits ) );
-				if ( ( ord( $ip_bin[ $full_bytes ] ) & $mask ) !== ( ord( $net_bin[ $full_bytes ] ) & $mask ) ) {
-					return false;
-				}
-			}
+		}
 
 			return true;
 	}
@@ -110,7 +110,7 @@ final class CidrMatcher {
 	}
 
 	public static function cidr_to_ip( string $entry ): string {
-		if ( strpos( $entry, '/' ) !== false &&  self::is_valid_cidr( $entry ) ) {
+		if ( strpos( $entry, '/' ) !== false && self::is_valid_cidr( $entry ) ) {
 			$parts = explode( '/', $entry );
 
 			if ( count( $parts ) !== 2 ) {

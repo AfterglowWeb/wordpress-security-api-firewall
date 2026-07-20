@@ -17,7 +17,7 @@ use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryAjaxController;
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
 
-use Bromate\SecurityApiFirewall\Logs\LogEntryAjaxController;
+use Bromate\SecurityApiFirewall\Logs\LogsAjaxController;
 
 
 final class Bootstrap {
@@ -39,7 +39,7 @@ final class Bootstrap {
 			SettingsAjaxController::register();
 			AuthenticationAjaxController::register();
 			IpEntryAjaxController::register();
-			LogEntryAjaxController::register();
+			LogsAjaxController::register();
 			Documentation::register();
 		}
 	}
@@ -94,6 +94,7 @@ final class Bootstrap {
 		delete_transient( 'bromate_security_api_firewall_routes_list' );
 
 		global $wpdb;
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

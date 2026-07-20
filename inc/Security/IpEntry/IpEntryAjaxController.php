@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
-use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
+use Bromate\SecurityApiFirewall\Security\IpEntry\IpUtils;
 use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 
 class IpEntryAjaxController {
@@ -67,7 +67,7 @@ class IpEntryAjaxController {
 		$expires_at = isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		if ( empty( $ip ) || ! CidrMatcher::is_valid_ip_or_cidr( $ip ) ) {
+		if ( empty( $ip ) || ! IpUtils::is_valid_ip_or_cidr( $ip ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid IP address or CIDR', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
@@ -80,7 +80,7 @@ class IpEntryAjaxController {
 		}
 
 		$data = array(
-			'ip'           => CidrMatcher::sanitize_ip_or_cidr( $ip ),
+			'ip'           => IpUtils::sanitize_ip_or_cidr( $ip ),
 			'list_type'    => 'blacklist' === $list_type ? 'blacklist' : 'whitelist',
 			'entry_origin' => 'manual',
 			'user_id'      => ! empty( $user_id ) ? $user_id : null,
@@ -223,7 +223,7 @@ class IpEntryAjaxController {
 		}
 
 		$current_user_ip = ClientIpResolver::get_client_ip();
-		if( empty( $current_user_ip ) ) {
+		if ( empty( $current_user_ip ) ) {
 			wp_send_json_error( array( 'message' => 'Could not resolve your IP.' ), 400 );
 		}
 		wp_send_json_success( array( 'current_user_ip' => $current_user_ip ), 200 );

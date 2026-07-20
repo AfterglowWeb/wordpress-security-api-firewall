@@ -8,7 +8,7 @@ import {
   GridRowSelectionModel, useGridApiContext, Toolbar,
 } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { type LogEntry, type LogSeverity, type LogSettings } from '@app-types/logs';
+import { type LogEntry, type LogSeverity, type LogsSettings } from '@app-types/logs';
 import { LogAPI } from '@services/logs';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import ConfirmDialog from '@components/ConfirmDialog';
@@ -36,7 +36,7 @@ interface LogsToolbarProps {
   onDeleteSelected?: (rows: Map<GridRowId, LogEntry>) => void;
   severityFilter?: LogSeverity | 'all';
   onSeverityChange?: (v: LogSeverity | 'all') => void;
-  logsSettings?: LogSettings;
+  logsSettings?: LogsSettings;
 }
 
 function LogsToolbar({ 
@@ -150,7 +150,7 @@ const LOG_COLUMNS: GridColDef<LogEntry>[] = [
 ];
 
 type LogsDataGridProps = {
-  settings?: LogSettings;
+  settings?: LogsSettings;
 };
 
 export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element {

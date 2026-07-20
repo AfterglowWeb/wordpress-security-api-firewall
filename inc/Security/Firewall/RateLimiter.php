@@ -7,7 +7,7 @@ use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
 use Bromate\SecurityApiFirewall\Security\Firewall\AutoBlacklist;
 use Bromate\SecurityApiFirewall\Security\Firewall\ViolationTracker;
-use Bromate\SecurityApiFirewall\Logs\FirewallLogger;
+use Bromate\SecurityApiFirewall\Logs\Logger;
 
 use WP_Error;
 
@@ -61,11 +61,15 @@ class RateLimiter {
 				$client_ip
 			);
 
-			FirewallLogger::log( 'ip_banned', 'warning', [
-				'reason' => __( 'Too many violations. IP has been temporarily blocked.', 'bromate-security-api-firewall' ), 
-				'extra' => $violations
-			], $client_ip );
-
+			Logger::log(
+				'ip_banned',
+				'warning',
+				array(
+					'reason' => __( 'Too many violations. IP has been temporarily blocked.', 'bromate-security-api-firewall' ),
+					'extra'  => $violations,
+				),
+				$client_ip
+			);
 
 			return new WP_Error(
 				'rest_firewall_ip_blacklisted',
@@ -74,10 +78,15 @@ class RateLimiter {
 			);
 		}
 
-		FirewallLogger::log( 'ip_rate_limited', 'error', [
-				'reason' => __( 'IP rate limited.', 'bromate-security-api-firewall' ), 
-				'extra' => $count
-			], $client_ip );
+		Logger::log(
+			'ip_rate_limited',
+			'error',
+			array(
+				'reason' => __( 'IP rate limited.', 'bromate-security-api-firewall' ),
+				'extra'  => $count,
+			),
+			$client_ip
+		);
 
 		return new WP_Error(
 			'rest_firewall_rate_limited',

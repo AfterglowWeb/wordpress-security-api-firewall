@@ -2,9 +2,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use Bromate\RestApiModels\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 
-class LogEntryAjaxController {
+class LogsAjaxController {
+
+	const LOGS_SETTINGS_KEYS = array(
+		'logs_enabled',
+		'logs_keep_severities',
+		'logs_keep_events',
+		'logs_rotation_time',
+	);
 
 	private function __construct() {}
 
@@ -13,6 +21,55 @@ class LogEntryAjaxController {
 		add_action( 'wp_ajax_bromate_get_log_entries', array( $self, 'ajax_get_log_entries' ) );
 		add_action( 'wp_ajax_bromate_delete_log_entry', array( $self, 'ajax_delete_log_entry' ) );
 		add_action( 'wp_ajax_bromate_delete_log_entries', array( $self, 'ajax_delete_log_entries' ) );
+		add_action( 'wp_ajax_bromate_get_logs_settings', array( $self, 'ajax_get_logs_settings' ) );
+		add_action( 'wp_ajax_bromate_update_logs_settings', array( $self, 'ajax_update_logs_settings' ) );
+	}
+
+	public function ajax_get_logs_settings(): void {
+
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
+
+		$settings = array();
+
+		foreach ( self::LOGS_SETTINGS_KEYS as $log_settings_key ) {
+			$settings[ $log_settings_key ] = SettingsRepository::read_option( $log_settings_key );
+		}
+		wp_send_json_success( $settings, 200 );
+	}
+
+
+	public function ajax_update_logs_settings(): void {
+
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
+
+		$post_args = array_filter(
+			array_map(
+				function ( $key, $post_arg ) {
+					return in_array( sanitize_key( $key ), self::LOGS_SETTINGS_KEYS, true ) ? sanitize_text_field( wp_unslash( $post_arg ) ) : null;
+				},
+				$_POST
+			)
+		);
+
+		if ( empty( $post_args ) ) {
+			wp_send_json_error( array( 'message' => __( 'No args.', 'bromate-security-api-firewall' ) ), 400 );
+		}
+
+		$settings = array();
+
+		foreach ( $post_args as $key => $value ) {
+			$settings[ $key ] = SettingsRepository::update_option( $key, $value );
+		}
+
+		if ( empty( array_filter( $settings ) ) ) {
+			wp_send_json_error( array( 'message' => __( 'No settings saved.', 'bromate-security-api-firewall' ) ), 400 );
+		}
+
+		wp_send_json_success( $settings, 200 );
 	}
 
 	public function ajax_get_log_entries(): void {
@@ -37,7 +94,7 @@ class LogEntryAjaxController {
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		$result = LogRepository::get_entries( $args );
+		$result = LogsRepository::get_entries( $args );
 
 		wp_send_json_success( $result, 200 );
 	}
@@ -55,7 +112,7 @@ class LogEntryAjaxController {
 			wp_send_json_error( array( 'message' => __( 'Log ID required', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
-		$deleted = LogRepository::delete( $id );
+		$deleted = LogsRepository::delete( $id );
 
 		if ( ! $deleted ) {
 			wp_send_json_error( array( 'message' => __( 'Log entry not found', 'bromate-security-api-firewall' ) ), 404 );
@@ -80,7 +137,7 @@ class LogEntryAjaxController {
 			wp_send_json_error( array( 'message' => __( 'No entries selected', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
-		$count = LogRepository::delete_many( $ids );
+		$count = LogsRepository::delete_many( $ids );
 
 		wp_send_json_success( array( 'deleted' => $count ), 200 );
 	}
