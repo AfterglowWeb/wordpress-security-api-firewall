@@ -1,5 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Logs;
 
+use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
+
 defined( 'ABSPATH' ) || exit;
 
 final class LogRepository {
@@ -16,7 +18,7 @@ final class LogRepository {
 			'event'       => isset($data['event']) ? sanitize_text_field( $data['event'] ) : '',
 			'severity'    => isset($data['severity']) ? self::sanitize_severity( $data['severity'] ) : 'info',
 			'details'     => isset($data['details']) ? wp_json_encode( $data['details'] ) : null,
-			'ip'          => isset($data['ip']) ? sanitize_text_field( $data['ip'] ) : self::current_ip(),
+			'ip'          => isset($data['ip']) ? sanitize_text_field( $data['ip'] ) : ClientIpResolver::get_client_ip(),
 			'user_agent'  => self::current_user_agent(),
 			'referrer'    => self::current_referrer(),
 			'method'      => self::current_method(),
@@ -152,12 +154,43 @@ final class LogRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $days ) );
 	}
 
+	public static function sanitize_severity( string $raw_value ): string {
+
+		$value = sanitize_key($raw_value);
+		$allowed = [
+			'ip_blocked',
+			'ip_rate_limited',
+			'ip_banned',
+			'ip_whitelisted_bypass',
+			'ip_entry_created',
+			'ip_entry_deleted',
+			'expired_ip_entry_cleanup',
+			'auth_success',
+			'auth_failed',
+			'auth_revoked',
+			'admin_login_success',
+			'admin_login_failed',
+			'admin_login_rate_limited',
+			'admin_login_banned',
+			'emergency_token_used',
+			'plugin_settings_changed',
+			'unknown'
+		];
+		return in_array( $value, $allowed, true ) ? $value : 'unknown';
+	}
+
+	public static function sanitize_event( string $raw_value ): string {
+		$value = sanitize_key($raw_value);
+		$allowed = array( 'debug', 'info', 'warning', 'error', 'critical' );
+		return in_array( $value, $allowed, true ) ? $value : 'info';
+	}
+
 	private static function normalize( array $row ): array {
 		return array(
 			'id'          => (int) $row['id'],
 			'event'       => $row['event'],
 			'severity'    => $row['severity'],
-			'details'    => $row['details'],
+			'details'     => $row['details'],
 			'ip'          => $row['ip'],
 			'user_agent'  => $row['user_agent'],
 			'referrer'    => $row['referrer'],
@@ -167,16 +200,6 @@ final class LogRepository {
 			'context'     => null !== $row['context'] ? json_decode( $row['context'], true ) : null,
 			'created_at'  => $row['created_at'],
 		);
-	}
-
-	private static function sanitize_severity( string $value ): string {
-		$allowed = array( 'debug', 'info', 'warning', 'error', 'critical' );
-		return in_array( $value, $allowed, true ) ? $value : 'info';
-	}
-
-	private static function current_ip(): ?string {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : null;
 	}
 
 	private static function current_user_agent(): ?string {

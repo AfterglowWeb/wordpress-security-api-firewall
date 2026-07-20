@@ -144,6 +144,7 @@ export default function Firewall(): JSX.Element {
                     disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_max}
                     onChange={(e) => updateSetting('rate_limit_max', Number(e.target.value))}
+                    helperText={__('Number of requests before blocking.', 'bromate-security-api-firewall')}
                   />
                   <TextField
                     label={__('Time window (seconds)', 'bromate-security-api-firewall')}
@@ -151,6 +152,7 @@ export default function Firewall(): JSX.Element {
                     disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_time}
                     onChange={(e) => updateSetting('rate_limit_time', Number(e.target.value))}
+                    helperText={__('Time window for counting requests.', 'bromate-security-api-firewall')}
                   />
                   <TextField
                     label={__('Block duration (seconds)', 'bromate-security-api-firewall')}
@@ -158,21 +160,23 @@ export default function Firewall(): JSX.Element {
                     disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_block_duration}
                     onChange={(e) => updateSetting('rate_limit_block_duration', Number(e.target.value))}
+                    helperText={__('How long to block the IP?', 'bromate-security-api-firewall')}
                   />
                   <TextField
-                    label={__('Blacklist threshold', 'bromate-security-api-firewall')}
+                    label={__('Blacklist after (num. of blocks)', 'bromate-security-api-firewall')}
                     type="number"
                     disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_blacklist_threshold}
                     onChange={(e) => updateSetting('rate_limit_blacklist_threshold', Number(e.target.value))}
-                    helperText="Violations before ban"
+                    helperText={__('0 = never add to the blacklist.', 'bromate-security-api-firewall')}
                   />
                   <TextField
-                    label={__('Violations time window (seconds)', 'bromate-security-api-firewall')}
+                    label={__('Blacklist time window (seconds)', 'bromate-security-api-firewall')}
                     type="number"
                     disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_violation_window}
                     onChange={(e) => updateSetting('rate_limit_violation_window', Number(e.target.value))}
+                    helperText={__('Time window for counting blocks before blacklist.', 'bromate-security-api-firewall')}
                   />
                 </Stack>
               </Stack>

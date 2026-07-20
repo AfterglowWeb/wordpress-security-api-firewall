@@ -12,7 +12,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import type { AuthorizedUser, AuthorizedUserMeta, AuthSettings } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
-import type { LogEntry, LogSeverity } from '@services/log';
+import type { LogEntry, LogSeverity } from '@app-types/logs';
 import UserDialog from '@features/authentication/UserDialog';
 import { apiRequest } from '@services/api';
 import { SettingsAPI } from '@services/settings';
