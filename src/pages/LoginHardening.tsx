@@ -278,53 +278,53 @@ export default function LoginHardening(): JSX.Element {
               sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
             />
             <Divider orientation="vertical" variant="middle" flexItem />
-            <Typography variant="h6">{__('Login Rate Limiting', 'bromate-security-api-firewall')}</Typography>
+            <Typography variant="h6">{__('Login Attempts Limiting', 'bromate-security-api-firewall')}</Typography>
           </Stack>
 
           <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
             <TextField
-              label={__('Max Attempts', 'bromate-security-api-firewall')}
+              label={__('Maximum attempts', 'bromate-security-api-firewall')}
               type="number"
               size="small"
               value={settings.login_rate_limit_attempts}
               onChange={(e) =>
                 updateSetting('login_rate_limit_attempts', Number(e.target.value))
               }
-              helperText={__('Number of failed attempts before blocking', 'bromate-security-api-firewall')}
+              helperText={__('Number of failed attempts before blocking.', 'bromate-security-api-firewall')}
               sx={{ minWidth: 150 }}
             />
             <TextField
-              label={__('Time Window (seconds)', 'bromate-security-api-firewall')}
+              label={__('Time window (seconds)', 'bromate-security-api-firewall')}
               type="number"
               size="small"
               value={settings.login_rate_limit_window}
               onChange={(e) =>
                 updateSetting('login_rate_limit_window', Number(e.target.value))
               }
-              helperText={__('Time window for counting attempts', 'bromate-security-api-firewall')}
+              helperText={__('Time window for counting attempts.', 'bromate-security-api-firewall')}
               sx={{ minWidth: 150 }}
             />
             <TextField
-              label={__('Block Duration (seconds)', 'bromate-security-api-firewall')}
+              label={__('Block duration (seconds)', 'bromate-security-api-firewall')}
               type="number"
               size="small"
               value={settings.login_rate_limit_blacklist_time}
               onChange={(e) =>
                 updateSetting('login_rate_limit_blacklist_time', Number(e.target.value))
               }
-              helperText={__('How long to block the IP', 'bromate-security-api-firewall')}
+              helperText={__('How long to block the user?', 'bromate-security-api-firewall')}
               sx={{ minWidth: 150 }}
             />
             <TextField
-              label={__('Promote After (blocks)', 'bromate-security-api-firewall')}
+              label={__('Blacklist after (num. of blocks)', 'bromate-security-api-firewall')}
               type="number"
               size="small"
               value={settings.login_rate_limit_promote_after}
               onChange={(e) =>
                 updateSetting('login_rate_limit_promote_after', Number(e.target.value))
               }
-              helperText={__('0 = never promote to global blacklist', 'bromate-security-api-firewall')}
-              sx={{ minWidth: 150 }}
+              helperText={__('0 = never add to the blacklist.', 'bromate-security-api-firewall')}
+              sx={{ minWidth: 160 }}
             />
           </Stack>
 
@@ -428,7 +428,7 @@ export default function LoginHardening(): JSX.Element {
                 updateSetting('login_totp_issuer', e.target.value)
               }
               sx={{ maxWidth: 400 }}
-              helperText={__('Name shown in your authentication app', 'bromate-security-api-firewall')}
+              helperText={__('Name shown in your authentication app.', 'bromate-security-api-firewall')}
             />
           </Stack>
 
@@ -441,6 +441,7 @@ export default function LoginHardening(): JSX.Element {
               onChange={(e) =>
                 updateSetting('login_totp_policy', e.target.value as 'grace' | 'mandatory' | 'free')
               }
+              sx={{gap:2}}
             >
               <FormControlLabel
                 value="free"
@@ -456,6 +457,8 @@ export default function LoginHardening(): JSX.Element {
                   </Stack>
                 }
               />
+
+              <Stack gap={1} flexDirection={"column"}>
               <FormControlLabel
                 value="grace"
                 control={<Radio />}
@@ -470,7 +473,7 @@ export default function LoginHardening(): JSX.Element {
                   </Stack>
                 }
               />
-                <Box sx={{ pl: 4, pt: 1 }}>
+                <Stack sx={{ pl: 4, pt: 1 }}>
                   <TextField
                     label={__('Grace Period (days)', 'bromate-security-api-firewall')}
                     type="number"
@@ -480,10 +483,10 @@ export default function LoginHardening(): JSX.Element {
                       updateSetting('login_totp_grace_period', Number(e.target.value))
                     }
                     slotProps={{ htmlInput: { min: 1, max: 30 } }}
-                    helperText={__('Number of days before 2FA becomes mandatory', 'bromate-security-api-firewall')}
-                    sx={{ maxWidth: 200 }}
+                    sx={{ width: 140 }}
                   />
-                </Box>
+                </Stack>
+              </Stack>
 
               <FormControlLabel
                 value="mandatory"

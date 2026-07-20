@@ -1,10 +1,28 @@
-import { apiRequest } from '@services/api';
 
-export type LogSeverity = 'debug' | 'info' | 'warning' | 'error' | 'critical';
+export type LogSeverity = 'info' | 'warning' | 'error';
+
+export type LogEvent = 
+	'ip_blocked' |
+	'ip_rate_limited' |
+	'ip_banned' |
+	'ip_whitelisted_bypass' |
+	'ip_entry_created' |
+	'ip_entry_deleted' |
+	'expired_ip_entry_cleanup' |
+	'auth_success' |
+	'auth_failed' |
+	'auth_revoked' |
+	'admin_login_success' |
+	'admin_login_failed' |
+	'admin_login_rate_limited' |
+	'admin_login_banned' |
+	'emergency_token_used' |
+	'plugin_settings_changed' |
+	'unknown';
 
 export interface LogEntry {
   id: number;
-  event: string;
+  event: LogEvent;
   severity: LogSeverity;
   ip: string | null;
   user_agent: string | null;
@@ -19,7 +37,7 @@ export interface LogEntry {
 }
 
 export interface LogQueryArgs {
-  event?: string;
+  event?: LogEvent[];
   severity?: LogSeverity;
   ip?: string;
   user_id?: number;
@@ -40,15 +58,9 @@ export interface LogPage {
   total_pages: number;
 }
 
-export const LogAPI = {
-  getEntries: (args: LogQueryArgs = {}) =>
-    apiRequest<LogPage>('bromate_get_log_entries', args as Record<string, unknown>),
-
-  deleteEntry: (id: number) =>
-    apiRequest<{ deleted: boolean }>('bromate_delete_log_entry', { id }),
-
-  deleteEntries: (ids: number[]) =>
-    apiRequest<{ deleted: number }>('bromate_delete_log_entries', {
-      ids: JSON.stringify(ids),
-    }),
-};
+export interface LogSettings {
+    logs_enabled: boolean;
+    logs_keep_severities: LogSeverity[];
+    logs_keep_events: LogEvent[];
+    logs_rotation_time: number;
+}

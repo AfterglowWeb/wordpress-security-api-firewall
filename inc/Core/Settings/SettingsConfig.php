@@ -1,5 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
+use Bromate\SecurityApiFirewall\Logs\LogRepository;
 use Bromate\SecurityApiFirewall\Security\IpEntry\CidrMatcher;
 use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 use Bromate\SecurityApiFirewall\Security\Login\Recaptcha;
@@ -33,7 +34,7 @@ final class SettingsConfig {
 
 		$options = array(
 
-			'auth_control_enabled'                        => array(
+			'auth_control_enabledd'                        => array(
 				'default_value'     => 'wp_auth',
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -86,7 +87,7 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'rate_limit_enabled'                          => array(
+			'rate_limit_enabledd'                          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -135,7 +136,7 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
-			'routes_policy_enabled'                       => array(
+			'routes_policy_enabledd'                       => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -192,7 +193,7 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			'login_rate_limit_enabled'                    => array(
+			'login_rate_limit_enabledd'                    => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -227,7 +228,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_recaptcha_enabled'                     => array(
+			'login_recaptcha_enabledd'                     => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -255,14 +256,14 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabled'                          => array(
+			'login_totp_enabledd'                          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabled_timestamp'                => array(
+			'login_totp_enabledd_timestamp'                => array(
 				'default_value'     => 0,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -290,7 +291,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'cookie_hardening_samesite_enabled'           => array(
+			'cookie_hardening_samesite_enabledd'           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -315,7 +316,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'salts_rotation_enabled'                      => array(
+			'salts_rotation_enabledd'                      => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -337,7 +338,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'redirect_front_enabled'                      => array(
+			'redirect_front_enabledd'                      => array(
 				'default_value'     => '',
 				'type'              => false,
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -568,6 +569,31 @@ final class SettingsConfig {
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
+			),
+
+			'logs_enabled'                    => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'logs',
+			),
+			'logs_keep_severities'                    => array(
+				'default_value'     => [],
+				'type'              => 'array',
+				'sanitize_callback' => array('array_map', array(LogRepository::class, 'sanitize_severity')),
+				'group'             => 'logs',
+			),
+			'logs_keep_events'                    => array(
+				'default_value'     => [],
+				'type'              => 'array',
+				'sanitize_callback' => array('array_map', array(LogRepository::class, 'sanitize_event')),
+				'group'             => 'logs',
+			),
+			'logs_rotation_time'             => array(
+				'default_value'     => 30,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'logs',
 			),
 		);
 

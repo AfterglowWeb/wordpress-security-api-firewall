@@ -71,7 +71,7 @@ export default function RedirectFront({
 					</Typography>
 					<Typography variant="caption" color="text.secondary">
 						{__(
-							'Turn WordPress into a REST API resource only. All the theme templates will be redirected.',
+							'When enabled, all the theme templates are redirected. It helps turning WordPress into a REST API resource only.',
 							TEXT_DOMAIN
 						)}
 					</Typography>

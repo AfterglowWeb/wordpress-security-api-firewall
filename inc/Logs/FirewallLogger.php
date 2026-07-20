@@ -13,27 +13,8 @@ final class FirewallLogger {
 	): bool {
 
 		$result = false;
-		$event = in_array($event, [
-			'ip_blocked',
-			'ip_rate_limited',
-			'ip_banned',
-			'ip_whitelisted_bypass',
-			'ip_entry_created',
-			'ip_entry_deleted',
-			'expired_ip_entry_cleanup',
-			'auth_success',
-			'auth_failed',
-			'auth_revoked',
-			'admin_login_success',
-			'admin_login_failed',
-			'admin_login_rate_limited',
-			'admin_login_banned',
-			'emergency_token_used',
-			'plugin_settings_changed',
-
-		]) ? sanitize_key( $event ) : 'unknown_event';
-
-		$severity = in_array($severity, ['debug','info','warning','error','critical']) ? sanitize_key( $severity ) : 'info';
+		$event = LogRepository::sanitize_event($event);
+		$severity = LogRepository::sanitize_severity( $severity );
 		
 		return LogRepository::insert(
 			array(

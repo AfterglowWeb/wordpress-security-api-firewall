@@ -23,10 +23,10 @@ class LogEntryAjaxController {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$args = array(
-			'event'     => isset( $_POST['event'] ) ? sanitize_text_field( wp_unslash( $_POST['event'] ) ) : null,
-			'severity'  => isset( $_POST['severity'] ) ? sanitize_text_field( wp_unslash( $_POST['severity'] ) ) : null,
-			'ip'        => isset( $_POST['ip'] ) ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : null,
-			'user_id'   => isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : null,
+			'event'     => isset( $_POST['event'] ) && 'undefined' !== $_POST['event'] ? sanitize_text_field( wp_unslash( $_POST['event'] ) ) : null,
+			'severity'  => isset( $_POST['severity'] ) && 'undefined' !== $_POST['severity'] ? sanitize_text_field( wp_unslash( $_POST['severity'] ) ) : null,
+			'ip'        => isset( $_POST['ip'] ) && 'undefined' !== $_POST['ip'] ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : null,
+			'user_id'   => isset( $_POST['user_id'] ) && 'undefined' !== $_POST['user_id'] ? absint( $_POST['user_id'] ) : null,
 			'date_from' => isset( $_POST['date_from'] ) ? sanitize_text_field( wp_unslash( $_POST['date_from'] ) ) : null,
 			'date_to'   => isset( $_POST['date_to'] ) ? sanitize_text_field( wp_unslash( $_POST['date_to'] ) ) : null,
 			'search'    => isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : null,

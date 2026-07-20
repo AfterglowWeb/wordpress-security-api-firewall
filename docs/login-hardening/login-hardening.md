@@ -8,7 +8,7 @@ Auth Hardening protects the WordPress login surface against brute-force attempts
 
 ## What It Controls
 
-- **Enable Login Rate Limiting**: turns login protection on/off.
+- **Enable Login Attempts Limiting**: turns login protection on/off.
 - **Max Failed Attempts**: number of failed logins allowed before block.
 - **Window (seconds)**: rolling period used to count failed attempts.
 - **Block Duration (seconds)**: temporary block duration once threshold is exceeded.
