@@ -38,9 +38,6 @@ interface AuthenticationToolbarProps {
   selectedCount: number;
 }
 
-// Reported to the parent whenever the authorized users list changes, so
-// sibling components (AuthOptions) can gate their own save logic on
-// "is there at least one authorized user" without duplicating the fetch.
 export interface AuthorizedUsersInfo {
   count: number;
   loading: boolean;
@@ -88,8 +85,6 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
 
 export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
-  // Tracks the auth_users fetch specifically (distinct from wpUsersLoading,
-  // which tracks the separate WordPress users list fetch below).
   const [authUsersLoading, setAuthUsersLoading] = useState(true);
   const portalContainer = usePortalContainer();
   const { openDialog } = useDialog();
@@ -124,10 +119,6 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
 
   const authorizedUserIds = useMemo(() => authUsers.map((u) => u.id), [authUsers]);
 
-  // Report count + loading state to the parent any time either changes.
-  // setAuthUsersInfo in the parent is a plain useState setter (referentially
-  // stable) and receives primitive values, so React bails out of re-render
-  // loops when nothing actually changed.
   useEffect(() => {
     onUsersChange?.({ count: authUsers.length, loading: authUsersLoading });
   }, [authUsers, authUsersLoading, onUsersChange]);
@@ -203,10 +194,6 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     );
   }, []);
 
-  // UserDialog.handleSave() has ALREADY persisted the change to auth_users
-  // via SettingsAPI.updateOption before calling onSave — this only syncs
-  // local state so the grid reflects it without a refetch. A second network
-  // write here would race with the one UserDialog just made.
   const applySavedUser = useCallback((user: AuthorizedUser) => {
     const meta: AuthorizedUserMeta = {
       id: user.id,
@@ -220,11 +207,6 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     });
   }, []);
 
-  // No confirmation dialog here on purpose: UserDialog's own Add/Save
-  // button is already the deliberate action. A second "are you sure?"
-  // modal stacked on top of the still-open UserDialog added no real
-  // protection (unlike delete below, which stays confirmed since it's
-  // destructive) and made the nested-dialog flow fragile.
   const handleSaveUser = useCallback((user: AuthorizedUser) => {
     const exists = authUsers.some((u) => u.id === user.id);
     applySavedUser(user);

@@ -441,12 +441,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
 
     const anySuccess = results.some((r) => r.status === 'fulfilled');
     if (anySuccess) {
-      // FIX: these were mutually exclusive (if/else), so the grid only
-      // refreshed when the newly-added list_type happened to already match
-      // the tracked `listType` state — which defaults to 'blacklist'. Any
-      // FIRST addition to whitelist would only update `listType` and skip
-      // the reload entirely, hence needing a full page refresh to see it.
-      // Both actions are independent and both need to happen on success.
       if (form.list_type !== listType) setListType(form.list_type);
       await load();
     }

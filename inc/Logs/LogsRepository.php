@@ -154,7 +154,46 @@ final class LogsRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $days ) );
 	}
 
-	public static function sanitize_severity( string $raw_value ): string {
+	public static function sanitize_severities( $raw_value ): array {
+		if( is_string($raw_value) && false !== strpos($raw_value, ',') ) {
+			$raw_value = explode(',', $raw_value);
+		}
+
+		if( empty($raw_value) ) {
+			return [];
+		}
+
+		if( !is_array($raw_value) ) {
+			$raw_value = [$raw_value];
+		}
+
+		$severities = array_map( function($raw_severity) {
+			return self::sanitize_severity($raw_severity);
+		}, $raw_value);
+
+		return array_unique(array_filter($severities));
+			
+	}
+
+	public static function sanitize_events( $raw_value ): array {
+		if( is_string($raw_value) && false !== strpos($raw_value, ',') ) {
+			$raw_value = explode(',', $raw_value);
+		}
+
+		if( !is_array($raw_value) || empty($raw_value) ) {
+			return [];
+		}
+
+		$events = array_map( function($raw_event) {
+			return self::sanitize_event($raw_event);
+		}, $raw_value);
+
+		return array_unique(array_filter($events));
+			
+		
+	}
+
+	public static function sanitize_event( string $raw_value ): string {
 
 		$value   = sanitize_key( $raw_value );
 		$allowed = array(
@@ -179,9 +218,9 @@ final class LogsRepository {
 		return in_array( $value, $allowed, true ) ? $value : 'unknown';
 	}
 
-	public static function sanitize_event( string $raw_value ): string {
+	public static function sanitize_severity( string $raw_value ): string {
 		$value   = sanitize_key( $raw_value );
-		$allowed = array( 'debug', 'info', 'warning', 'error', 'critical' );
+		$allowed = array('info', 'warning', 'error' );
 		return in_array( $value, $allowed, true ) ? $value : 'info';
 	}
 

@@ -17,8 +17,7 @@ export type LogEvent =
 	'admin_login_rate_limited' |
 	'admin_login_banned' |
 	'emergency_token_used' |
-	'plugin_settings_changed' |
-	'unknown';
+	'plugin_settings_changed';
 
 export interface LogEntry {
   id: number;

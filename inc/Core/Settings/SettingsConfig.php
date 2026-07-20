@@ -580,13 +580,13 @@ final class SettingsConfig {
 			'logs_keep_severities'                        => array(
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => array( 'array_map', array( LogsRepository::class, 'sanitize_severity' ) ),
+				'sanitize_callback' => array( LogsRepository::class, 'sanitize_severities' ),
 				'group'             => 'logs',
 			),
 			'logs_keep_events'                            => array(
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => array( 'array_map', array( LogsRepository::class, 'sanitize_event' ) ),
+				'sanitize_callback' => array( LogsRepository::class, 'sanitize_events' ),
 				'group'             => 'logs',
 			),
 			'logs_rotation_time'                          => array(

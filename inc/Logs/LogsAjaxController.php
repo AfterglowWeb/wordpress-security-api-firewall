@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use Bromate\RestApiModels\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 
 class LogsAjaxController {
@@ -46,14 +46,22 @@ class LogsAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		$post_args = array_filter(
-			array_map(
-				function ( $key, $post_arg ) {
-					return in_array( sanitize_key( $key ), self::LOGS_SETTINGS_KEYS, true ) ? sanitize_text_field( wp_unslash( $post_arg ) ) : null;
-				},
-				$_POST
-			)
-		);
+		$post_args = [];
+
+		foreach ( self::LOGS_SETTINGS_KEYS as $log_settings_key ) {
+			if(isset( $_POST[ $log_settings_key ] ) ) {
+				
+				$log_setting = sanitize_text_field( wp_unslash( $_POST[$log_settings_key] ) );
+				if(empty($log_setting)) {
+					continue;
+				}
+				if( in_array( $log_settings_key, ['logs_keep_severities', 'logs_keep_events'], true ) && is_string($log_setting) ) {
+					$post_args[ $log_settings_key ] = false !== strpos($log_setting, ',') ? explode(',', $log_setting) : [$log_setting];
+				} else {
+					$post_args[ $log_settings_key ] = $log_setting;
+				}
+			}
+		}
 
 		if ( empty( $post_args ) ) {
 			wp_send_json_error( array( 'message' => __( 'No args.', 'bromate-security-api-firewall' ) ), 400 );
