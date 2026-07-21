@@ -437,22 +437,22 @@ final class SettingsConfig {
 				'options'           => array(
 					'x_powered_by'                 => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Remove X-Powered-By', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Remove X-Powered-By', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'server'                       => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Remove Server', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Remove Server', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'x_generator'                  => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Remove X-Generator', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Remove X-Generator', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'referrer_policy'              => array(
 						'type'    => 'string',
-						'label'   => __( 'Referrer Policy', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Referrer Policy', 'bromate-security-api-firewall' ),
 						'default' => 'strict-origin-when-cross-origin',
 						'options' => array(
 							'no-referrer',
@@ -467,7 +467,7 @@ final class SettingsConfig {
 					),
 					'cross_origin_resource_policy' => array(
 						'type'    => 'string',
-						'label'   => __( 'Cross-Origin Resource Policy', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Cross-Origin Resource Policy', 'bromate-security-api-firewall' ),
 						'default' => 'same-site',
 						'options' => array(
 							'same-origin',
@@ -477,27 +477,27 @@ final class SettingsConfig {
 					),
 					'x_content_type_options'       => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Enable X-Content-Type-Options', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Enable X-Content-Type-Options', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'x_frame_options'              => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Enable X-Frame-Options', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Enable X-Frame-Options', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'strict_transport_security'    => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Enable Strict-Transport-Security', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Enable Strict-Transport-Security', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'content_security_policy'      => array(
 						'type'    => 'string',
-						'label'   => __( 'Content Security Policy', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Content Security Policy', 'bromate-security-api-firewall' ),
 						'default' => '',
 					),
 					'permissions_policy'           => array(
 						'type'    => 'string',
-						'label'   => __( 'Permissions Policy', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Permissions Policy', 'bromate-security-api-firewall' ),
 						'default' => '',
 					),
 				),
@@ -518,44 +518,44 @@ final class SettingsConfig {
 				'options'           => array(
 					'no_cache'        => array(
 						'type'    => 'boolean',
-						'label'   => __( 'No-Cache', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'No-Cache', 'bromate-security-api-firewall' ),
 						'default' => false,
 					),
 					'no_store'        => array(
 						'type'    => 'boolean',
-						'label'   => __( 'No-Store', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'No-Store', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'must_revalidate' => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Must-Revalidate', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Must-Revalidate', 'bromate-security-api-firewall' ),
 						'default' => false,
 					),
 					'public'          => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Public', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Public', 'bromate-security-api-firewall' ),
 						'default' => false,
 					),
 					'private'         => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Private', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Private', 'bromate-security-api-firewall' ),
 						'default' => false,
 					),
 					'max_age'         => array(
 						'type'    => 'integer',
-						'label'   => __( 'Max Age (seconds)', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Max Age (seconds)', 'bromate-security-api-firewall' ),
 						'default' => 0,
 						'min'     => 0,
 						'max'     => 31536000,
 					),
 					'pragma_no_cache' => array(
 						'type'    => 'boolean',
-						'label'   => __( 'Pragma: No-Cache', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Pragma: No-Cache', 'bromate-security-api-firewall' ),
 						'default' => true,
 					),
 					'expires'         => array(
 						'type'    => 'integer',
-						'label'   => __( 'Expires (seconds)', 'bromate-security-api-firewall' ),
+						'label'   => esc_html__( 'Expires (seconds)', 'bromate-security-api-firewall' ),
 						'default' => 0,
 						'min'     => 0,
 						'max'     => 31536000,
@@ -590,7 +590,7 @@ final class SettingsConfig {
 				'group'             => 'logs',
 			),
 			'logs_rotation_time'                          => array(
-				'default_value'     => 30,
+				'default_value'     => 90,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'logs',
@@ -604,42 +604,42 @@ final class SettingsConfig {
 		$groups_config = array(
 
 			'dashboard'       => array(
-				'label' => __( 'Dashboard', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'Dashboard', 'bromate-security-api-firewall' ),
 				'icon'  => 'dashboard',
 			),
 
 			'firewall'        => array(
-				'label' => __( 'Firewall', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'Firewall', 'bromate-security-api-firewall' ),
 				'icon'  => 'world',
 			),
 
 			'login-hardening' => array(
-				'label' => __( 'Login Security', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'Login Security', 'bromate-security-api-firewall' ),
 				'icon'  => 'shield',
 			),
 
 			'wordpress'       => array(
-				'label' => __( 'Global Security', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'Global Security', 'bromate-security-api-firewall' ),
 				'icon'  => 'wordpress',
 			),
 
 			'authentication'  => array(
-				'label' => __( 'REST API Auth.', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'REST API Auth.', 'bromate-security-api-firewall' ),
 				'icon'  => 'lock',
 			),
 
 			'routes'          => array(
-				'label' => __( 'REST API Routes', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'REST API Routes', 'bromate-security-api-firewall' ),
 				'icon'  => 'route',
 			),
 
 			'models'          => array(
-				'label' => __( 'REST API Models', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'REST API Models', 'bromate-security-api-firewall' ),
 				'icon'  => 'data_object',
 			),
 
 			'logs'            => array(
-				'label' => __( 'Logs', 'bromate-security-api-firewall' ),
+				'label' => esc_html__( 'Logs', 'bromate-security-api-firewall' ),
 				'icon'  => 'logs',
 			),
 

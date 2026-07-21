@@ -50,7 +50,6 @@ final class LogsRepository {
 			'method'     => self::current_method(),
 			'uri'        => self::current_uri(),
 			'user_id'    => get_current_user_id() ? get_current_user_id() : null,
-			'context'    => isset( $data['context'] ) ? wp_json_encode( $data['context'] ) : null,
 			'created_at' => current_time( 'mysql' ),
 		);
 
@@ -190,6 +189,19 @@ final class LogsRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
+	public static function schedule_expired_deletion() {
+		$schedule_key = 'bromate_security_api_firewall_log_entries_delete_expired';
+		if ( ! wp_next_scheduled( $schedule_key ) ) {
+			wp_schedule_event( time(), 'daily', $schedule_key );
+		}
+		add_action( $schedule_key, function() {
+			$result_count = self::maybe_rotate_logs();
+			Logger::log('log_entries_delete_expired' , 'info', [
+				'reason' => sprintf(__('%d expired log entries deleted by wp_schedule_event runtime.','bromate-security-api-firewall'), $result_count ),
+			]);
+		} );
+	}
+
 	public static function maybe_rotate_logs(): int {
 		$days = SettingsRepository::read_option( 'logs_rotation_time' );
 		
@@ -255,13 +267,13 @@ final class LogsRepository {
 
 		$value   = sanitize_key( $raw_value );
 		$allowed = array(
-			'ip_blocked',
+			'ip_country_blocked',
 			'ip_rate_limited',
-			'ip_banned',
+			'ip_blacklisted',
 			'ip_whitelisted_bypass',
 			'ip_entry_created',
 			'ip_entry_deleted',
-			'expired_ip_entry_cleanup',
+			'ip_entries_delete_expired',
 			'auth_success',
 			'auth_failed',
 			'auth_revoked',
@@ -271,7 +283,7 @@ final class LogsRepository {
 			'admin_login_banned',
 			'emergency_token_used',
 			'plugin_settings_changed',
-			'unknown',
+			'log_entries_delete_expired',
 		);
 		return in_array( $value, $allowed, true ) ? $value : 'unknown';
 	}
@@ -294,7 +306,6 @@ final class LogsRepository {
 			'method'     => $row['method'],
 			'uri'        => $row['uri'],
 			'user_id'    => null !== $row['user_id'] ? (int) $row['user_id'] : null,
-			'context'    => null !== $row['context'] ? json_decode( $row['context'], true ) : null,
 			'created_at' => $row['created_at'],
 		);
 	}

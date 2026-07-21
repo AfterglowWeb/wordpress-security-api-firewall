@@ -65,7 +65,7 @@ class LogsAjaxController {
 		}
 
 		if ( empty( $post_args ) ) {
-			wp_send_json_error( array( 'message' => __( 'No args.', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'No args.', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$settings = array();
@@ -75,7 +75,7 @@ class LogsAjaxController {
 		}
 
 		if ( empty( array_filter( $settings ) ) ) {
-			wp_send_json_error( array( 'message' => __( 'No settings saved.', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'No settings saved.', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		wp_send_json_success( $settings, 200 );
@@ -129,13 +129,13 @@ class LogsAjaxController {
 		$id = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
 
 		if ( ! $id ) {
-			wp_send_json_error( array( 'message' => __( 'Log ID required', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Log ID required', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$deleted = LogsRepository::delete( $id );
 
 		if ( ! $deleted ) {
-			wp_send_json_error( array( 'message' => __( 'Log entry not found', 'bromate-security-api-firewall' ) ), 404 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Log entry not found', 'bromate-security-api-firewall' ) ), 404 );
 		}
 
 		wp_send_json_success( array( 'deleted' => true ), 200 );
@@ -154,7 +154,7 @@ class LogsAjaxController {
 		}
 
 		if ( ! is_array( $ids ) || empty( $ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'No entries selected', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'No entries selected', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$count = LogsRepository::delete_many( $ids );

@@ -2,13 +2,13 @@
 export type LogSeverity = 'info' | 'warning' | 'error';
 
 export type LogEvent = 
-	'ip_blocked' |
+	'ip_country_blocked' |
 	'ip_rate_limited' |
-	'ip_banned' |
+	'ip_blacklisted' |
 	'ip_whitelisted_bypass' |
 	'ip_entry_created' |
 	'ip_entry_deleted' |
-	'expired_ip_entry_cleanup' |
+	'ip_entries_delete_expired' |
 	'auth_success' |
 	'auth_failed' |
 	'auth_revoked' |
@@ -17,7 +17,8 @@ export type LogEvent =
 	'admin_login_rate_limited' |
 	'admin_login_banned' |
 	'emergency_token_used' |
-	'plugin_settings_changed';
+	'plugin_settings_changed' |
+  'log_entries_delete_expired';
 
 export interface LogEntry {
   id: number;

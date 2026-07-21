@@ -13,7 +13,7 @@ const DEFAULT_LOGS_SETTINGS:LogsSettings = {
   logs_enabled: false,
   logs_keep_severities: ['info', 'warning', 'error'] as LogSeverity[],
   logs_keep_events: [] as LogEvent[],
-  logs_rotation_time: 30,
+  logs_rotation_time: 90,
 }
 
 export default function Logs(): JSX.Element {

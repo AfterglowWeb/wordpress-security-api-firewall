@@ -169,21 +169,7 @@ const LOG_COLUMNS: GridColDef<LogEntry>[] = [
     renderCell: ({ value }) => value
       ? <Tooltip slotProps={{ popper: { container: usePortalContainer() } }} title={value}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span></Tooltip>
       : '—',
-  },
-  {
-    field: 'context', headerName: 'Context', width: 200,
-    renderCell: ({ value }) => {
-      if (!value) return '—';
-      const text = JSON.stringify(value);
-      return (
-        <Tooltip slotProps={{ popper: { container: usePortalContainer() } }} title={<pre style={{ margin: 0, fontSize: 11 }}>{JSON.stringify(value, null, 2)}</pre>}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'monospace', fontSize: 12 }}>
-            {text}
-          </span>
-        </Tooltip>
-      );
-    },
-  },
+  }
 ];
 
 type LogsDataGridProps = {

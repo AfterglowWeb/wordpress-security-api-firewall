@@ -68,15 +68,15 @@ class IpEntryAjaxController {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( empty( $ip ) || ! IpUtils::is_valid_ip_or_cidr( $ip ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid IP address or CIDR', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid IP address or CIDR', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		if ( IpEntryRepository::find_by_ip( $ip, $list_type ) ) {
-			wp_send_json_error( array( 'message' => __( 'IP already in list', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'IP already in list', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		if ( $user_id && ! get_userdata( $user_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid user', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid user', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$data = array(
@@ -97,7 +97,7 @@ class IpEntryAjaxController {
 		$id = IpEntryRepository::insert( $data );
 
 		if ( ! $id ) {
-			wp_send_json_error( array( 'message' => __( 'Failed to add IP entry', 'bromate-security-api-firewall' ) ), 500 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Failed to add IP entry', 'bromate-security-api-firewall' ) ), 500 );
 		}
 
 		$entry = IpEntryRepository::find_by_ip( $ip, $list_type );
@@ -120,7 +120,7 @@ class IpEntryAjaxController {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! $id ) {
-			wp_send_json_error( array( 'message' => __( 'Entry ID required', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Entry ID required', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$data = array();
@@ -142,18 +142,18 @@ class IpEntryAjaxController {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( empty( $data ) ) {
-			wp_send_json_error( array( 'message' => __( 'Nothing to update', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Nothing to update', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$updated = IpEntryRepository::update( $id, $data );
 
 		if ( ! $updated ) {
-			wp_send_json_error( array( 'message' => __( 'Entry not found or unchanged', 'bromate-security-api-firewall' ) ), 404 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Entry not found or unchanged', 'bromate-security-api-firewall' ) ), 404 );
 		}
 
 		$entry = IpEntryRepository::find_by_id( $id );
 		if ( null === $entry ) {
-			wp_send_json_error( array( 'message' => __( 'Entry not found', 'bromate-security-api-firewall' ) ), 404 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Entry not found', 'bromate-security-api-firewall' ) ), 404 );
 		}
 		wp_send_json_success( array( 'entry' => $entry ), 200 );
 	}
@@ -168,13 +168,13 @@ class IpEntryAjaxController {
 		$id = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
 
 		if ( ! $id ) {
-			wp_send_json_error( array( 'message' => __( 'Entry ID required', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Entry ID required', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$deleted = IpEntryRepository::delete( $id );
 
 		if ( ! $deleted ) {
-			wp_send_json_error( array( 'message' => __( 'Entry not found', 'bromate-security-api-firewall' ) ), 404 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Entry not found', 'bromate-security-api-firewall' ) ), 404 );
 		}
 
 		wp_send_json_success( array( 'deleted' => true ), 200 );
@@ -193,7 +193,7 @@ class IpEntryAjaxController {
 		}
 
 		if ( ! is_array( $ids ) || empty( $ids ) ) {
-			wp_send_json_error( array( 'message' => __( 'No entries selected', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'No entries selected', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$count = IpEntryRepository::delete_many( $ids );
@@ -210,7 +210,7 @@ class IpEntryAjaxController {
 		$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
 
 		if ( ! $user_id ) {
-			wp_send_json_error( array( 'message' => __( 'User ID required', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'User ID required', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$entries = IpEntryRepository::find_by_user( $user_id );
@@ -262,7 +262,7 @@ class IpEntryAjaxController {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( empty( $country_code ) || 2 !== strlen( $country_code ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid country code', 'bromate-security-api-firewall' ) ), 400 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid country code', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
 		$list_type = 'blacklist' === $list_type ? 'blacklist' : 'whitelist';
@@ -272,7 +272,7 @@ class IpEntryAjaxController {
 			: IpEntryRepository::unblock_country( $country_code, $list_type );
 
 		if ( false === $result ) {
-			wp_send_json_error( array( 'message' => __( 'Failed to update country block', 'bromate-security-api-firewall' ) ), 500 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Failed to update country block', 'bromate-security-api-firewall' ) ), 500 );
 		}
 
 		wp_send_json_success(

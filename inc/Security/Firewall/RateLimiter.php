@@ -62,18 +62,18 @@ class RateLimiter {
 			);
 
 			Logger::log(
-				'ip_banned',
+				'ip_blacklisted',
 				'warning',
 				array(
-					'reason' => __( 'Too many violations. IP has been temporarily blocked.', 'bromate-security-api-firewall' ),
+					'reason' => esc_html__( 'Too many violations. IP has been blacklisted.', 'bromate-security-api-firewall' ),
 					'extra'  => $violations,
 				),
 				$client_ip
 			);
 
 			return new WP_Error(
-				'rest_firewall_ip_blacklisted',
-				__( 'Too many violations, your IP has been temporarily blocked.', 'bromate-security-api-firewall' ),
+				'bromate_security_api_firewall_ip_blacklisted',
+				esc_html__( 'Too many violations, IP has been blacklisted.', 'bromate-security-api-firewall' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -82,15 +82,15 @@ class RateLimiter {
 			'ip_rate_limited',
 			'error',
 			array(
-				'reason' => __( 'IP rate limited.', 'bromate-security-api-firewall' ),
+				'reason' => esc_html__( 'Too many requests. IP has been temporaly blocked.', 'bromate-security-api-firewall' ),
 				'extra'  => $count,
 			),
 			$client_ip
 		);
 
 		return new WP_Error(
-			'rest_firewall_rate_limited',
-			__( 'Too many requests.', 'bromate-security-api-firewall' ),
+			'bromate_security_api_firewall_ip_rate_limited',
+			esc_html__( 'Too many requests. IP has been temporaly blocked.', 'bromate-security-api-firewall' ),
 			array( 'status' => 429 )
 		);
 	}

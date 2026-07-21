@@ -84,6 +84,11 @@ class FilePermissions {
 
 		$upload_dir        = wp_upload_dir();
 		$htaccess_path     = trailingslashit( $upload_dir['basedir'] ) . '.htaccess';
+
+		FileUtils::wp_filesystem();
+		if ( ! FileUtils::is_readable( $htaccess_path ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( '.htaccess file is not readable.', 'bromate-security-api-firewall' ) ), 400 );
+		}
 		$htaccess_content  = (string) FileUtils::read_file( $htaccess_path );
 		$uploads_protected = false !== strpos( $htaccess_content, '# WP Security & API Firewall' );
 

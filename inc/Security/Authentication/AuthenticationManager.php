@@ -43,7 +43,7 @@ class AuthenticationManager {
 					'auth_success',
 					'info',
 					array(
-						'reason' => 'Successfull Authentication with JWT',
+						'reason' =>  esc_html__( 'Successfull Authentication with JWT', 'bromate-security-api-firewall' ),
 						'extra'  => $auth_result,
 					)
 				);
@@ -54,7 +54,7 @@ class AuthenticationManager {
 				'invalid_jwt',
 				'warning',
 				array(
-					'reason' => __( 'Authentication failed because of invalid JWT.', 'bromate-security-api-firewall' ),
+					'reason' => esc_html__( 'Authentication failed because of invalid JWT.', 'bromate-security-api-firewall' ),
 				)
 			);
 			return false;
@@ -67,7 +67,7 @@ class AuthenticationManager {
 				'auth_success',
 				'info',
 				array(
-					'reason' => 'Successfull Authentication with WordPress Application Password',
+					'reason' => esc_html__( 'Successfull Authentication with WordPress Application Password' , 'bromate-security-api-firewall' ),
 					'extra'  => $auth_result,
 				)
 			);
@@ -76,7 +76,7 @@ class AuthenticationManager {
 				'invalid_application_password',
 				'warning',
 				array(
-					'reason' => __( 'Authentication failed because of invalid application password.', 'bromate-security-api-firewall' ),
+					'reason' => esc_html__( 'Authentication failed because of invalid application password.', 'bromate-security-api-firewall' ),
 				)
 			);
 		}

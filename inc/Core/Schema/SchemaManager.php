@@ -54,30 +54,29 @@ final class SchemaManager {
 	}
 
 	private static function create_logs( \wpdb $wpdb ): void {
-		$table           = $wpdb->prefix . 'bromate_security_api_firewall_logs';
-		$charset_collate = $wpdb->get_charset_collate();
+    $table           = $wpdb->prefix . 'bromate_security_api_firewall_logs';
+    $charset_collate = $wpdb->get_charset_collate();
 
-		dbDelta(
-			"CREATE TABLE {$table} (
-			id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			event       VARCHAR(64)     NOT NULL,
-			details     LONGTEXT        DEFAULT NULL,
-			severity    ENUM('debug','info','warning','error','critical') NOT NULL DEFAULT 'info',
-			ip          VARCHAR(45)     DEFAULT NULL,
-			user_agent  VARCHAR(512)    DEFAULT NULL,
-			referrer    VARCHAR(512)    DEFAULT NULL,
-			method      VARCHAR(10)     DEFAULT NULL,
-			uri         VARCHAR(1024)   DEFAULT NULL,
-			user_id     BIGINT UNSIGNED DEFAULT NULL,
-			context     LONGTEXT        DEFAULT NULL,
-			created_at  DATETIME        NOT NULL,
-			PRIMARY KEY (id),
-			KEY idx_event      (event),
-			KEY idx_ip         (ip),
-			KEY idx_user_id    (user_id),
-			KEY idx_severity   (severity),
-			KEY idx_created_at (created_at)
-		) {$charset_collate};"
-		);
-	}
+    dbDelta(
+        "CREATE TABLE {$table} (
+        id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        event       VARCHAR(64)     NOT NULL,
+        details     LONGTEXT        DEFAULT NULL,
+        severity    ENUM('info','warning','error') NOT NULL DEFAULT 'info',
+        ip          VARCHAR(45)     DEFAULT NULL,
+        user_agent  VARCHAR(512)    DEFAULT NULL,
+        referrer    VARCHAR(512)    DEFAULT NULL,
+        method      VARCHAR(10)     DEFAULT NULL,
+        uri         VARCHAR(1024)   DEFAULT NULL,
+        user_id     BIGINT UNSIGNED DEFAULT NULL,
+        created_at  DATETIME        NOT NULL,
+        PRIMARY KEY  (id),
+        KEY idx_user_id (user_id),
+        KEY idx_created_at (created_at),
+        KEY idx_severity_created (severity, created_at),
+        KEY idx_event_created (event, created_at),
+        FULLTEXT KEY idx_uri_ft (uri)
+        ) ENGINE=InnoDB {$charset_collate};"
+    );
+}
 }

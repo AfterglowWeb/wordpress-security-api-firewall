@@ -166,7 +166,7 @@ class SettingsAjaxController {
 		if ( ! isset( $_POST['settings'] ) ) {
 			wp_send_json_error(
 				array(
-					'message' => __( 'Bad request error', 'bromate-security-api-firewall' ),
+					'message' => esc_html__( 'Bad request error', 'bromate-security-api-firewall' ),
 				),
 				400
 			);
@@ -179,7 +179,7 @@ class SettingsAjaxController {
 		if ( false === $result ) {
 			wp_send_json_error(
 				array(
-					'message' => __( 'Failed to save route settings', 'bromate-security-api-firewall' ),
+					'message' => esc_html__( 'Failed to save route settings', 'bromate-security-api-firewall' ),
 				),
 				500
 			);
@@ -187,7 +187,7 @@ class SettingsAjaxController {
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'Settings saved successfully', 'bromate-security-api-firewall' ),
+				'message' => esc_html__( 'Settings saved successfully', 'bromate-security-api-firewall' ),
 			),
 			200
 		);

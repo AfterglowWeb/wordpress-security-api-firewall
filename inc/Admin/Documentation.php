@@ -39,52 +39,52 @@ class Documentation {
 		$pages = array(
 			array(
 				'slug'  => 'presentation',
-				'title' => __( 'Presentation', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Presentation', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'getting-started',
-				'title' => __( 'Getting Started', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Getting Started', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'hooks',
-				'title' => __( 'Hooks', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Hooks', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'applications',
-				'title' => __( 'Applications', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Applications', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'users',
-				'title' => __( 'Auth. & Rate Limit', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Auth. & Rate Limit', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'models',
-				'title' => __( 'Properties', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Properties', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'collections',
-				'title' => __( 'Collections', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Collections', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'automations',
-				'title' => __( 'Automations', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Automations', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'webhooks',
-				'title' => __( 'Webhooks', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Webhooks', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 			array(
 				'slug'  => 'mails',
-				'title' => __( 'Emails', 'bromate-security-api-firewall' ),
+				'title' => esc_html__( 'Emails', 'bromate-security-api-firewall' ),
 				'html'  => '',
 			),
 		);

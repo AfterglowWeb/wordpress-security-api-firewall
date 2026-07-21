@@ -21,14 +21,13 @@ const LOGS_EVENTS_OPTIONS: Array<{
   secondary?: string;
 }> = [
   // IP Management Events
-  { value: 'ip_blocked', label: __('IP Blocked', 'bromate-security-api-firewall'), groupLabel: __('IP Management', 'bromate-security-api-firewall') },
-  { value: 'ip_blocked', label: __('IP Blocked', 'bromate-security-api-firewall') },
-  { value: 'ip_rate_limited', label: __('IP Rate Limited', 'bromate-security-api-firewall') },
-  { value: 'ip_banned', label: __('IP Banned', 'bromate-security-api-firewall') },
+  { value: 'ip_country_blocked', label: __('IP Country Blocked', 'bromate-security-api-firewall'), groupLabel: __('IP Management', 'bromate-security-api-firewall') },
+  { value: 'ip_rate_limited', label: __('IP Temporarly Blocked', 'bromate-security-api-firewall') },
+  { value: 'ip_blacklisted', label: __('IP Blacklisted', 'bromate-security-api-firewall') },
+  { value: 'ip_country_blocked', label: __('IP Country Blocked', 'bromate-security-api-firewall') },
   { value: 'ip_whitelisted_bypass', label: __('IP Whitelisted Bypass', 'bromate-security-api-firewall') },
   { value: 'ip_entry_created', label: __('IP Entry Manually Created', 'bromate-security-api-firewall') },
   { value: 'ip_entry_deleted', label: __('IP Entry Manually Deleted', 'bromate-security-api-firewall') },
-  { value: 'expired_ip_entry_cleanup', label: __('Expired IP Entries Cleanup', 'bromate-security-api-firewall') },
   
   // Authentication Events
   { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall'), groupLabel: __('REST API Auth.', 'bromate-security-api-firewall') },
@@ -42,11 +41,17 @@ const LOGS_EVENTS_OPTIONS: Array<{
   { value: 'admin_login_failed', label: __('Login Failed', 'bromate-security-api-firewall') },
   { value: 'admin_login_rate_limited', label: __('Login Rate Limited', 'bromate-security-api-firewall') },
   { value: 'admin_login_banned', label: __('Login Banned', 'bromate-security-api-firewall') },
-  
+
+  // Cron Events
+  { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall'), groupLabel: __('WordPress Cron Events', 'bromate-security-api-firewall') },
+  { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall') },
+  { value: 'log_entries_delete_expired', label: __('Expired Log Entries Cleaned', 'bromate-security-api-firewall') },
+
   // System Events
   { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall'), groupLabel: __('System', 'bromate-security-api-firewall') },
   { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall') },
   { value: 'plugin_settings_changed', label: __('Plugin Settings Changed', 'bromate-security-api-firewall') },
+
 ];
 
 type Props = {
