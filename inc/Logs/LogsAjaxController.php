@@ -23,6 +23,7 @@ class LogsAjaxController {
 		add_action( 'wp_ajax_bromate_delete_log_entries', array( $self, 'ajax_delete_log_entries' ) );
 		add_action( 'wp_ajax_bromate_get_logs_settings', array( $self, 'ajax_get_logs_settings' ) );
 		add_action( 'wp_ajax_bromate_update_logs_settings', array( $self, 'ajax_update_logs_settings' ) );
+		add_action( 'wp_ajax_bromate_rotate_log_entries', array( $self, 'ajax_rotate_log_entries' ) );
 	}
 
 	public function ajax_get_logs_settings(): void {
@@ -78,6 +79,17 @@ class LogsAjaxController {
 		}
 
 		wp_send_json_success( $settings, 200 );
+	}
+
+	public function ajax_rotate_log_entries(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
+
+		$result = LogsRepository::maybe_rotate_logs();
+		$logs_cleaned =  $result && is_numeric($result) ? (int) $result : 0;
+
+		wp_send_json_success( array( 'deleted' => $logs_cleaned ), 200 );
 	}
 
 	public function ajax_get_log_entries(): void {

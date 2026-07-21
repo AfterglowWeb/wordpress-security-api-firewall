@@ -11,26 +11,11 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import type { AuthorizedUser, AuthorizedUserMeta, AuthSettings } from '@app-types/auth';
-import type { IpEntry } from '@services/ip';
-import type { LogEntry, LogSeverity } from '@app-types/logs';
 import UserDialog from '@features/authentication/UserDialog';
 import { apiRequest } from '@services/api';
 import { SettingsAPI } from '@services/settings';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
-
-declare module '@mui/x-data-grid' {
-  interface ToolbarPropsOverrides {
-    onAddUser?: () => void;
-    onAdd?: () => void;
-    onDeleteSelectedUser?: (rows: Map<GridRowId, AuthorizedUser>) => void;
-    onDeleteSelectedIps?: (rows: Map<GridRowId, IpEntry>) => void;
-    onDeleteSelected?: (rows: Map<GridRowId, LogEntry>) => void;
-    selectedCount: number;
-    severityFilter?: LogSeverity | 'all';
-    onSeverityChange?: (v: LogSeverity | 'all') => void;
-  }
-}
 
 interface AuthenticationToolbarProps {
   onAddUser?: () => void;

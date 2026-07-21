@@ -1,6 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Logs;
 
 use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -14,9 +15,34 @@ final class LogsRepository {
 	public static function insert( array $data ): bool {
 		global $wpdb;
 
+		if ( ! SettingsRepository::read_option( 'logs_enabled' ) ) {
+			return false;
+		}
+
+		$event = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
+		$severity = isset( $data['severity'] ) ? self::sanitize_severity( $data['severity'] ) : 'info';
+
+		if ( empty( $event ) ) {
+			return false;
+		}
+
+		$keep_events = SettingsRepository::read_option( 'logs_keep_events' );
+		if ( ! empty( $keep_events ) && is_array( $keep_events ) ) {
+			if ( ! in_array( $event, $keep_events, true ) ) {
+				return false;
+			}
+		}
+
+		$keep_severities = SettingsRepository::read_option( 'logs_keep_severities' );
+		if ( ! empty( $keep_severities ) && is_array( $keep_severities ) ) {
+			if ( ! in_array( $severity, $keep_severities, true ) ) {
+				return false;
+			}
+		}
+
 		$row = array(
-			'event'      => isset( $data['event'] ) ? sanitize_text_field( $data['event'] ) : '',
-			'severity'   => isset( $data['severity'] ) ? self::sanitize_severity( $data['severity'] ) : 'info',
+			'event'      => $event,
+			'severity'   => $severity,
 			'details'    => isset( $data['details'] ) ? wp_json_encode( $data['details'] ) : null,
 			'ip'         => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : ClientIpResolver::get_client_ip(),
 			'user_agent' => self::current_user_agent(),
@@ -28,12 +54,14 @@ final class LogsRepository {
 			'created_at' => current_time( 'mysql' ),
 		);
 
-		if ( empty( $row['event'] ) ) {
-			return false;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$result = (bool) $wpdb->insert( self::table(), $row );
+
+		if ( $result ) {
+			self::maybe_rotate_logs();
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		return (bool) $wpdb->insert( self::table(), $row );
+		return $result;
 	}
 
 	public static function get_entries( array $args = array() ): array {
@@ -59,6 +87,21 @@ final class LogsRepository {
 		$values = array();
 
 		$sortable = array( 'id', 'event', 'severity', 'ip', 'user_id', 'created_at' );
+
+		$keep_severities = SettingsRepository::read_option( 'logs_keep_severities' );
+		$keep_events = SettingsRepository::read_option( 'logs_keep_events' );
+
+		if ( ! empty( $keep_severities ) && is_array( $keep_severities ) ) {
+			$placeholders = implode( ',', array_fill( 0, count( $keep_severities ), '%s' ) );
+			$where[] = "severity IN ({$placeholders})";
+			$values = array_merge( $values, $keep_severities );
+		}
+
+		if ( ! empty( $keep_events ) && is_array( $keep_events ) ) {
+			$placeholders = implode( ',', array_fill( 0, count( $keep_events ), '%s' ) );
+			$where[] = "event IN ({$placeholders})";
+			$values = array_merge( $values, $keep_events );
+		}
 
 		if ( ! empty( $args['event'] ) ) {
 			$where[]  = 'event = %s';
@@ -147,8 +190,23 @@ final class LogsRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
+	public static function maybe_rotate_logs(): int {
+		$days = SettingsRepository::read_option( 'logs_rotation_time' );
+		
+		if ( ! is_numeric( $days ) || $days < 1 ) {
+			$days = 90;
+		}
+		
+		return self::cleanup( (int) $days );
+	}
+
 	public static function cleanup( int $days = 90 ): int {
 		global $wpdb;
+		
+		if ( $days < 1 ) {
+			$days = 90;
+		}
+		
 		$sql = 'DELETE FROM ' . self::table() . ' WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $days ) );
