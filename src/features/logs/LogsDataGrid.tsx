@@ -180,8 +180,6 @@ export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element 
     ids: new Set(),
   });
 
-  const portalContainer = usePortalContainer();
-
   const load = useCallback(async (p = page, ps = pageSize, sev = severityFilter) => {
     setLoading(true);
     try {
