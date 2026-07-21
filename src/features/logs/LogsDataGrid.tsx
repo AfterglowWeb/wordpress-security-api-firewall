@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import {
   Box, Paper, Typography, Button, Chip, Stack, Tooltip,
   ToggleButton, ToggleButtonGroup,
@@ -9,10 +9,10 @@ import {
   GridRowSelectionModel, useGridApiContext, Toolbar
 } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UpdateIcon from '@mui/icons-material/Update';
 import { type LogEntry, type LogSeverity, type LogsSettings } from '@app-types/logs';
 import { LogAPI } from '@services/logs';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
-import ConfirmDialog from '@components/ConfirmDialog';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 const SEVERITY_COLOR: Record<LogSeverity, 'info' | 'warning' | 'error'> = {
@@ -44,7 +44,7 @@ function LogsToolbar({
   onDeleteSelected, 
   severityFilter, 
   onSeverityChange, 
-  logsSettings 
+  logsSettings
 }: LogsToolbarProps) {
   const apiRef = useGridApiContext();
   const [selectedCount, setSelectedCount] = useState(0);
@@ -61,13 +61,27 @@ function LogsToolbar({
 
   useEffect(() => {
     const update = () => {
-      const rows = apiRef.current.getSelectedRows() as Map<GridRowId, LogEntry>;
-      setSelectedCount(rows.size);
-      setSelectedRows(rows);
+      const currentRows = apiRef.current.getSelectedRows() as Map<GridRowId, LogEntry>;
+      setSelectedCount(currentRows.size);
+      setSelectedRows(currentRows);
     };
     update();
     return apiRef.current.subscribeEvent('rowSelectionChange', update);
   }, [apiRef]);
+
+    const { openDialog }  = useDialog();
+
+    const handleRotateNow = () => {
+      openDialog({
+        type: DIALOG_TYPES.CONFIRM,
+        title: __('Delete expired log entries', 'bromate-security-api-firewall'),
+        content: __('Delete expired log entries now? This action cannot be undone.', 'bromate-security-api-firewall'),
+        confirmLabel: __('Rotate Now', 'bromate-security-api-firewall'),
+        onConfirm: async () => {
+          await LogAPI.rotateEntries();
+        },
+      });
+  };
 
   return (
     <Toolbar style={{ gap: 16 }}>
@@ -80,7 +94,17 @@ function LogsToolbar({
         startIcon={<DeleteIcon />}
         onClick={() => onDeleteSelected?.(selectedRows)}
       >
-        Delete ({selectedCount})
+        { sprintf(__('Delete %d', 'bromate-security-api-firewall'), selectedCount ) }
+      </Button>
+
+      <Button
+        variant="text"
+        disableElevation
+        size="small"
+        startIcon={<UpdateIcon />}
+        onClick={() => handleRotateNow()}
+      >
+        {__('Delete expired', 'bromate-security-api-firewall')}
       </Button>
 
       <Stack direction="row" alignItems="center" spacing={1}>
@@ -145,21 +169,7 @@ const LOG_COLUMNS: GridColDef<LogEntry>[] = [
     renderCell: ({ value }) => value
       ? <Tooltip slotProps={{ popper: { container: usePortalContainer() } }} title={value}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span></Tooltip>
       : '—',
-  },
-  {
-    field: 'context', headerName: 'Context', width: 200,
-    renderCell: ({ value }) => {
-      if (!value) return '—';
-      const text = JSON.stringify(value);
-      return (
-        <Tooltip slotProps={{ popper: { container: usePortalContainer() } }} title={<pre style={{ margin: 0, fontSize: 11 }}>{JSON.stringify(value, null, 2)}</pre>}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'monospace', fontSize: 12 }}>
-            {text}
-          </span>
-        </Tooltip>
-      );
-    },
-  },
+  }
 ];
 
 type LogsDataGridProps = {
@@ -180,13 +190,11 @@ export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element 
     ids: new Set(),
   });
 
-  const portalContainer = usePortalContainer();
-
   const load = useCallback(async (p = page, ps = pageSize, sev = severityFilter) => {
     setLoading(true);
     try {
       const result = await LogAPI.getEntries({
-        page:     p + 1,          // API is 1-based
+        page:     p + 1,
         per_page: ps,
         severity: sev === 'all' ? undefined : sev,
         order_by: 'created_at',
@@ -222,6 +230,20 @@ export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element 
     });
   }, [openDialog, load]);
 
+  const handleRotateNow = useCallback((rows: Map<GridRowId, LogEntry>) => {
+    if (rows.size === 0) return;
+    openDialog({
+      type: DIALOG_TYPES.CONFIRM,
+      title: `Rotate log entr${rows.size > 1 ? 'ies' : 'y'} now?`,
+      content: 'Rotate log entr older than This action cannot be undone.',
+      confirmLabel: 'Rotate Now',
+      onConfirm: async () => {
+        await LogAPI.rotateEntries();
+        await load();
+      },
+    });
+  }, [openDialog, load]);
+
   const toolbarSlots = useMemo(() => ({ toolbar: LogsToolbar }), []);
 
   return (
@@ -252,12 +274,12 @@ export default function LogsDataGrid({settings}:LogsDataGridProps): JSX.Element 
               severityFilter,
               onSeverityChange: handleSeverityChange,
               logsSettings: settings,
+              onRotateNow: handleRotateNow,
             } as any,
           }}
 
         />
       </Paper>
-      <ConfirmDialog />
     </Box>
   );
 }

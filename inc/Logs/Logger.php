@@ -12,7 +12,6 @@ final class Logger {
 		string $severity = 'info',
 		array $details = array(),
 		string $ip = '',
-		array $context = array()
 	): bool {
 
 		$event    = LogsRepository::sanitize_event( $event );
@@ -25,7 +24,6 @@ final class Logger {
 				'severity' => $severity,
 				'details'  => $details,
 				'ip'       => $ip,
-				'context'  => ! empty( $context ) ? $context : null,
 			)
 		);
 	}
@@ -36,7 +34,7 @@ final class Logger {
 			'info',
 			array(
 				/* translators: %d is the user ID. */
-				'reason' => sprintf( __( 'Entry created by user %d', 'bromate-security-api-firewall' ), $user_id ),
+				'reason' => sprintf( esc_html__( 'Entry created by user %d', 'bromate-security-api-firewall' ), $user_id ),
 				'extra'  => array(
 					'entry_id'  => $entry_id,
 					'ip'        => $ip_created,
@@ -53,7 +51,7 @@ final class Logger {
 			'info',
 			array(
 				/* translators: %d is the user ID. */
-				'reason' => sprintf( __( 'Entry deleted by user %d', 'bromate-security-api-firewall' ), $user_id ),
+				'reason' => sprintf( esc_html__( 'Entry deleted by user %d', 'bromate-security-api-firewall' ), $user_id ),
 				'extra'  => array(
 					'entry_id'  => $entry_id,
 					'ip'        => $ip_deleted,

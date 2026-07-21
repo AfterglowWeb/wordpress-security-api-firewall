@@ -12,6 +12,9 @@ export const LogAPI = {
   getEntries: (args: LogsQueryArgs = {}) =>
     apiRequest<LogsPage>('bromate_get_log_entries', args as Record<string, unknown>),
 
+  rotateEntries: () =>
+    apiRequest<{ deleted: number }>('bromate_rotate_log_entries'),
+
   deleteEntry: (id: number) =>
     apiRequest<{ deleted: boolean }>('bromate_delete_log_entry', { id }),
 

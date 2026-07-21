@@ -52,7 +52,7 @@ class AuthenticationAjaxController {
 					'kid'                => $key_pair['kid'],
 					'public_key'         => $key_pair['public'],
 					'private_key_stored' => true,
-					'message'            => __( 'Key pair generated and stored securely.', 'bromate-security-api-firewall' ),
+					'message'            => esc_html__( 'Key pair generated and stored securely.', 'bromate-security-api-firewall' ),
 					'summary'            => JwtAuthentication::get_key_pair_summary(),
 				)
 			);
@@ -91,13 +91,13 @@ class AuthenticationAjaxController {
 		if ( $deleted ) {
 			wp_send_json_success(
 				array(
-					'message' => __( 'Key pair deleted successfully.', 'bromate-security-api-firewall' ),
+					'message' => esc_html__( 'Key pair deleted successfully.', 'bromate-security-api-firewall' ),
 				)
 			);
 		} else {
 			wp_send_json_error(
 				array(
-					'message' => __( 'Failed to delete key pair.', 'bromate-security-api-firewall' ),
+					'message' => esc_html__( 'Failed to delete key pair.', 'bromate-security-api-firewall' ),
 				),
 				500
 			);

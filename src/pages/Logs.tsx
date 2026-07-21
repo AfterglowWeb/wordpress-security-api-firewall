@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import Stack from '@mui/material/Stack';
+import Skeleton from '@mui/material/Skeleton';
 
 import { type LogSeverity, type LogsSettings, type LogEvent } from '@app-types/logs';
 import { LogAPI } from '@services/logs';
@@ -12,11 +13,11 @@ const DEFAULT_LOGS_SETTINGS:LogsSettings = {
   logs_enabled: false,
   logs_keep_severities: ['info', 'warning', 'error'] as LogSeverity[],
   logs_keep_events: [] as LogEvent[],
-  logs_rotation_time: 30,
+  logs_rotation_time: 90,
 }
 
 export default function Logs(): JSX.Element {
-
+  const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<LogsSettings>(DEFAULT_LOGS_SETTINGS);
   const [loadedSettings, setLoadedSettings] = useState<LogsSettings>(DEFAULT_LOGS_SETTINGS);
   
@@ -24,8 +25,9 @@ export default function Logs(): JSX.Element {
         try {
           const logSettings:LogsSettings = await LogAPI.getSettings();
           setSettings(logSettings);
-        } catch (err) {
-          setSettings(DEFAULT_LOGS_SETTINGS);
+          setLoadedSettings(logSettings);
+        } finally {
+          setLoading(false);
         }
       }, []);
 
@@ -33,10 +35,8 @@ export default function Logs(): JSX.Element {
     () => JSON.stringify(settings) !== JSON.stringify(loadedSettings),
     [settings, loadedSettings]
   );
-    
-  useEffect(() => {
-    loadLogsSettings();
-  }, [loadLogsSettings]);
+
+  useEffect(() => { void loadLogsSettings(); }, [loadLogsSettings]);
 
   const onChange = <K extends keyof LogsSettings>(
     key: K,
@@ -50,6 +50,17 @@ export default function Logs(): JSX.Element {
         setLoadedSettings(settings);
     }, [settings]);
 
+  if (loading) {
+		return (
+			<Stack spacing={3}>
+				<Stack flexDirection={"row"} justifyContent={"flex-end"}>
+				  <Skeleton variant="rounded" width={65} height={35} />
+        </Stack>
+				<Skeleton variant="rounded" width={'100%'} height={385} />
+				<Skeleton variant="rounded" width={'100%'} height={680} />
+			</Stack>
+		);
+	}
 
   return (
     <Stack spacing={3}>

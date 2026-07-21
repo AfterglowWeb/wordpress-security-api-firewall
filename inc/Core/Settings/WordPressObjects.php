@@ -107,7 +107,7 @@ class WordPressObjects {
 		return array(
 			array(
 				'id'           => 0,
-				'display_name' => __( 'Author', 'bromate-security-api-firewall' ),
+				'display_name' => esc_html__( 'Author', 'bromate-security-api-firewall' ),
 			),
 		);
 	}

@@ -36,13 +36,13 @@ class SaltsRotation {
 		if ( ! isset( $schedules['bromate_security_api_firewall_weekly'] ) ) {
 			$schedules['bromate_security_api_firewall_weekly'] = array(
 				'interval' => WEEK_IN_SECONDS,
-				'display'  => __( 'Once Weekly (Bromate)', 'bromate-security-api-firewall' ),
+				'display'  => esc_html__( 'Once Weekly (Bromate)', 'bromate-security-api-firewall' ),
 			);
 		}
 		if ( ! isset( $schedules['bromate_security_api_firewall_monthly'] ) ) {
 			$schedules['bromate_security_api_firewall_monthly'] = array(
 				'interval' => 30 * DAY_IN_SECONDS,
-				'display'  => __( 'Once Monthly (Bromate)', 'bromate-security-api-firewall' ),
+				'display'  => esc_html__( 'Once Monthly (Bromate)', 'bromate-security-api-firewall' ),
 			);
 		}
 		return $schedules;
@@ -126,7 +126,7 @@ class SaltsRotation {
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'Salt keys rotated. All sessions have been invalidated.', 'bromate-security-api-firewall' ),
+				'message' => esc_html__( 'Salt keys rotated. All sessions have been invalidated.', 'bromate-security-api-firewall' ),
 			),
 			200
 		);

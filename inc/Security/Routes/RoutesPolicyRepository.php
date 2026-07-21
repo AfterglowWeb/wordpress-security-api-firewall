@@ -103,13 +103,13 @@ class RoutesPolicyRepository {
 		$code_message = '';
 		switch ( $redirect_option ) {
 			case '401':
-				$code_message = __( 'Unauthorized', 'bromate-security-api-firewall' );
+				$code_message = esc_html__( 'Unauthorized', 'bromate-security-api-firewall' );
 				break;
 			case '404':
-				$code_message = __( 'The ressource doesn\'t exist', 'bromate-security-api-firewall' );
+				$code_message = esc_html__( 'The ressource doesn\'t exist', 'bromate-security-api-firewall' );
 				break;
 			case '403':
-				$code_message = __( 'Forbidden', 'bromate-security-api-firewall' );
+				$code_message = esc_html__( 'Forbidden', 'bromate-security-api-firewall' );
 				break;
 			default:
 				$code_message = '';
