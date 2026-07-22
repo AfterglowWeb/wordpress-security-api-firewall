@@ -3,55 +3,47 @@ namespace Bromate\SecurityApiFirewall\Security\Login;
 
 defined( 'ABSPATH' ) || exit;
 
+use Bromate\SecurityApiFirewall\Core\Cron;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 
-use DateTime;
-
 class SaltsRotation {
 
-	const OPTION_KEY        = 'bromate_security_api_firewall_salts_rotation';
-	const CONFIG_OPTION_KEY = 'bromate_security_api_firewall_salts_rotation_config';
-	const LAST_ROTATION_KEY = 'bromate_security_api_firewall_last_salts_rotation';
-	const CRON_HOOK_KEY     = 'bromate_security_api_firewall_salts_rotation_cron_hook';
+	const KEYS_PREFIX       = 'bromate_security_api_firewall_salts_rotation_hook_';
+	const SALTS_KEY         = self::KEYS_PREFIX . 'salts';
+	const RECURRENCE_KEY    = self::KEYS_PREFIX . 'recurrence';
+	const LAST_RUN_KEY      = self::KEYS_PREFIX . 'last_run';
+	const SCHEDULE_KEY      = self::KEYS_PREFIX . 'cron_schedule_key';
 	const SALT_API_ENDPOINT = 'https://api.wordpress.org/secret-key/1.1/salt/';
 
 	public static function register(): void {
+		if ( ! empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
+			
+			Cron::add_custom_schedule(
+				self::KEYS_PREFIX . 'weekly',
+				WEEK_IN_SECONDS,
+				esc_html__( 'Once Weekly (Bromate)', 'bromate-security-api-firewall' )
+			);
+			Cron::add_custom_schedule(
+				self::KEYS_PREFIX . 'monthly',
+				30 * DAY_IN_SECONDS,
+				esc_html__( 'Once Monthly (Bromate)', 'bromate-security-api-firewall' )
+			);
 
-		add_filter( 'cron_schedules', array( self::class, 'register_custom_schedules' ) );
-		add_filter( 'salt', array( self::class, 'filter_salt' ), 10, 2 );
-		add_action( self::CRON_HOOK_KEY, array( self::class, 'rotate_salts_now' ) );
-		add_action( 'init', array( self::class, 'sync_schedule' ), 20 );
+			add_action( 'init', array( self::class, 'sync_schedule' ), 20 );
+			add_filter( 'salt', array( self::class, 'filter_salt' ), 10, 2 );
+		}
 
+		
 		add_action( 'wp_ajax_bromate_security_api_firewall_salts_rotation_status', array( self::class, 'ajax_salts_rotation_status' ) );
 		add_action( 'wp_ajax_bromate_security_api_firewall_rotate_salts_now', array( self::class, 'ajax_rotate_salts_now' ) );
-	}
-
-	public static function register_custom_schedules( array $schedules ): array {
-
-		if ( empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
-			return $schedules;
-		}
-
-		if ( ! isset( $schedules['bromate_security_api_firewall_weekly'] ) ) {
-			$schedules['bromate_security_api_firewall_weekly'] = array(
-				'interval' => WEEK_IN_SECONDS,
-				'display'  => esc_html__( 'Once Weekly (Bromate)', 'bromate-security-api-firewall' ),
-			);
-		}
-		if ( ! isset( $schedules['bromate_security_api_firewall_monthly'] ) ) {
-			$schedules['bromate_security_api_firewall_monthly'] = array(
-				'interval' => 30 * DAY_IN_SECONDS,
-				'display'  => esc_html__( 'Once Monthly (Bromate)', 'bromate-security-api-firewall' ),
-			);
-		}
-		return $schedules;
 	}
 
 	public static function sync_schedule(): void {
 
 		if ( empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
-			self::unschedule();
+			Cron::unschedule( self::SCHEDULE_KEY );
+			delete_option( self::RECURRENCE_KEY );
 			return;
 		}
 
@@ -59,16 +51,29 @@ class SaltsRotation {
 			'recurrence' => SettingsRepository::read_option( 'salts_rotation_recurrence' ),
 			'time'       => SettingsRepository::read_option( 'salts_rotation_time' ),
 		);
-		$current_config = get_option( self::CONFIG_OPTION_KEY );
-
-		$already_scheduled = (bool) wp_next_scheduled( self::CRON_HOOK_KEY );
-
-		if ( $already_scheduled && $current_config === $desired_config ) {
+		$current_config = get_option( self::RECURRENCE_KEY );
+		if ( wp_next_scheduled( self::SCHEDULE_KEY ) && $current_config === $desired_config ) {
 			return;
 		}
 
-		self::schedule( $desired_config['recurrence'], $desired_config['time'] );
-		update_option( self::CONFIG_OPTION_KEY, $desired_config, false );
+		$schedule_key = self::resolve_schedule_key( $desired_config['recurrence'] );
+		$timestamp    = Cron::next_daily_timestamp( $desired_config['time'] );
+
+		Cron::schedule( self::SCHEDULE_KEY, $schedule_key, array( self::class, 'rotate_salts_now' ), $timestamp );
+
+		update_option( self::RECURRENCE_KEY, $desired_config, false );
+	}
+
+	private static function resolve_schedule_key( string $recurrence ): string {
+		if ( 'daily' === $recurrence ) {
+			return 'daily';
+		}
+
+		$valid = array( 'weekly', 'monthly' );
+		if ( ! in_array( $recurrence, $valid, true ) ) {
+			$recurrence = 'weekly';
+		}
+		return self::KEYS_PREFIX . $recurrence;
 	}
 
 	public static function filter_salt( $salt, $scheme ) {
@@ -77,11 +82,11 @@ class SaltsRotation {
 			return $salt;
 		}
 
-		$stored = get_option( self::OPTION_KEY );
+		$stored = get_option(  self::SALTS_KEY  );
 
 		if ( empty( $stored[ $scheme ] ) ) {
 			$stored[ $scheme ] = self::generate_salt();
-			update_option( self::OPTION_KEY, $stored, false );
+			update_option(  self::SALTS_KEY , $stored, false );
 		}
 
 		return $stored[ $scheme ];
@@ -97,8 +102,8 @@ class SaltsRotation {
 		foreach ( array( 'auth', 'secure_auth', 'logged_in', 'nonce' ) as $scheme ) {
 			$new[ $scheme ] = self::generate_salt();
 		}
-		update_option( self::OPTION_KEY, $new, false );
-		update_option( self::LAST_ROTATION_KEY, current_time( 'mysql' ), false );
+		update_option(  self::SALTS_KEY , $new, false );
+		update_option(  self::LAST_RUN_KEY , current_time( 'mysql' ), false );
 	}
 
 	public static function ajax_salts_rotation_status(): void {
@@ -132,37 +137,13 @@ class SaltsRotation {
 		);
 	}
 
-	private static function schedule( string $recurrence, string $time ): void {
-		self::unschedule();
-
-		$tz            = wp_timezone();
-		$now           = new DateTime( 'now', $tz );
-		list( $h, $m ) = array_map( 'intval', explode( ':', $time ) );
-
-		$next = new DateTime( 'now', $tz );
-		$next->setTime( $h, $m, 0 );
-		if ( $next <= $now ) {
-			$next->modify( '+1 day' );
-		}
-
-		wp_schedule_event( $next->getTimestamp(), $recurrence, self::CRON_HOOK_KEY );
-	}
-
-	private static function unschedule(): void {
-		$timestamp = wp_next_scheduled( self::CRON_HOOK_KEY );
-		if ( $timestamp ) {
-			wp_unschedule_event( $timestamp, self::CRON_HOOK_KEY );
-		}
-		delete_option( self::CONFIG_OPTION_KEY );
-	}
-
 	private static function get_next_rotation(): ?string {
-		$ts = wp_next_scheduled( self::CRON_HOOK_KEY );
+		$ts = wp_next_scheduled( self::SCHEDULE_KEY );
 		return $ts ? get_date_from_gmt( gmdate( 'Y-m-d H:i:s', $ts ), 'Y-m-d H:i:s' ) : null;
 	}
 
 	private static function get_last_rotation(): ?string {
-		return get_option( self::LAST_ROTATION_KEY, null );
+		return get_option(  self::LAST_RUN_KEY , null );
 	}
 
 	private static function generate_salt(): string {
@@ -176,9 +157,9 @@ class SaltsRotation {
 		return in_array(
 			$value,
 			array(
-				'day',
-				'week',
-				'month',
+				'daily',
+				'weekly',
+				'monthly',
 			),
 			true
 		) ? sanitize_text_field( $value ) : 'weekly';
