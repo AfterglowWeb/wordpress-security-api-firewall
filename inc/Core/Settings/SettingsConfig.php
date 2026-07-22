@@ -1,7 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
 use Bromate\SecurityApiFirewall\Logs\LogsRepository;
-use Bromate\SecurityApiFirewall\Security\IpEntry\IpUtils;
+use Bromate\SecurityApiFirewall\Security\Authentication\AuthorizedUserRepository;
 use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
 use Bromate\SecurityApiFirewall\Security\Login\Recaptcha;
 use Bromate\SecurityApiFirewall\Security\Login\SaltsRotation;
@@ -34,7 +34,7 @@ final class SettingsConfig {
 
 		$options = array(
 
-			'auth_control_enabledd'                       => array(
+			'auth_control_enabled'                       => array(
 				'default_value'     => 'wp_auth',
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -83,11 +83,11 @@ final class SettingsConfig {
 			'auth_users'                                  => array(
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => array( SettingsRepository::class, 'sanitize_authorized_users' ),
+				'sanitize_callback' => array( AuthorizedUserRepository::class, 'sanitize_authorized_users' ),
 				'group'             => 'authentication',
 			),
 
-			'rate_limit_enabledd'                         => array(
+			'rate_limit_enabled'                         => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -136,7 +136,7 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
-			'routes_policy_enabledd'                      => array(
+			'routes_policy_enabled'                      => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -228,7 +228,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_recaptcha_enabledd'                    => array(
+			'login_recaptcha_enabled'                    => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -256,14 +256,14 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabledd'                         => array(
+			'login_totp_enabled'                         => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabledd_timestamp'               => array(
+			'login_totp_enabled_timestamp'               => array(
 				'default_value'     => 0,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -291,7 +291,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'cookie_hardening_samesite_enabledd'          => array(
+			'cookie_hardening_samesite_enabled'          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -316,7 +316,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'salts_rotation_enabledd'                     => array(
+			'salts_rotation_enabled'                     => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -338,7 +338,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'redirect_front_enabledd'                     => array(
+			'redirect_front_enabled'                     => array(
 				'default_value'     => '',
 				'type'              => false,
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -653,7 +653,9 @@ final class SettingsConfig {
 		$defaults = array();
 
 		foreach ( self::options_config() as $key => $config ) {
-			$defaults[ $key ] = $config['default_value'];
+			if( isset( $config['default_value'] ) ) {
+				$defaults[ $key ] = $config['default_value'];
+			}
 		}
 
 		return $defaults;

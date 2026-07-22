@@ -1,8 +1,8 @@
 <?php namespace Bromate\SecurityApiFirewall\Security\Authentication;
 
-use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthentication;
+use Bromate\SecurityApiFirewall\Security\Authentication\AuthorizedUserRepository;
 
 class AuthenticationAjaxController {
 
@@ -23,7 +23,7 @@ class AuthenticationAjaxController {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
-		$wordpress_users = SettingsRepository::authorized_users_options();
+		$wordpress_users = AuthorizedUserRepository::authorized_users_options();
 		wp_send_json_success( $wordpress_users );
 	}
 

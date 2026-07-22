@@ -26,7 +26,7 @@ class SettingsAjaxController {
 
 	public function ajax_read_options() {
 		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		$options = SettingsRepository::read_options();
@@ -134,7 +134,7 @@ class SettingsAjaxController {
 
 	public function ajax_get_routes_policy_tree(): void {
 		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		$routes_tree = RoutesTreeRepository::get_routes_policy_tree();
@@ -148,7 +148,7 @@ class SettingsAjaxController {
 
 	public function ajax_get_routes_settings(): void {
 		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		wp_send_json_success(
@@ -159,7 +159,7 @@ class SettingsAjaxController {
 
 	public function ajax_save_all_routes_settings(): void {
 		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
