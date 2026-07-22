@@ -1,8 +1,8 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
-use Bromate\SecurityApiFirewall\Security\Authentication\JwtAuthentication;
-use Bromate\SecurityApiFirewall\Security\Authentication\WordPressApplicationPassword;
-use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\WordPressApplicationPassword;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
 use WP_User;
 
 class SettingsRepository {

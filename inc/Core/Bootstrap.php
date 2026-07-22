@@ -4,23 +4,24 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
-use Bromate\SecurityApiFirewall\Core\Cron;
 
-use Bromate\SecurityApiFirewall\Api\RestRequestBootstrap;
-use Bromate\SecurityApiFirewall\Api\PublicRequestBootstrap;
-use Bromate\SecurityApiFirewall\Api\LoginBootstrap;
+use Bromate\SecurityApiFirewall\Runtime\RestRequestBootstrap;
+use Bromate\SecurityApiFirewall\Runtime\PublicRequestBootstrap;
+use Bromate\SecurityApiFirewall\Runtime\LoginBootstrap;
 
-use Bromate\SecurityApiFirewall\Security\Authentication\JwksEndpoint;
-use Bromate\SecurityApiFirewall\Security\Authentication\AuthenticationAjaxController;
-use Bromate\SecurityApiFirewall\Security\WordPress\WordPressSecurityBootstrap;
-use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryAjaxController;
-use Bromate\SecurityApiFirewall\Security\IpEntry\CronIpEntries;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwksEndpoint;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\AuthenticationAjaxController;
+use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\GlobalSecurityBootstrap;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesAjaxController;
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
 
 use Bromate\SecurityApiFirewall\Logs\LogsAjaxController;
-use Bromate\SecurityApiFirewall\Logs\CronLogs;
+
+use Bromate\SecurityApiFirewall\Cron\Cron;
+use Bromate\SecurityApiFirewall\Cron\CronIpEntries;
+use Bromate\SecurityApiFirewall\Cron\CronLogs;
 
 final class Bootstrap {
 
@@ -32,7 +33,7 @@ final class Bootstrap {
 		RestRequestBootstrap::register();
 		PublicRequestBootstrap::register();
 		LoginBootstrap::register();
-		WordPressSecurityBootstrap::register();
+		GlobalSecurityBootstrap::register();
 		JwksEndpoint::register();
 
 		Cron::register();
@@ -43,7 +44,7 @@ final class Bootstrap {
 			AdminPage::register();
 			SettingsAjaxController::register();
 			AuthenticationAjaxController::register();
-			IpEntryAjaxController::register();
+			IpEntriesAjaxController::register();
 			LogsAjaxController::register();
 			Documentation::register();
 		}

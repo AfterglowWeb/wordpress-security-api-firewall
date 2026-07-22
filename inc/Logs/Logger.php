@@ -1,7 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Logs;
 
-use Bromate\SecurityApiFirewall\Security\IpEntry\IpUtils;
-use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -16,7 +15,7 @@ final class Logger {
 
 		$event    = LogsRepository::sanitize_event( $event );
 		$severity = LogsRepository::sanitize_severity( $severity );
-		$ip       = ! empty( $ip ) && IpUtils::is_valid_ip_or_cidr( $ip ) ? IpUtils::sanitize_ip_or_cidr( $ip ) : ClientIpResolver::get_client_ip();
+		$ip       = ! empty( $ip ) && IpUtils::is_valid_ip_or_cidr( $ip ) ? IpUtils::sanitize_ip_or_cidr( $ip ) : IpUtils::get_client_ip();
 
 		return LogsRepository::insert(
 			array(
