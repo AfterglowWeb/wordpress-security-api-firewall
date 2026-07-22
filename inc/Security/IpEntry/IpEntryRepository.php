@@ -334,20 +334,7 @@ class IpEntryRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
-	public static function schedule_expired_deletion() {
-		$schedule_key = 'bromate_security_api_firewall_ip_entries_delete_expired';
-		if ( ! wp_next_scheduled( $schedule_key ) ) {
-			wp_schedule_event( time(), 'daily', $schedule_key );
-		}
-		add_action( $schedule_key, function() {
-			$result_count = self::delete_expired();
-			Logger::log('ip_entries_delete_expired' , 'info', [
-				'reason' => sprintf(__('%d expired IP entries deleted by wp_schedule_event runtime.','bromate-security-api-firewall'), $result_count ),
-			]);
-		} );
-	}
-
-	private static function delete_expired(): int {
+	public static function delete_expired(): int {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- static SQL, no user input
 		return (int) $wpdb->query( 'DELETE FROM ' . self::table() . ' WHERE expires_at IS NOT NULL AND expires_at < NOW()' );

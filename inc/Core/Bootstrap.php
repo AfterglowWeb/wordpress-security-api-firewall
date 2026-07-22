@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
+use Bromate\SecurityApiFirewall\Core\Cron;
 
 use Bromate\SecurityApiFirewall\Api\RestRequestBootstrap;
 use Bromate\SecurityApiFirewall\Api\PublicRequestBootstrap;
@@ -13,17 +14,17 @@ use Bromate\SecurityApiFirewall\Security\Authentication\JwksEndpoint;
 use Bromate\SecurityApiFirewall\Security\Authentication\AuthenticationAjaxController;
 use Bromate\SecurityApiFirewall\Security\WordPress\WordPressSecurityBootstrap;
 use Bromate\SecurityApiFirewall\Security\IpEntry\IpEntryAjaxController;
+use Bromate\SecurityApiFirewall\Security\IpEntry\CronIpEntries;
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
 
 use Bromate\SecurityApiFirewall\Logs\LogsAjaxController;
-
+use Bromate\SecurityApiFirewall\Logs\CronLogs;
 
 final class Bootstrap {
 
 	private function __construct() {}
-
 
 	public static function register(): void {
 		add_action( 'plugins_loaded', array( SchemaManager::class, 'install' ) );
@@ -33,6 +34,10 @@ final class Bootstrap {
 		LoginBootstrap::register();
 		WordPressSecurityBootstrap::register();
 		JwksEndpoint::register();
+
+		Cron::register();
+		CronLogs::register();
+		CronIpEntries::register();
 
 		if ( is_admin() ) {
 			AdminPage::register();

@@ -326,7 +326,7 @@ final class SettingsConfig {
 			'salts_rotation_recurrence'                   => array(
 				'default_value'     => 'week',
 				'type'              => 'select',
-				'options'           => array( 'day', 'week', 'month' ),
+				'options'           => array( 'daily', 'weekly', 'monthly' ),
 				'sanitize_callback' => array( SaltsRotation::class, 'sanitize_recurrence' ),
 				'group'             => 'login-hardening',
 			),

@@ -1,11 +1,13 @@
 <?php namespace Bromate\SecurityApiFirewall\Logs;
 
+use Bromate\SecurityApiFirewall\Core\Cron;
 use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 
 defined( 'ABSPATH' ) || exit;
 
 final class LogsRepository {
+
 
 	protected static function table(): string {
 		global $wpdb;
@@ -57,7 +59,7 @@ final class LogsRepository {
 		$result = (bool) $wpdb->insert( self::table(), $row );
 
 		if ( $result ) {
-			self::maybe_rotate_logs();
+			CronLogs::maybe_rotate_logs();
 		}
 
 		return $result;
@@ -189,30 +191,7 @@ final class LogsRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
-	public static function schedule_expired_deletion() {
-		$schedule_key = 'bromate_security_api_firewall_log_entries_delete_expired';
-		if ( ! wp_next_scheduled( $schedule_key ) ) {
-			wp_schedule_event( time(), 'daily', $schedule_key );
-		}
-		add_action( $schedule_key, function() {
-			$result_count = self::maybe_rotate_logs();
-			Logger::log('log_entries_delete_expired' , 'info', [
-				'reason' => sprintf(__('%d expired log entries deleted by wp_schedule_event runtime.','bromate-security-api-firewall'), $result_count ),
-			]);
-		} );
-	}
-
-	public static function maybe_rotate_logs(): int {
-		$days = SettingsRepository::read_option( 'logs_rotation_time' );
-		
-		if ( ! is_numeric( $days ) || $days < 1 ) {
-			$days = 90;
-		}
-		
-		return self::cleanup( (int) $days );
-	}
-
-	public static function cleanup( int $days = 90 ): int {
+	public static function delete_expired( int $days = 90 ): int {
 		global $wpdb;
 		
 		if ( $days < 1 ) {
