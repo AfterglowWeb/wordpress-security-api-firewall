@@ -1,7 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Logs;
 
-use Bromate\SecurityApiFirewall\Core\Cron;
-use Bromate\SecurityApiFirewall\Security\IpEntry\ClientIpResolver;
+use Bromate\SecurityApiFirewall\Cron\Cron;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 
 defined( 'ABSPATH' ) || exit;
@@ -46,7 +46,7 @@ final class LogsRepository {
 			'event'      => $event,
 			'severity'   => $severity,
 			'details'    => isset( $data['details'] ) ? wp_json_encode( $data['details'] ) : null,
-			'ip'         => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : ClientIpResolver::get_client_ip(),
+			'ip'         => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : IpUtils::get_client_ip(),
 			'user_agent' => self::current_user_agent(),
 			'referrer'   => self::current_referrer(),
 			'method'     => self::current_method(),

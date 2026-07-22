@@ -1,14 +1,14 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
 use Bromate\SecurityApiFirewall\Logs\LogsRepository;
-use Bromate\SecurityApiFirewall\Security\Authentication\AuthorizedUserRepository;
-use Bromate\SecurityApiFirewall\Security\IpEntry\GeoIpApi;
-use Bromate\SecurityApiFirewall\Security\Login\Recaptcha;
-use Bromate\SecurityApiFirewall\Security\Login\SaltsRotation;
-use Bromate\SecurityApiFirewall\Security\Login\TOTPRepository;
-use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
-use Bromate\SecurityApiFirewall\Security\Routes\RoutesTreeRepository;
-use Bromate\SecurityApiFirewall\Security\WordPress\HttpHeaders;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\AuthorizedUserRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\Recaptcha;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\SaltsRotation;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesPolicyRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeaders;
 
 final class SettingsConfig {
 

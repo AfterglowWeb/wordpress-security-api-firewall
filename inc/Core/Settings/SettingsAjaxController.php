@@ -1,10 +1,10 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\Security\Routes\RoutesPolicyRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\WordPressObjects;
-use Bromate\SecurityApiFirewall\Security\Routes\RoutesTreeRepository;
-use Bromate\SecurityApiFirewall\Security\WordPress\HttpHeaders;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeaders;
 
 class SettingsAjaxController {
 
