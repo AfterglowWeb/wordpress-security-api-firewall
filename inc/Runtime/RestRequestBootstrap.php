@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
 use Bromate\SecurityApiFirewall\Runtime\IpAccessControl;
 use Bromate\SecurityApiFirewall\Runtime\RateLimiter;
 
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\AuthenticationManager;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationRuntime;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesResolver;
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeaders;
@@ -74,7 +74,7 @@ final class RestRequestBootstrap {
 			return $result;
 		}
 
-		$auth_result = AuthenticationManager::authenticate();
+		$auth_result = RestAuthenticationRuntime::authenticate();
 
 		if ( is_wp_error( $auth_result ) ) {
 			return $auth_result;

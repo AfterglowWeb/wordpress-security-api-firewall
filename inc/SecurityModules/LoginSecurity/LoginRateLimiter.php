@@ -40,7 +40,7 @@ final class LoginRateLimiter {
 		if ( get_transient( self::BLOCK_PREFIX . self::ip_hash( $ip ) ) ) {
 			return new \WP_Error(
 				'too_many_login_attempts',
-				__( 'Too many failed login attempts. Please try again later.', 'bromate-security-api-firewall' )
+				esc_html__( 'Too many failed login attempts. Please try again later.', 'bromate-security-api-firewall' )
 			);
 		}
 
@@ -89,16 +89,16 @@ final class LoginRateLimiter {
 	}
 
 	private function is_enabled(): bool {
-		return (bool) SettingsRepository::read_option( 'login_rate_limit_enabled' );
+		return (bool) SettingsRepository::read_option( 'login_attempts_limit_enabled' );
 	}
 
 	private function get_options(): array {
 		$opts = SettingsRepository::read_options();
 		return array(
-			'attempts'       => max( 1, (int) ( $opts['login_rate_limit_attempts'] ?? 5 ) ),
-			'window'         => max( 1, (int) ( $opts['login_rate_limit_window'] ?? 300 ) ),
-			'blacklist_time' => max( 1, (int) ( $opts['login_rate_limit_blacklist_time'] ?? 3600 ) ),
-			'promote_after'  => max( 0, (int) ( $opts['login_rate_limit_promote_after'] ?? 3 ) ),
+			'attempts'       => max( 1, (int) ( $opts['login_attempts_limit'] ?? 5 ) ),
+			'window'         => max( 1, (int) ( $opts['login_attempts_limit_window'] ?? 300 ) ),
+			'blacklist_time' => max( 1, (int) ( $opts['login_attempts_violation_block_time'] ?? 3600 ) ),
+			'promote_after'  => max( 0, (int) ( $opts['login_attempts_blacklist_after_violations'] ?? 3 ) ),
 		);
 	}
 
@@ -136,5 +136,28 @@ final class LoginRateLimiter {
 		}
 
 		return false;
+	}
+
+	public static function delete_all_rate_limit_transients(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::BLOCK_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::BLOCK_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_' . self::STRIKE_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::STRIKE_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_' . self::COUNT_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::COUNT_PREFIX ) . '%'
+			)
+		);
 	}
 }

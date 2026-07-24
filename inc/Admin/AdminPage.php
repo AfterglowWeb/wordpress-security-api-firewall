@@ -12,26 +12,35 @@ class AdminPage {
 
 	private function __construct() {}
 
+	private const EDIT_OPTIONS_CUSTOM_CAP = 'bromate_security_api_firewall_edit_options';
 
 	public static function register(): void {
 		$self = new self();
-		add_action(
-			'admin_init',
-			function () {
-				$role_object = get_role( 'administrator' );
-				$role_object->add_cap( 'bromate_security_api_firewall_edit_options' );
-			}
-		);
+		add_action( 'admin_init', array( $self, 'add_edit_options_custom_cap' ) );
 		add_action( 'admin_menu', array( $self, 'register_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $self, 'enqueue_scripts' ), 10, 1 );
 		add_action( 'admin_footer', array( $self, 'print_inline_styles' ), 20 );
+	}
+
+	public static function add_edit_options_custom_cap() {
+		$role = get_role( 'administrator' );
+		if ( $role ) {
+			$role->add_cap( self::EDIT_OPTIONS_CUSTOM_CAP );
+		}
+	}
+
+	public static function remove_edit_options_custom_cap() {
+		$role = get_role( 'administrator' );
+		if ( $role ) {
+			$role->remove_cap( self::EDIT_OPTIONS_CUSTOM_CAP );
+		}
 	}
 
 	public function register_admin_page(): void {
 		add_menu_page(
 			__( 'WP Security & API Firewall', 'bromate-security-api-firewall' ),
 			__( 'WP Security & API Firewall', 'bromate-security-api-firewall' ),
-			'bromate_security_api_firewall_edit_options',
+			self::EDIT_OPTIONS_CUSTOM_CAP,
 			'bromate-security-api-firewall',
 			array( $this, 'render_admin_page' ),
 			'dashicons-tablet',

@@ -7,7 +7,7 @@ use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\WordPressA
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
 use Bromate\SecurityApiFirewall\Logs\Logger;
 
-class AuthenticationManager {
+class RestAuthenticationRuntime {
 
 	public static function authenticate() {
 
@@ -43,7 +43,7 @@ class AuthenticationManager {
 					'auth_success',
 					'info',
 					array(
-						'reason' =>  esc_html__( 'Successfull Authentication with JWT', 'bromate-security-api-firewall' ),
+						'reason' => esc_html__( 'Successfull Authentication with JWT', 'bromate-security-api-firewall' ),
 						'extra'  => $auth_result,
 					)
 				);
@@ -67,7 +67,7 @@ class AuthenticationManager {
 				'auth_success',
 				'info',
 				array(
-					'reason' => esc_html__( 'Successfull Authentication with WordPress Application Password' , 'bromate-security-api-firewall' ),
+					'reason' => esc_html__( 'Successfull Authentication with WordPress Application Password', 'bromate-security-api-firewall' ),
 					'extra'  => $auth_result,
 				)
 			);

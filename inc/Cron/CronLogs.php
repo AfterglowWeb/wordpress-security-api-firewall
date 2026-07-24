@@ -36,7 +36,8 @@ final class CronLogs {
 			'info',
 			array(
 				'reason' => sprintf(
-					__( '%d expired log entries deleted by wp_schedule_event runtime.', 'bromate-security-api-firewall' ),
+					/* translators: $d is the number of expired log entries deleted */
+					esc_html__( '%d expired log entries deleted by wp_schedule_event runtime.', 'bromate-security-api-firewall' ),
 					$result_count
 				),
 			)
@@ -45,17 +46,15 @@ final class CronLogs {
 
 	public static function maybe_rotate_logs(): int {
 		$days = SettingsRepository::read_option( 'logs_rotation_time' );
-		
+
 		if ( ! is_numeric( $days ) || $days < 1 ) {
 			$days = 90;
 		}
-		
+
 		return self::cleanup( (int) $days );
 	}
 
 	private static function cleanup( int $days = 90 ): int {
 		return LogsRepository::delete_expired( $days );
 	}
-
-	
 }

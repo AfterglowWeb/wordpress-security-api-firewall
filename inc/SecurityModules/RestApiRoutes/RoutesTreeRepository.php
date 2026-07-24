@@ -7,7 +7,8 @@ use Throwable;
 
 class RoutesTreeRepository {
 
-	const DEFAULT_HIDDEN_ROUTES = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
+	const DEFAULT_HIDDEN_ROUTES     = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
+	const ROUTES_LIST_TRANSIENT_KEY = 'bromate_security_api_firewall_routes_list';
 
 	public static function get_routes_policy_tree(): array {
 		$tree       = self::build_policy_tree();
@@ -36,13 +37,8 @@ class RoutesTreeRepository {
 		}
 	}
 
-
-	public static function flush_cache(): void {
-		delete_transient( 'rest_firewall_routes_list' );
-	}
-
 	private static function list_all_rest_routes(): array {
-		$cached = get_transient( 'rest_firewall_routes_list' );
+		$cached = get_transient( self::ROUTES_LIST_TRANSIENT_KEY );
 		if ( false !== $cached && is_array( $cached ) ) {
 			return $cached;
 		}
@@ -70,7 +66,7 @@ class RoutesTreeRepository {
 			}
 		}
 
-		set_transient( 'rest_firewall_routes_list', $output, HOUR_IN_SECONDS );
+		set_transient( self::ROUTES_LIST_TRANSIENT_KEY, $output, HOUR_IN_SECONDS );
 		return $output;
 	}
 
@@ -401,5 +397,9 @@ class RoutesTreeRepository {
 	private static function get_saved_rest_routes(): array {
 		$saved = SettingsRepository::read_option( 'routes_policy_tree' );
 		return is_array( $saved ) ? self::sanitize_routes_policy_tree( $saved ) : array();
+	}
+
+	public static function delete_routes_list_transient(): void {
+		delete_transient( self::ROUTES_LIST_TRANSIENT_KEY );
 	}
 }

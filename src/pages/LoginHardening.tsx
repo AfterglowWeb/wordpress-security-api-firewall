@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { SettingsAPI } from '@services/settings';
-import { UserSessionsAPI, SaltsRotationStatus } from '@services/user-sessions';
 import { useNavigation } from '@contexts/NavigationContext';
-import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 import {
   Paper,
@@ -20,22 +18,20 @@ import {
   RadioGroup,
   Radio,
   Divider,
-  MenuItem,
-  CircularProgress,
   Skeleton
 } from '@mui/material';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
-import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
-import ConfirmDialog from '@components/ConfirmDialog';
 import SaveButton from '@components/SaveButton';
+import SaltsRotationSection from '@features/login/SaltsRotationSection';
+import RevokeTotpEnrollments from '@features/login/RevokeTotpEnrollments';
 
 interface LoginSettings {
-  login_rate_limit_enabled: boolean;
-  login_rate_limit_attempts: number;
-  login_rate_limit_window: number;
-  login_rate_limit_blacklist_time: number;
-  login_rate_limit_promote_after: number;
+  login_attempts_limit_enabled: boolean;
+  login_attempts_limit: number;
+  login_attempts_limit_window: number;
+  login_attempts_violation_block_time: number;
+  login_attempts_blacklist_after_violations: number;
 
   login_recaptcha_enabled: boolean;
   login_recaptcha_site_key: string;
@@ -52,17 +48,16 @@ interface LoginSettings {
   cookie_hardening_max_concurrent_sessions: number;
 
   salts_rotation_enabled: boolean;
-  salts_rotation_recurrence: 'day' | 'week' | 'month';
+  salts_rotation_recurrence: 'daily' | 'weekly' | 'monthly';
   salts_rotation_time: string;
-
 }
 
 const DEFAULT_SETTINGS: LoginSettings = {
-  login_rate_limit_enabled: false,
-  login_rate_limit_attempts: 5,
-  login_rate_limit_window: 300,
-  login_rate_limit_blacklist_time: 3600,
-  login_rate_limit_promote_after: 3,
+  login_attempts_limit_enabled: false,
+  login_attempts_limit: 5,
+  login_attempts_limit_window: 300,
+  login_attempts_violation_block_time: 3600,
+  login_attempts_blacklist_after_violations: 3,
 
   login_recaptcha_enabled: false,
   login_recaptcha_site_key: '',
@@ -70,7 +65,7 @@ const DEFAULT_SETTINGS: LoginSettings = {
   login_recaptcha_threshold: 0.5,
 
   login_totp_enabled: false,
-  login_totp_issuer: 'Bromate REST API',
+  login_totp_issuer: 'Bromate Security API Firewall',
   login_totp_policy: 'grace',
   login_totp_grace_period: 7,
 
@@ -78,37 +73,19 @@ const DEFAULT_SETTINGS: LoginSettings = {
   cookie_hardening_samesite_mode: 'Strict',
 
   salts_rotation_enabled: false,
-  salts_rotation_recurrence: 'week',
+  salts_rotation_recurrence: 'weekly',
   salts_rotation_time: '03:00',
 
   cookie_hardening_max_concurrent_sessions: 0,
 };
 
-function formatDateTime(value: string | null): string {
-  if (!value) {
-    return __('Never', 'bromate-security-api-firewall');
-  }
-  const parsed = new Date(value.replace(' ', 'T'));
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString();
-}
-
 export default function LoginHardening(): JSX.Element {
-  const { openDialog } = useDialog();
   const { navigateGuarded } = useNavigation();
-  const portalContainer = usePortalContainer();
   
   const [settings, setSettings] = useState<LoginSettings>(DEFAULT_SETTINGS);
   const [loadedSettings, setLoadedSettings] = useState<LoginSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const [rotationStatus, setRotationStatus] = useState<SaltsRotationStatus | null>(null);
-  const [rotatingNow, setRotatingNow] = useState(false);
-  const [revokingAll, setRevokingAll] = useState(false);
 
   const isDirty = useMemo(
     () => JSON.stringify(settings) !== JSON.stringify(loadedSettings),
@@ -139,22 +116,6 @@ export default function LoginHardening(): JSX.Element {
     loadSettings();
   }, []);
 
-  const loadRotationStatus = useCallback(async () => {
-    try {
-      const status = await UserSessionsAPI.getSaltsRotationStatus();
-      setRotationStatus(status);
-    } catch (err) {
-      setRotationStatus(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    if(! settings.salts_rotation_enabled) {
-      return;
-    }
-    loadRotationStatus();
-  }, [loadRotationStatus, settings]);
-
   const updateSetting = <K extends keyof LoginSettings>(
     key: K,
     value: LoginSettings[K]
@@ -166,68 +127,6 @@ export default function LoginHardening(): JSX.Element {
       await SettingsAPI.updateOptions(settings);
       setLoadedSettings(settings);
   }, [settings]);
-
-  const handleRotateSaltsNow = useCallback(async () => {
-    setRotatingNow(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      await UserSessionsAPI.rotateSaltsNow();
-      setSuccess(
-        __('Salt keys rotated. Every logged-in user, including you, has been signed out.', 'bromate-security-api-firewall')
-      );
-      await loadRotationStatus();
-    } catch (err) {
-      setError(__('Failed to rotate salt keys.', 'bromate-security-api-firewall'));
-    } finally {
-      setRotatingNow(false);
-    }
-  }, [loadRotationStatus]);
-
-  const handleRotateSaltsConfirm = useCallback(() => {
-    openDialog({
-      type: DIALOG_TYPES.CONFIRM,
-      title: __('Rotate salt keys now', 'bromate-security-api-firewall'),
-      content: __(
-        'This immediately signs out every logged-in user on this site, including you. Continue?',
-        'bromate-security-api-firewall'
-      ),
-      confirmLabel: __('Rotate now', 'bromate-security-api-firewall'),
-      onConfirm: handleRotateSaltsNow,
-    });
-  }, [openDialog, handleRotateSaltsNow]);
-
-  const handleRevokeAll = useCallback(async () => {
-    setRevokingAll(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const result = await UserSessionsAPI.revokeAllTrustedDevices();
-      setSuccess(
-        result.message ||
-          __('All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall')
-      );
-    } catch (err) {
-      setError(__('Failed to revoke sessions and trusted devices.', 'bromate-security-api-firewall'));
-    } finally {
-      setRevokingAll(false);
-    }
-  }, []);
-
-  const handleRevokeAllConfirm = useCallback(() => {
-    openDialog({
-      type: DIALOG_TYPES.CONFIRM,
-      title: __('Revoke all sessions & trusted devices', 'bromate-security-api-firewall'),
-      content: __(
-        'This signs out every user on this site and clears every "remember this device" 2FA token. Users will need to log in (and pass 2FA again) on their next visit. Continue?',
-        'bromate-security-api-firewall'
-      ),
-      confirmLabel: __('Revoke everything', 'bromate-security-api-firewall'),
-      onConfirm: handleRevokeAll,
-    });
-  }, [openDialog, handleRevokeAll]);
 
   if (loading) {
 		return (
@@ -261,6 +160,7 @@ export default function LoginHardening(): JSX.Element {
         />
       </Stack>
 
+      {/* login attempts limit Section */}
       <Paper sx={{ p: 2 }} elevation={0}>
         <Stack flexDirection="column" gap={2}>
 
@@ -269,9 +169,9 @@ export default function LoginHardening(): JSX.Element {
               label={__('Enable', 'bromate-security-api-firewall')}
               control={
                 <Switch
-                checked={settings.login_rate_limit_enabled}
+                checked={settings.login_attempts_limit_enabled}
                   onChange={(e) =>
-                  updateSetting('login_rate_limit_enabled', e.target.checked)
+                  updateSetting('login_attempts_limit_enabled', e.target.checked)
                   }
                 />
               }
@@ -286,9 +186,9 @@ export default function LoginHardening(): JSX.Element {
               label={__('Maximum attempts', 'bromate-security-api-firewall')}
               type="number"
               size="small"
-              value={settings.login_rate_limit_attempts}
+              value={settings.login_attempts_limit}
               onChange={(e) =>
-                updateSetting('login_rate_limit_attempts', Number(e.target.value))
+                updateSetting('login_attempts_limit', Number(e.target.value))
               }
               helperText={__('Number of failed attempts before blocking.', 'bromate-security-api-firewall')}
               sx={{ minWidth: 150 }}
@@ -297,9 +197,9 @@ export default function LoginHardening(): JSX.Element {
               label={__('Time window (seconds)', 'bromate-security-api-firewall')}
               type="number"
               size="small"
-              value={settings.login_rate_limit_window}
+              value={settings.login_attempts_limit_window}
               onChange={(e) =>
-                updateSetting('login_rate_limit_window', Number(e.target.value))
+                updateSetting('login_attempts_limit_window', Number(e.target.value))
               }
               helperText={__('Time window for counting attempts.', 'bromate-security-api-firewall')}
               sx={{ minWidth: 150 }}
@@ -308,9 +208,9 @@ export default function LoginHardening(): JSX.Element {
               label={__('Block duration (seconds)', 'bromate-security-api-firewall')}
               type="number"
               size="small"
-              value={settings.login_rate_limit_blacklist_time}
+              value={settings.login_attempts_violation_block_time}
               onChange={(e) =>
-                updateSetting('login_rate_limit_blacklist_time', Number(e.target.value))
+                updateSetting('login_attempts_violation_block_time', Number(e.target.value))
               }
               helperText={__('How long to block the user?', 'bromate-security-api-firewall')}
               sx={{ minWidth: 150 }}
@@ -319,21 +219,21 @@ export default function LoginHardening(): JSX.Element {
               label={__('Blacklist after (num. of blocks)', 'bromate-security-api-firewall')}
               type="number"
               size="small"
-              value={settings.login_rate_limit_promote_after}
+              value={settings.login_attempts_blacklist_after_violations}
               onChange={(e) =>
-                updateSetting('login_rate_limit_promote_after', Number(e.target.value))
+                updateSetting('login_attempts_blacklist_after_violations', Number(e.target.value))
               }
               helperText={__('0 = never add to the blacklist.', 'bromate-security-api-firewall')}
               sx={{ minWidth: 160 }}
             />
           </Stack>
 
-          {settings.login_rate_limit_enabled && (
+          {settings.login_attempts_limit_enabled && (
             <Box>
               <Button
                 size="small"
                 disableElevation
-                variant="contained"
+                variant="outlined"
                 onClick={() => navigateGuarded('firewall', { entry_origin: 'login_rate_limit' })}
                 endIcon={<KeyboardArrowRightIcon fontSize="inherit" />}
               >
@@ -504,7 +404,10 @@ export default function LoginHardening(): JSX.Element {
               />
             </RadioGroup>
           </FormControl>
+          
 
+          {/* Global revoke */}
+          <RevokeTotpEnrollments />
         </Stack>
       </Paper>
 
@@ -555,7 +458,7 @@ export default function LoginHardening(): JSX.Element {
               onChange={(e) =>
                 updateSetting('cookie_hardening_max_concurrent_sessions', Number(e.target.value))
               }
-              helperText={__('0 = unlimited. Oldest session is closed automatically beyond this number.', 'bromate-security-api-firewall')}
+              helperText={__('Oldest session is closed automatically beyond this number. 0 = unlimited.', 'bromate-security-api-firewall')}
               slotProps={{ htmlInput: { min: 0 } }}
               sx={{ maxWidth: 250 }}
             />
@@ -565,146 +468,17 @@ export default function LoginHardening(): JSX.Element {
       </Paper>
 
       {/* Salt Rotation Section */}
-      <Paper sx={{ p: 2 }} elevation={0}>
-        <Stack flexDirection="column" gap={2} maxWidth={500}>
-              
-          <Stack flexDirection="row" gap={1} alignItems="center">
-            <FormControlLabel
-              label={__('Enable', 'bromate-security-api-firewall')}
-              control={
-                <Switch
-                checked={settings.salts_rotation_enabled}
-                  onChange={(e) =>
-                    updateSetting('salts_rotation_enabled', e.target.checked)
-                  }
-                />
-              }
-              sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
-            />
-            <Divider orientation="vertical" variant="middle" flexItem />
-            <Stack>
-            <Typography variant="h6">{__('Rotate Salt Keys', 'bromate-security-api-firewall')}</Typography>
-            <Typography variant="caption" color="text.secondary">{__('The rotation will be triggered once after saving, this will log you out.', 'bromate-security-api-firewall')}</Typography>
-            </Stack>
-          </Stack>
+     <SaltsRotationSection
+      enabled={settings.salts_rotation_enabled}
+      recurrence={settings.salts_rotation_recurrence}
+      time={settings.salts_rotation_time}
+      onChangeEnabled={(value) => updateSetting('salts_rotation_enabled', value)}
+      onChangeRecurrence={(value) => updateSetting('salts_rotation_recurrence', value)}
+      onChangeTime={(value) => updateSetting('salts_rotation_time', value)}
+      />
 
-          <Stack flexDirection={"column"} gap={1} sx={{ pl: 4 }}>
-
-            <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
-              <TextField
-                select
-                slotProps={{select:{MenuProps:{container:portalContainer}}}}
-                label={__('Recurrence', 'bromate-security-api-firewall')}
-                size="small"
-                value={settings.salts_rotation_recurrence}
-                onChange={(e) =>
-                  updateSetting(
-                    'salts_rotation_recurrence',
-                    e.target.value as 'day' | 'week' | 'month'
-                  )
-                }
-                sx={{ minWidth: 150 }}
-              >
-                <MenuItem value="day">{__('Every day', 'bromate-security-api-firewall')}</MenuItem>
-                <MenuItem value="week">{__('Every week', 'bromate-security-api-firewall')}</MenuItem>
-                <MenuItem value="month">{__('Every month', 'bromate-security-api-firewall')}</MenuItem>
-              </TextField>
-
-              <TextField
-                label={__('Rotation Time', 'bromate-security-api-firewall')}
-                type="time"
-                size="small"
-                value={settings.salts_rotation_time}
-                onChange={(e) =>
-                  updateSetting('salts_rotation_time', e.target.value)
-                }
-                sx={{ minWidth: 150 }}
-              />
-            </Stack>
-
-            <Alert severity="info" elevation={0}>
-              {__(
-                'Rotation signs out every logged-in user.',
-                'bromate-security-api-firewall'
-              )}
-            </Alert>
-
-            <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-              <Stack>
-                <Typography variant="caption" color="text.secondary">
-                  {__('Last rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.last_rotation ?? null)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {__('Next rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.next_rotation ?? null)}
-                </Typography>
-              </Stack>
-
-              <Button
-                size="small"
-                variant="outlined"
-                color="primary"
-                disabled={rotatingNow}
-                startIcon={rotatingNow ? <CircularProgress size={16} /> : undefined}
-                onClick={handleRotateSaltsConfirm}
-              >
-                {rotatingNow
-                  ? __('Rotating...', 'bromate-security-api-firewall')
-                  : __('Rotate now', 'bromate-security-api-firewall')}
-              </Button>
-            </Stack>
-
-          </Stack>
-
-        </Stack>
-      </Paper>
-
-      {/* Global revoke */}
-      <Paper sx={{p:2}} elevation={0}>
-        <Stack flexDirection="column" gap={2} maxWidth={500}>
-          <Stack>
-            <Typography variant="h6" fontWeight={600}>
-              {__('Emergency Action', 'bromate-security-api-firewall')}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {__(
-                'Immediately signs out every user on this site and clears every "remember this device" 2FA token. Use this if you suspect an account compromise.',
-                'bromate-security-api-firewall'
-              )}
-            </Typography>
-          </Stack>
-          <Box>
-            <Button
-              variant="contained"
-              color="error"
-              disableElevation
-              disabled={revokingAll}
-              startIcon={revokingAll ? <CircularProgress size={16} color="inherit" /> : undefined}
-              onClick={handleRevokeAllConfirm}
-            >
-              {revokingAll
-                ? __('Revoking...', 'bromate-security-api-firewall')
-                : __('Revoke all sessions', 'bromate-security-api-firewall')}
-            </Button>
-          </Box>
-        </Stack>
-      </Paper>
 
       {/* Notifications */}
-      <Snackbar
-        open={!!success}
-        autoHideDuration={4000}
-        onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSuccess(null)}
-          severity="success"
-          variant="filled"
-        >
-          {success}
-        </Alert>
-      </Snackbar>
-
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
@@ -720,7 +494,6 @@ export default function LoginHardening(): JSX.Element {
         </Alert>
       </Snackbar>
 
-      <ConfirmDialog />
     </Stack>
   );
 }

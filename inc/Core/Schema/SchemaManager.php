@@ -4,10 +4,10 @@ defined( 'ABSPATH' ) || exit;
 
 final class SchemaManager {
 
-	const OPTION_KEY = 'bromate_security_api_firewall_schema_version';
+	private const SCHEMA_VERSION_OPTION_KEY = 'bromate_security_api_firewall_schema_version';
 
 	public static function install(): void {
-		$current = get_option( self::OPTION_KEY, '0.0.0' );
+		$current = get_option( self::SCHEMA_VERSION_OPTION_KEY, '0.0.0' );
 
 		if ( '0.0.0' === $current && version_compare( $current, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, '>=' ) ) {
 			return;
@@ -19,7 +19,21 @@ final class SchemaManager {
 		self::create_ip_entries( $wpdb );
 		self::create_logs( $wpdb );
 
-		update_option( self::OPTION_KEY, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, false );
+		update_option( self::SCHEMA_VERSION_OPTION_KEY, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, false );
+	}
+
+	public static function drop_tables(): void {
+
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_logs" );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
+	}
+
+	public static function delete_schema_version(): void {
+		delete_option( self::SCHEMA_VERSION_OPTION_KEY );
 	}
 
 	private static function create_ip_entries( \wpdb $wpdb ): void {

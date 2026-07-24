@@ -396,7 +396,7 @@ export default function TOTPEnrollment({
       confirmColor: 'error',
       onConfirm: async () => {
         try {
-          await apiRequest('bromate_disable_totp');
+          await apiRequest('bromate_revoke_user_totp_enrollment');
           dispatch({ type: 'DISABLE_SUCCESS' });
           dispatch({ type: 'SET_SUCCESS', message: __('2FA disabled successfully', 'bromate-security-api-firewall') });
           setTimeout(() => {

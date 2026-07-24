@@ -32,4 +32,19 @@ class AutoBlacklist {
 			self::AUTO_BLACKLIST_KEY_PREFIX . md5( $ip )
 		);
 	}
+
+	public static function delete_all_auto_blacklist_ip_transients(): void {
+		global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix; uninstall-only cleanup.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options}
+			WHERE option_name LIKE %s
+			OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::AUTO_BLACKLIST_KEY_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::AUTO_BLACKLIST_KEY_PREFIX ) . '%'
+			)
+		);
+	}
 }

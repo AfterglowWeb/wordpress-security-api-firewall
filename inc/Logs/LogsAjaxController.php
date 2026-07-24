@@ -2,12 +2,14 @@
 
 defined( 'ABSPATH' ) || exit;
 
+
+use Bromate\SecurityApiFirewall\Cron\CronLogs;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 
 class LogsAjaxController {
 
-	const LOGS_SETTINGS_KEYS = array(
+	private static $logs_settings_key = array(
 		'logs_enabled',
 		'logs_keep_severities',
 		'logs_keep_events',
@@ -34,7 +36,7 @@ class LogsAjaxController {
 
 		$settings = array();
 
-		foreach ( self::LOGS_SETTINGS_KEYS as $log_settings_key ) {
+		foreach ( self::$logs_settings_key as $log_settings_key ) {
 			$settings[ $log_settings_key ] = SettingsRepository::read_option( $log_settings_key );
 		}
 		wp_send_json_success( $settings, 200 );
@@ -47,17 +49,19 @@ class LogsAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		$post_args = [];
+		$post_args = array();
 
-		foreach ( self::LOGS_SETTINGS_KEYS as $log_settings_key ) {
-			if(isset( $_POST[ $log_settings_key ] ) ) {
-				
-				$log_setting = sanitize_text_field( wp_unslash( $_POST[$log_settings_key] ) );
-				if(empty($log_setting)) {
+		foreach ( self::$logs_settings_key as $log_settings_key ) {
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
+			if ( isset( $_POST[ $log_settings_key ] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
+				$log_setting = sanitize_text_field( wp_unslash( $_POST[ $log_settings_key ] ) );
+				if ( empty( $log_setting ) ) {
 					continue;
 				}
-				if( in_array( $log_settings_key, ['logs_keep_severities', 'logs_keep_events'], true ) && is_string($log_setting) ) {
-					$post_args[ $log_settings_key ] = false !== strpos($log_setting, ',') ? explode(',', $log_setting) : [$log_setting];
+				if ( in_array( $log_settings_key, array( 'logs_keep_severities', 'logs_keep_events' ), true ) && is_string( $log_setting ) ) {
+					$post_args[ $log_settings_key ] = false !== strpos( $log_setting, ',' ) ? explode( ',', $log_setting ) : array( $log_setting );
 				} else {
 					$post_args[ $log_settings_key ] = $log_setting;
 				}
@@ -86,8 +90,8 @@ class LogsAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		$result = LogsRepository::maybe_rotate_logs();
-		$logs_cleaned =  $result && is_numeric($result) ? (int) $result : 0;
+		$result       = CronLogs::maybe_rotate_logs();
+		$logs_cleaned = $result && is_numeric( $result ) ? (int) $result : 0;
 
 		wp_send_json_success( array( 'deleted' => $logs_cleaned ), 200 );
 	}

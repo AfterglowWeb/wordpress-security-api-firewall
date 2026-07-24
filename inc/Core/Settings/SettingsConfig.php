@@ -1,7 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
 use Bromate\SecurityApiFirewall\Logs\LogsRepository;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\AuthorizedUserRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthorizedUserRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\Recaptcha;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\SaltsRotation;
@@ -12,6 +12,8 @@ use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeaders;
 
 final class SettingsConfig {
 
+	public const SETTINGS_OPTION_KEY = 'bromate_security_api_firewall_options';
+
 	private function __construct() {}
 
 	public static function register(): void {
@@ -21,8 +23,8 @@ final class SettingsConfig {
 
 	public function register_settings(): void {
 		register_setting(
-			'bromate_security_api_firewall_options_group',
-			'bromate_security_api_firewall_options',
+			self::SETTINGS_OPTION_KEY . '_group',
+			self::SETTINGS_OPTION_KEY,
 			array(
 				'sanitize_callback' => array( self::class, 'sanitize_options' ),
 				'default'           => self::default_options(),
@@ -30,11 +32,15 @@ final class SettingsConfig {
 		);
 	}
 
+	public static function delete_settings(): void {
+		delete_option( self::SETTINGS_OPTION_KEY );
+	}
+
 	public static function options_config(): array {
 
 		$options = array(
 
-			'auth_control_enabled'                       => array(
+			'auth_control_enabled'                        => array(
 				'default_value'     => 'wp_auth',
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -83,11 +89,11 @@ final class SettingsConfig {
 			'auth_users'                                  => array(
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => array( AuthorizedUserRepository::class, 'sanitize_authorized_users' ),
+				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_users' ),
 				'group'             => 'authentication',
 			),
 
-			'rate_limit_enabled'                         => array(
+			'rate_limit_enabled'                          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -136,7 +142,7 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
-			'routes_policy_enabled'                      => array(
+			'routes_policy_enabled'                       => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -193,42 +199,42 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			'login_rate_limit_enabled'                    => array(
+			'login_attempts_limit_enabled'                    => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_attempts'                   => array(
+			'login_attempts_limit'                   => array(
 				'default_value'     => 5,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_window'                     => array(
+			'login_attempts_limit_window'                     => array(
 				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_blacklist_time'             => array(
+			'login_attempts_violation_block_time'             => array(
 				'default_value'     => 3600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_promote_after'              => array(
+			'login_attempts_blacklist_after_violations'              => array(
 				'default_value'     => 3,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_recaptcha_enabled'                    => array(
+			'login_recaptcha_enabled'                     => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -256,14 +262,14 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabled'                         => array(
+			'login_totp_enabled'                          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabled_timestamp'               => array(
+			'login_totp_enabled_timestamp'                => array(
 				'default_value'     => 0,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -291,7 +297,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'cookie_hardening_samesite_enabled'          => array(
+			'cookie_hardening_samesite_enabled'           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -316,7 +322,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'salts_rotation_enabled'                     => array(
+			'salts_rotation_enabled'                      => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -325,7 +331,7 @@ final class SettingsConfig {
 
 			'salts_rotation_recurrence'                   => array(
 				'default_value'     => 'week',
-				'type'              => 'select',
+				'type'              => 'string',
 				'options'           => array( 'daily', 'weekly', 'monthly' ),
 				'sanitize_callback' => array( SaltsRotation::class, 'sanitize_recurrence' ),
 				'group'             => 'login-hardening',
@@ -338,7 +344,7 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'redirect_front_enabled'                     => array(
+			'redirect_front_enabled'                      => array(
 				'default_value'     => '',
 				'type'              => false,
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -653,7 +659,7 @@ final class SettingsConfig {
 		$defaults = array();
 
 		foreach ( self::options_config() as $key => $config ) {
-			if( isset( $config['default_value'] ) ) {
+			if ( isset( $config['default_value'] ) ) {
 				$defaults[ $key ] = $config['default_value'];
 			}
 		}

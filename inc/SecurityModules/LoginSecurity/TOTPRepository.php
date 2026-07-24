@@ -7,6 +7,12 @@ use Exception;
 
 final class TOTPRepository {
 
+
+	private const TOTP_DIGITS       = 6;
+	private const TOKEN_EXPIRY_DAYS = 30;
+	private const TOTP_ALGORITHM    = 'SHA1';
+
+
 	private const PENDING_META_KEY       = '_bromate_security_api_firewall_totp_secret_pending';
 	private const PENDING_TIME_META_KEY  = '_bromate_security_api_firewall_totp_secret_pending_time';
 	private const SECRET_META_KEY        = '_bromate_security_api_firewall_totp_secret';
@@ -17,12 +23,23 @@ final class TOTPRepository {
 	private const PERIOD_META_KEY        = '_bromate_security_api_firewall_totp_period';
 	private const ALGORITHM_META_KEY     = '_bromate_security_api_firewall_totp_algorithm';
 
-	private const TOTP_DIGITS       = 6;
-	private const TOKEN_EXPIRY_DAYS = 30;
-	private const TOTP_ALGORITHM    = 'SHA1';
+	private const ENABLED_META_KEY            = '_bromate_security_api_firewall_totp_enabled';
+	private const USER_SETTINGS_META_KEY      = '_bromate_security_api_firewall_totp_settings';
+	private const SESSION_VERIFIED_META_KEY   = '_bromate_security_api_firewall_totp_session_verified';
+	private const REMINDER_DISMISSED_META_KEY = '_bromate_security_api_firewall_totp_reminder_dismissed_at';
+	private const FAILED_ATTEMPTS_META_KEY    = '_bromate_security_api_firewall_totp_failed_attempts';
+	private const TRUSTED_TOKEN_META_KEY      = '_bromate_security_api_firewall_totp_trusted_token';
+
+	private static ?self $instance = null;
 
 	private Google2FA $google2fa;
 
+	public static function get_instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
 	public function __construct() {
 		$this->google2fa = new Google2FA();
 	}
@@ -149,39 +166,98 @@ final class TOTPRepository {
 		return false;
 	}
 
-	public function disable_totp( int $user_id ): bool {
-		$enabled = get_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
-		if ( ! $enabled ) {
-			throw new Exception( '2FA is not enabled for this user' );
-		}
-
-		delete_user_meta( $user_id, self::SECRET_META_KEY );
-		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
-		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
-		delete_user_meta( $user_id, self::BACKUP_CODES_META_KEY );
-		delete_user_meta( $user_id, self::DIGITS_META_KEY );
-		delete_user_meta( $user_id, self::PERIOD_META_KEY );
-		delete_user_meta( $user_id, self::ALGORITHM_META_KEY );
-
-		$this->clear_pending_secret( $user_id );
-
-		return true;
-	}
-
 	public function regenerate_backup_codes( int $user_id ): array {
-		if ( ! $this->is_totp_enabled( $user_id ) ) {
+		if ( ! $this->is_user_enrolled( $user_id ) ) {
 			throw new Exception( '2FA is not enabled for this user' );
 		}
 
 		return $this->generate_backup_codes( $user_id );
 	}
 
-	public function is_totp_enabled( int $user_id ): bool {
+	public function is_user_enrolled( int $user_id ): bool {
 		return (bool) get_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
 	}
 
-	public function get_totp_status( int $user_id ): array {
-		$enabled          = $this->is_totp_enabled( $user_id );
+	public function is_login_enabled( int $user_id ): bool {
+		return (bool) get_user_meta( $user_id, self::ENABLED_META_KEY, true );
+	}
+
+	public function set_login_enabled( int $user_id, bool $enabled ): void {
+		update_user_meta( $user_id, self::ENABLED_META_KEY, $enabled );
+	}
+
+	public function get_user_settings( int $user_id ): array {
+		$settings = get_user_meta( $user_id, self::USER_SETTINGS_META_KEY, true );
+
+		if ( ! is_array( $settings ) ) {
+			return array(
+				'require_on_login' => true,
+				'remember_device'  => true,
+			);
+		}
+
+		return $settings;
+	}
+
+	public function update_user_settings( int $user_id, array $settings ): void {
+		update_user_meta( $user_id, self::USER_SETTINGS_META_KEY, $settings );
+	}
+
+	public function is_session_verified( int $user_id ): bool {
+		return (bool) get_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, true );
+	}
+
+	public function mark_session_verified( int $user_id ): void {
+		update_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, true );
+	}
+
+	public function get_reminder_dismissed_at( int $user_id ): int {
+		return (int) get_user_meta( $user_id, self::REMINDER_DISMISSED_META_KEY, true );
+	}
+
+	public function dismiss_reminder( int $user_id, int $timestamp ): void {
+		update_user_meta( $user_id, self::REMINDER_DISMISSED_META_KEY, $timestamp );
+	}
+
+	public function get_failed_attempts( int $user_id ): array {
+		$log = get_user_meta( $user_id, self::FAILED_ATTEMPTS_META_KEY, true );
+		return is_array( $log ) ? $log : array();
+	}
+
+	public function record_failed_attempt( int $user_id, array $entry ): void {
+		$log   = $this->get_failed_attempts( $user_id );
+		$log[] = $entry;
+		if ( count( $log ) > 10 ) {
+			$log = array_slice( $log, -10 );
+		}
+		update_user_meta( $user_id, self::FAILED_ATTEMPTS_META_KEY, $log );
+	}
+
+	public function store_trusted_token( int $user_id, string $token, array $token_data ): void {
+		$tokens           = $this->get_trusted_tokens( $user_id );
+		$tokens[ $token ] = $token_data;
+
+		if ( count( $tokens ) > 10 ) {
+			uasort( $tokens, fn( $a, $b ) => $a['created'] - $b['created'] );
+			$tokens = array_slice( $tokens, -10, 10, true );
+		}
+
+		update_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, $tokens );
+	}
+
+	public function get_trusted_tokens( int $user_id ): array {
+		$tokens = get_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, true );
+		return is_array( $tokens ) ? $tokens : array();
+	}
+
+	public function remove_trusted_token( int $user_id, string $token ): void {
+		$tokens = $this->get_trusted_tokens( $user_id );
+		unset( $tokens[ $token ] );
+		update_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, $tokens );
+	}
+
+	public function get_totp_user_status( int $user_id ): array {
+		$enabled          = $this->is_user_enrolled( $user_id );
 		$enabled_time     = get_user_meta( $user_id, self::ENABLED_TIME_META_KEY, true );
 		$backup_codes     = get_user_meta( $user_id, self::BACKUP_CODES_META_KEY, true );
 		$has_backup_codes = ! empty( $backup_codes );
@@ -222,31 +298,6 @@ final class TOTPRepository {
 		}
 	}
 
-	public function revoke_all_trusted_devices( int $user_id ): void {
-		delete_user_meta( $user_id, self::SECRET_META_KEY );
-		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
-		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
-	}
-
-	public function revoke_all_trusted_devices_everywhere(): void {
-		global $wpdb;
-		$current_user_id = get_current_user_id();
-
-		$wpdb->query(
-			$wpdb->prepare(
-				"
-				DELETE FROM {$wpdb->usermeta}
-				WHERE user_id != %d
-				AND meta_key IN (%s, %s, %s)
-				",
-				$current_user_id,
-				self::SECRET_META_KEY,
-				self::USER_ENROLLED_META_KEY,
-				self::ENABLED_TIME_META_KEY
-			)
-		);
-	}
-
 	public static function sanitize_totp_policy( $value ): string {
 		$allowed = array( 'free', 'grace', 'mandatory' );
 		$value   = sanitize_text_field( $value );
@@ -269,5 +320,73 @@ final class TOTPRepository {
 		}
 
 		return $value;
+	}
+
+	public function revoke_user_totp_enrollment( int $user_id ): bool {
+		$enabled = get_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
+		if ( ! $enabled ) {
+			throw new Exception( '2FA is not enabled for this user' );
+		}
+
+		delete_user_meta( $user_id, self::SECRET_META_KEY );
+		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
+		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
+		delete_user_meta( $user_id, self::BACKUP_CODES_META_KEY );
+		delete_user_meta( $user_id, self::DIGITS_META_KEY );
+		delete_user_meta( $user_id, self::PERIOD_META_KEY );
+		delete_user_meta( $user_id, self::ALGORITHM_META_KEY );
+
+		$this->clear_pending_secret( $user_id );
+
+		return true;
+	}
+
+	public static function revoke_all_users_totp_enrollment(): void {
+		delete_metadata( 'user', 0, self::USER_SETTINGS_META_KEY, '', true );
+
+		delete_metadata( 'user', 0, self::PENDING_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::PENDING_TIME_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::SECRET_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::USER_ENROLLED_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::ENABLED_TIME_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::BACKUP_CODES_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::DIGITS_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::PERIOD_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::ALGORITHM_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::ENABLED_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::SESSION_VERIFIED_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::REMINDER_DISMISSED_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::TRUSTED_TOKEN_META_KEY, '', true );
+		delete_metadata( 'user', 0, self::FAILED_ATTEMPTS_META_KEY, '', true );
+
+		self::delete_login_session_transients();
+	}
+
+	private static function delete_login_session_transients(): void {
+		global $wpdb;
+
+		$prefixes = array(
+			'bromate_totp_pending_',
+			'bromate_totp_attempts_',
+			'bromate_totp_verified_',
+		);
+
+		$like_clauses = array();
+		$params       = array();
+
+		foreach ( $prefixes as $prefix ) {
+			$like_clauses[] = 'option_name LIKE %s';
+			$like_clauses[] = 'option_name LIKE %s';
+			$params[]       = $wpdb->esc_like( '_transient_' . $prefix ) . '%';
+			$params[]       = $wpdb->esc_like( '_transient_timeout_' . $prefix ) . '%';
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix.
+		$wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM ' . $wpdb->options . ' WHERE ' . implode( ' OR ', $like_clauses ),
+				$params
+			)
+		);
 	}
 }

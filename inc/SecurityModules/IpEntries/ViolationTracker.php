@@ -61,4 +61,23 @@ class ViolationTracker {
 			self::VIOLATION_LOCK_PREFIX . md5( $client_ip )
 		);
 	}
+
+	public static function delete_all_violation_transients(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::VIOLATIONS_KEY_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::VIOLATIONS_KEY_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_' . self::VIOLATION_LOCK_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::VIOLATION_LOCK_PREFIX ) . '%'
+			)
+		);
+	}
 }

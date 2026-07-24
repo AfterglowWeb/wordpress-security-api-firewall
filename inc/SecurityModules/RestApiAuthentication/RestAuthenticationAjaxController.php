@@ -2,9 +2,9 @@
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\AuthorizedUserRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthorizedUserRepository;
 
-class AuthenticationAjaxController {
+class RestAuthenticationAjaxController {
 
 	private function __construct() {}
 
@@ -17,13 +17,14 @@ class AuthenticationAjaxController {
 		add_action( 'wp_ajax_bromate_check_jwt_key', array( $self, 'ajax_check_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_delete_jwt_key', array( $self, 'ajax_delete_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_generate_jwt_subclaim', array( $self, 'ajax_generate_jwt_subclaim' ) );
+		add_action( 'wp_ajax_bromate_refresh_jwt_subclaim', array( $self, 'ajax_refresh_jwt_subclaim' ) );
 	}
 
 	public function ajax_authorized_users_options(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
-		$wordpress_users = AuthorizedUserRepository::authorized_users_options();
+		$wordpress_users = RestAuthorizedUserRepository::authorized_users_options();
 		wp_send_json_success( $wordpress_users );
 	}
 
@@ -115,10 +116,30 @@ class AuthenticationAjaxController {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid user', 'bromate-security-api-firewall' ) ), 400 );
 		}
 
-		$subclaim = JwtAuthentication::create_user_subclaim( $user_id );
+		$subclaim = RestAuthorizedUserRepository::create_user_jwt_subclaim( $user_id );
 
 		if ( empty( $subclaim ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Failed to generate subclaim', 'bromate-security-api-firewall' ) ), 500 );
+		}
+
+		wp_send_json_success( array( 'subclaim' => $subclaim ) );
+	}
+
+	public function ajax_refresh_jwt_subclaim(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_validate_has_firewall_admin_caps()
+		$user_id = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
+		if ( $user_id <= 0 || ! get_userdata( $user_id ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Invalid user', 'bromate-security-api-firewall' ) ), 400 );
+		}
+
+		$subclaim = RestAuthorizedUserRepository::regenerate_user_subclaim( $user_id );
+
+		if ( empty( $subclaim ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Failed to refresh subclaim', 'bromate-security-api-firewall' ) ), 500 );
 		}
 
 		wp_send_json_success( array( 'subclaim' => $subclaim ) );
