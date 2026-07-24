@@ -18,7 +18,7 @@ class SaltsRotation {
 
 	public static function register(): void {
 		if ( ! empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
-			
+
 			Cron::add_custom_schedule(
 				self::KEYS_PREFIX . 'weekly',
 				WEEK_IN_SECONDS,
@@ -34,7 +34,6 @@ class SaltsRotation {
 			add_filter( 'salt', array( self::class, 'filter_salt' ), 10, 2 );
 		}
 
-		
 		add_action( 'wp_ajax_bromate_security_api_firewall_salts_rotation_status', array( self::class, 'ajax_salts_rotation_status' ) );
 		add_action( 'wp_ajax_bromate_security_api_firewall_rotate_salts_now', array( self::class, 'ajax_rotate_salts_now' ) );
 	}
@@ -82,11 +81,11 @@ class SaltsRotation {
 			return $salt;
 		}
 
-		$stored = get_option(  self::SALTS_KEY  );
+		$stored = get_option( self::SALTS_KEY );
 
 		if ( empty( $stored[ $scheme ] ) ) {
 			$stored[ $scheme ] = self::generate_salt();
-			update_option(  self::SALTS_KEY , $stored, false );
+			update_option( self::SALTS_KEY, $stored, false );
 		}
 
 		return $stored[ $scheme ];
@@ -102,8 +101,8 @@ class SaltsRotation {
 		foreach ( array( 'auth', 'secure_auth', 'logged_in', 'nonce' ) as $scheme ) {
 			$new[ $scheme ] = self::generate_salt();
 		}
-		update_option(  self::SALTS_KEY , $new, false );
-		update_option(  self::LAST_RUN_KEY , current_time( 'mysql' ), false );
+		update_option( self::SALTS_KEY, $new, false );
+		update_option( self::LAST_RUN_KEY, current_time( 'mysql' ), false );
 	}
 
 	public static function ajax_salts_rotation_status(): void {
@@ -143,7 +142,7 @@ class SaltsRotation {
 	}
 
 	private static function get_last_rotation(): ?string {
-		return get_option(  self::LAST_RUN_KEY , null );
+		return get_option( self::LAST_RUN_KEY, null );
 	}
 
 	private static function generate_salt(): string {
@@ -173,5 +172,15 @@ class SaltsRotation {
 			return $value;
 		}
 		return '03:00';
+	}
+
+	public static function unschedule(): void {
+		Cron::unschedule( self::SCHEDULE_KEY );
+	}
+
+	public static function delete_salts_rotation_options(): void {
+		delete_option( self::SALTS_KEY );
+		delete_option( self::RECURRENCE_KEY );
+		delete_option( self::LAST_RUN_KEY );
 	}
 }

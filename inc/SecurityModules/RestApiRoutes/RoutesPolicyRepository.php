@@ -6,8 +6,7 @@ use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 
 class RoutesPolicyRepository {
 
-	protected static $instance  = null;
-	const DEFAULT_HIDDEN_ROUTES = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
+	protected static $instance = null;
 
 	const GLOBAL_SETTINGS_DEFAULTS = array(
 		'routes_policy_enabled'                         => false,

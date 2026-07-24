@@ -1,6 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Logs;
 
-use Bromate\SecurityApiFirewall\Cron\Cron;
+use Bromate\SecurityApiFirewall\Cron\CronLogs;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 
@@ -21,7 +21,7 @@ final class LogsRepository {
 			return false;
 		}
 
-		$event = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
+		$event    = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
 		$severity = isset( $data['severity'] ) ? self::sanitize_severity( $data['severity'] ) : 'info';
 
 		if ( empty( $event ) ) {
@@ -90,18 +90,18 @@ final class LogsRepository {
 		$sortable = array( 'id', 'event', 'severity', 'ip', 'user_id', 'created_at' );
 
 		$keep_severities = SettingsRepository::read_option( 'logs_keep_severities' );
-		$keep_events = SettingsRepository::read_option( 'logs_keep_events' );
+		$keep_events     = SettingsRepository::read_option( 'logs_keep_events' );
 
 		if ( ! empty( $keep_severities ) && is_array( $keep_severities ) ) {
 			$placeholders = implode( ',', array_fill( 0, count( $keep_severities ), '%s' ) );
-			$where[] = "severity IN ({$placeholders})";
-			$values = array_merge( $values, $keep_severities );
+			$where[]      = "severity IN ({$placeholders})";
+			$values       = array_merge( $values, $keep_severities );
 		}
 
 		if ( ! empty( $keep_events ) && is_array( $keep_events ) ) {
 			$placeholders = implode( ',', array_fill( 0, count( $keep_events ), '%s' ) );
-			$where[] = "event IN ({$placeholders})";
-			$values = array_merge( $values, $keep_events );
+			$where[]      = "event IN ({$placeholders})";
+			$values       = array_merge( $values, $keep_events );
 		}
 
 		if ( ! empty( $args['event'] ) ) {
@@ -193,53 +193,56 @@ final class LogsRepository {
 
 	public static function delete_expired( int $days = 90 ): int {
 		global $wpdb;
-		
+
 		if ( $days < 1 ) {
 			$days = 90;
 		}
-		
+
 		$sql = 'DELETE FROM ' . self::table() . ' WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $days ) );
 	}
 
 	public static function sanitize_severities( $raw_value ): array {
-		if( is_string($raw_value) && false !== strpos($raw_value, ',') ) {
-			$raw_value = explode(',', $raw_value);
+		if ( is_string( $raw_value ) && false !== strpos( $raw_value, ',' ) ) {
+			$raw_value = explode( ',', $raw_value );
 		}
 
-		if( empty($raw_value) ) {
-			return [];
+		if ( empty( $raw_value ) ) {
+			return array();
 		}
 
-		if( !is_array($raw_value) ) {
-			$raw_value = [$raw_value];
+		if ( ! is_array( $raw_value ) ) {
+			$raw_value = array( $raw_value );
 		}
 
-		$severities = array_map( function($raw_severity) {
-			return self::sanitize_severity($raw_severity);
-		}, $raw_value);
+		$severities = array_map(
+			function ( $raw_severity ) {
+				return self::sanitize_severity( $raw_severity );
+			},
+			$raw_value
+		);
 
-		return array_unique(array_filter($severities));
-			
+		return array_unique( array_filter( $severities ) );
 	}
 
 	public static function sanitize_events( $raw_value ): array {
-		if( is_string($raw_value) && false !== strpos($raw_value, ',') ) {
-			$raw_value = explode(',', $raw_value);
+		if ( is_string( $raw_value ) && false !== strpos( $raw_value, ',' ) ) {
+			$raw_value = explode( ',', $raw_value );
 		}
 
-		if( !is_array($raw_value) || empty($raw_value) ) {
-			return [];
+		if ( ! is_array( $raw_value ) || empty( $raw_value ) ) {
+			return array();
 		}
 
-		$events = array_map( function($raw_event) {
-			return self::sanitize_event($raw_event);
-		}, $raw_value);
+		$events = array_map(
+			function ( $raw_event ) {
+				return self::sanitize_event( $raw_event );
+			},
+			$raw_value
+		);
 
-		return array_unique(array_filter($events));
-			
-		
+		return array_unique( array_filter( $events ) );
 	}
 
 	public static function sanitize_event( string $raw_value ): string {
@@ -269,7 +272,7 @@ final class LogsRepository {
 
 	public static function sanitize_severity( string $raw_value ): string {
 		$value   = sanitize_key( $raw_value );
-		$allowed = array('info', 'warning', 'error' );
+		$allowed = array( 'info', 'warning', 'error' );
 		return in_array( $value, $allowed, true ) ? $value : 'info';
 	}
 

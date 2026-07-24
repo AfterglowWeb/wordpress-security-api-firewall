@@ -71,12 +71,12 @@ class JwtAuthentication {
 			return false;
 		}
 
-		$user_id = self::get_user_id_from_subclaim( $decoded->sub ?? '' );
-		if ( 0 === $user_id || ! self::validate_user_subclaim( $user_id, $decoded->sub ?? '' ) ) {
+		$user_id = RestAuthorizedUserRepository::get_user_id_from_jwt_subclaim( $decoded->sub ?? '' );
+		if ( 0 === $user_id ) {
 			return false;
 		}
 
-		return true;
+		return RestAuthorizedUserRepository::user_has_rest_api_access_cap( $user_id );
 	}
 
 	private static function get_remote_jwks( string $url ): array {
@@ -108,56 +108,8 @@ class JwtAuthentication {
 		}
 	}
 
-	public static function create_user_subclaim( int $user_id, array $options = array() ): string {
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
-			return '';
-		}
-
-		$options = wp_parse_args(
-			$options,
-			array(
-				'force_new'          => false,
-				'meta_key'           => self::USER_SUBCLAIM_METAKEY,
-				'prefix'             => 'user',
-				'include_user_login' => true,
-				'include_user_email' => false,
-			)
-		);
-
-		if ( ! $options['force_new'] ) {
-			$existing_subclaim = get_user_meta( $user_id, $options['meta_key'], true );
-			if ( ! empty( $existing_subclaim ) && is_string( $existing_subclaim ) ) {
-				return $existing_subclaim;
-			}
-		}
-
-		$components   = array();
-		$components[] = $options['prefix'];
-		$components[] = $user_id;
-		$components[] = time();
-		$components[] = bin2hex( random_bytes( 16 ) );
-
-		if ( $options['include_user_login'] ) {
-			$components[] = sanitize_title( $user->user_login );
-		}
-
-		if ( $options['include_user_email'] ) {
-			$components[] = hash( 'sha256', $user->user_email );
-		}
-
-		$subclaim = implode( '_', $components );
-
-		$updated = update_user_meta( $user_id, $options['meta_key'], $subclaim );
-		if ( ! $updated ) {
-			return '';
-		}
-
-		return $subclaim;
-	}
-
-	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation.functions.base64_encode -- Required by RFC 7518 for JWK modulus/exponent encoding;
 	private static function base64url_encode( string $data ): string {
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation.functions.base64_encode -- Required by RFC 7518 for JWK modulus/exponent encoding;
 		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
 	}
 
@@ -175,52 +127,6 @@ class JwtAuthentication {
 		}
 
 		return trim( substr( $auth, 7 ) );
-	}
-
-	private static function get_user_subclaim( int $user_id ): string {
-		$subclaim = get_user_meta( $user_id, self::USER_SUBCLAIM_METAKEY, true );
-		return is_string( $subclaim ) && ! empty( $subclaim ) ? $subclaim : '';
-	}
-
-	private static function delete_user_subclaim( int $user_id ): bool {
-		return delete_user_meta( $user_id, self::USER_SUBCLAIM_METAKEY );
-	}
-
-	private static function get_user_id_from_subclaim( string $subclaim ): int {
-		$parts = explode( '_', $subclaim );
-
-		if ( count( $parts ) >= 2 ) {
-			$user_id = filter_var( $parts[1], FILTER_VALIDATE_INT );
-			if ( false !== $user_id ) {
-				return $user_id;
-			}
-		}
-
-		$authorized_users = SettingsRepository::read_option( 'auth_users' );
-		if ( empty( $authorized_users ) ) {
-			return 0;
-		}
-
-		$users = array_values(
-			array_filter(
-				$authorized_users,
-				function ( $authorized_user ) use ( $subclaim ) {
-					return ( $authorized_user[ self::USER_SUBCLAIM_METAKEY ] ?? '' ) === $subclaim;
-				}
-			)
-		);
-
-		return 1 === count( $users ) ? (int) $users[0] : 0;
-	}
-
-	private static function validate_user_subclaim( int $user_id, string $subclaim ): bool {
-		$stored_subclaim = self::get_user_subclaim( $user_id );
-		return $stored_subclaim === $subclaim;
-	}
-
-	private static function regenerate_user_subclaim( int $user_id ): string {
-		self::delete_user_subclaim( $user_id );
-		return self::create_user_subclaim( $user_id );
 	}
 
 	public static function create_key_pair( bool $keep_previous_for_grace_period = true ): array {
@@ -514,5 +420,9 @@ class JwtAuthentication {
 			'n'   => self::base64url_encode( $details['rsa']['n'] ),
 			'e'   => self::base64url_encode( $details['rsa']['e'] ),
 		);
+	}
+
+	public static function delete_jwt_settings() {
+		delete_option( self::JWKS_KEYS_OPTION );
 	}
 }

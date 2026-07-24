@@ -98,6 +98,7 @@ final class Recaptcha {
 			);
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 		$token = isset( $_POST['g-recaptcha-token'] ) ? sanitize_text_field( wp_unslash( $_POST['g-recaptcha-token'] ) ) : '';
 
 		if ( empty( $token ) ) {
@@ -126,7 +127,9 @@ final class Recaptcha {
 	}
 
 	public function store_recaptcha_data( $user ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 		if ( $user instanceof WP_User && isset( $_POST['g-recaptcha-token'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 			$token        = sanitize_text_field( wp_unslash( $_POST['g-recaptcha-token'] ) );
 			$options      = $this->get_options();
 			$verification = $this->verify_recaptcha_token( $token, $options['secret_key'] );
@@ -151,8 +154,10 @@ final class Recaptcha {
 			return;
 		}
 
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 		$token    = isset( $_POST['g-recaptcha-token'] ) ? sanitize_text_field( wp_unslash( $_POST['g-recaptcha-token'] ) ) : '';
 		$username = isset( $_POST['log'] ) ? sanitize_user( wp_unslash( $_POST['log'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 
 		if ( ! empty( $username ) ) {
 			$failed_login_transient = get_transient( 'recaptcha_failed_login_' . md5( $username ) );

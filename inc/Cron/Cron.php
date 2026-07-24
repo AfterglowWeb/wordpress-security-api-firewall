@@ -60,7 +60,7 @@ class Cron {
 	}
 
 	public static function next_daily_timestamp( string $time ): int {
-		$tz = wp_timezone();
+		$tz  = wp_timezone();
 		$now = new DateTime( 'now', $tz );
 
 		list( $h, $m ) = array_map( 'intval', explode( ':', $time ) );

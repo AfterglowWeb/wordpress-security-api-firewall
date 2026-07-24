@@ -35,11 +35,15 @@ final class CronIpEntries {
 			'info',
 			array(
 				'reason' => sprintf(
-					__( '%d expired ip entries deleted by wp_schedule_event runtime.', 'bromate-security-api-firewall' ),
+					/* translators: $d is the number of epxired IP entries deleted */
+					esc_html__( '%d expired IP entries deleted by wp_schedule_event runtime.', 'bromate-security-api-firewall' ),
 					$result_count
 				),
 			)
 		);
 	}
-	
+
+	public static function unschedule() {
+		wp_unschedule_hook( self::CRON_HOOK_KEY );
+	}
 }

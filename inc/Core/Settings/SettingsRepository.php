@@ -1,21 +1,18 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\WordPressApplicationPassword;
-use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
-use WP_User;
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsConfig;
 
 class SettingsRepository {
 
 	private function __construct() {}
 
 	public static function read_options(): array {
-		return self::sanitize_options( get_option( 'bromate_security_api_firewall_options', array() ) );
+		return self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
 	}
 
 	public static function read_option( string $option_key ) {
 		$option_key = sanitize_key( $option_key );
-		$options    = self::sanitize_options( get_option( 'bromate_security_api_firewall_options', array() ) );
+		$options    = self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
 		return isset( $options[ $option_key ] ) ? $options[ $option_key ] : false;
 	}
 
@@ -29,7 +26,7 @@ class SettingsRepository {
 
 		$sanitized_options = self::sanitize_options( $new_options, false );
 
-		update_option( 'bromate_security_api_firewall_options', $sanitized_options );
+		update_option( SettingsConfig::SETTINGS_OPTION_KEY, $sanitized_options );
 
 		return $sanitized_options;
 	}
@@ -45,14 +42,14 @@ class SettingsRepository {
 		$options                = self::read_options();
 		$options[ $option_key ] = $sanitized_option;
 
-		update_option( 'bromate_security_api_firewall_options', $options );
+		update_option( SettingsConfig::SETTINGS_OPTION_KEY, $options );
 
 		return $sanitized_option;
 	}
 
 	public static function sanitize_options( array $options, bool $use_defaults = true ): array {
 		$options_config = SettingsConfig::options_config();
-		$base_values    = $use_defaults ? SettingsConfig::default_options() : get_option( 'bromate_security_api_firewall_options', SettingsConfig::default_options() );
+		$base_values    = $use_defaults ? SettingsConfig::default_options() : get_option( SettingsConfig::SETTINGS_OPTION_KEY, SettingsConfig::default_options() );
 
 		$options   = wp_parse_args( $options, $base_values );
 		$sanitized = array();
@@ -106,5 +103,4 @@ class SettingsRepository {
 				return (string) call_user_func( $callback, $option_value );
 		}
 	}
-
 }

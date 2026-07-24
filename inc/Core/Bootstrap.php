@@ -4,15 +4,17 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsConfig;
 
 use Bromate\SecurityApiFirewall\Runtime\RestRequestBootstrap;
 use Bromate\SecurityApiFirewall\Runtime\PublicRequestBootstrap;
 use Bromate\SecurityApiFirewall\Runtime\LoginBootstrap;
 
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwksEndpoint;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\AuthenticationAjaxController;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationAjaxController;
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\GlobalSecurityBootstrap;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesAjaxController;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeRepository;
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
@@ -22,6 +24,15 @@ use Bromate\SecurityApiFirewall\Logs\LogsAjaxController;
 use Bromate\SecurityApiFirewall\Cron\Cron;
 use Bromate\SecurityApiFirewall\Cron\CronIpEntries;
 use Bromate\SecurityApiFirewall\Cron\CronLogs;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\AutoBlacklist;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\ViolationTracker;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\LoginRateLimiter;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\SaltsRotation;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthorizedUserRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\WordPressApplicationPassword;
 
 final class Bootstrap {
 
@@ -43,7 +54,7 @@ final class Bootstrap {
 		if ( is_admin() ) {
 			AdminPage::register();
 			SettingsAjaxController::register();
-			AuthenticationAjaxController::register();
+			RestAuthenticationAjaxController::register();
 			IpEntriesAjaxController::register();
 			LogsAjaxController::register();
 			Documentation::register();
@@ -51,16 +62,13 @@ final class Bootstrap {
 	}
 
 	public static function activate(): void {
+
 		SchemaManager::install();
+		AdminPage::add_edit_options_custom_cap();
 
-		$role = get_role( 'administrator' );
-		if ( $role ) {
-			$role->add_cap( 'bromate_security_api_firewall_edit_options' );
-		}
-
-		if ( false === get_option( 'bromate_security_api_firewall_options' ) ) {
+		if ( false === get_option( SettingsConfig::SETTINGS_OPTION_KEY ) ) {
 			update_option(
-				'bromate_security_api_firewall_options',
+				SettingsConfig::SETTINGS_OPTION_KEY,
 				array( 'version' => BROMATE_SECURITY_API_FIREWALL_VERSION ),
 				false
 			);
@@ -70,12 +78,11 @@ final class Bootstrap {
 	}
 
 	public static function deactivate(): void {
-		$role = get_role( 'administrator' );
-		if ( $role ) {
-			$role->remove_cap( 'bromate_security_api_firewall_edit_options' );
-		}
 
-		delete_transient( 'bromate_security_api_firewall_routes_list' );
+		delete_transient( RoutesTreeRepository::ROUTES_LIST_TRANSIENT_KEY );
+		wp_unschedule_hook( CronIpEntries::CRON_HOOK_KEY );
+
+		AdminPage::remove_edit_options_custom_cap();
 		flush_rewrite_rules();
 	}
 
@@ -84,26 +91,27 @@ final class Bootstrap {
 			return;
 		}
 
-		$caps = array( 'bromate_security_api_firewall_edit_options', 'rest_firewall_api_access' );
+		CronIpEntries::unschedule();
+		SaltsRotation::unschedule();
+		SaltsRotation::delete_salts_rotation_options();
 
-		foreach ( array_keys( wp_roles()->roles ) as $role_name ) {
-			$role = get_role( $role_name );
-			if ( $role ) {
-				foreach ( $caps as $cap ) {
-					$role->remove_cap( $cap );
-				}
-			}
-		}
+		RoutesTreeRepository::delete_routes_list_transient();
+		AutoBlacklist::delete_all_auto_blacklist_ip_transients();
+		GeoIpApi::delete_all_geoip_transients();
+		ViolationTracker::delete_all_violation_transients();
+		LoginRateLimiter::delete_all_rate_limit_transients();
 
-		delete_option( 'bromate_security_api_firewall_options' );
-		delete_option( \Bromate\SecurityApiFirewall\Core\Schema\SchemaManager::OPTION_KEY );
-		delete_transient( 'bromate_security_api_firewall_routes_list' );
+		TOTPRepository::delete_totp_users_metas();
+		RestAuthorizedUserRepository::delete_authorized_users_meta_and_cap();
 
-		global $wpdb;
+		SettingsConfig::delete_settings();
+		JwtAuthentication::delete_jwt_settings();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_logs" );
+		AdminPage::remove_edit_options_custom_cap();
+
+		SchemaManager::drop_tables();
+		SchemaManager::delete_schema_version();
+
+		flush_rewrite_rules();
 	}
 }

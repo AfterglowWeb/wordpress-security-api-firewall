@@ -11,17 +11,11 @@ use WP_Error;
 final class TOTPLoginService {
 
 	private const TRUSTED_COOKIE_NAME       = 'bromate_totp_trusted';
-	private const TRUSTED_TOKEN_META_KEY    = '_bromate_totp_trusted_token';
 	private const VERIFIED_TRANSIENT_PREFIX = 'bromate_totp_verified_';
 	private const SESSION_ID_COOKIE_NAME    = 'bromate_totp_session';
 	private const MAX_ATTEMPTS              = 5;
 	private const TRANSIENT_EXPIRY          = 300;
 	private const TOKEN_EXPIRY_DAYS         = 30;
-	private TOTPRepository $totp_repo;
-
-	public function __construct() {
-		$this->totp_repo = new TOTPRepository();
-	}
 
 	public static function register(): void {
 		$service = new self();
@@ -119,7 +113,7 @@ final class TOTPLoginService {
 
 		$user_id = (int) $pending['user_id'];
 
-		if ( ! $this->totp_repo->is_totp_enabled( $user_id ) ) {
+		if ( ! TOTPRepository::get_instance()->is_user_enrolled( $user_id ) ) {
 			return false;
 		}
 
@@ -198,11 +192,13 @@ final class TOTPLoginService {
 		$session_id = $this->get_session_id();
 		$pending    = get_transient( 'bromate_totp_pending_' . $session_id );
 		if ( ! $pending || ! isset( $pending['user_id'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 			if ( isset( $_POST['log'] ) && ! empty( $_POST['log'] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 				$username = sanitize_user( wp_unslash( $_POST['log'] ) );
 				$user     = get_user_by( 'login', $username );
 
-				if ( $user && $this->totp_repo->is_totp_enabled( $user->ID ) ) {
+				if ( $user && TOTPRepository::get_instance()->is_user_enrolled( $user->ID ) ) {
 					set_transient(
 						'bromate_totp_pending_' . $session_id,
 						array(
@@ -223,7 +219,7 @@ final class TOTPLoginService {
 
 		$user_id = (int) $pending['user_id'];
 
-		if ( ! $this->totp_repo->is_totp_enabled( $user_id ) ) {
+		if ( ! TOTPRepository::get_instance()->is_user_enrolled( $user_id ) ) {
 			return;
 		}
 
@@ -353,24 +349,16 @@ final class TOTPLoginService {
 			delete_transient( $attempts_key );
 		}
 
-		$failed_log = get_user_meta( $user_id, '_bromate_totp_failed_attempts', true );
-		if ( ! is_array( $failed_log ) ) {
-			$failed_log = array();
-		}
-
 		$http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 
-		$failed_log[] = array(
-			'time'       => time(),
-			'ip'         => IpUtils::get_client_ip(),
-			'user_agent' => $http_user_agent,
+		TOTPRepository::get_instance()->record_failed_attempt(
+			$user_id,
+			array(
+				'time'       => time(),
+				'ip'         => IpUtils::get_client_ip(),
+				'user_agent' => $http_user_agent,
+			)
 		);
-
-		if ( count( $failed_log ) > 10 ) {
-			$failed_log = array_slice( $failed_log, -10 );
-		}
-
-		update_user_meta( $user_id, '_bromate_totp_failed_attempts', $failed_log );
 	}
 
 	public function validate_totp( $user ) {
@@ -378,7 +366,7 @@ final class TOTPLoginService {
 			return $user;
 		}
 
-		if ( ! $this->totp_repo->is_totp_enabled( $user->ID ) ) {
+		if ( ! TOTPRepository::get_instance()->is_user_enrolled( $user->ID ) ) {
 			return $user;
 		}
 
@@ -393,25 +381,27 @@ final class TOTPLoginService {
 			return $user;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 		if ( empty( $_POST['bromate_totp_code'] ) ) {
 			set_transient(
 				'bromate_totp_pending_' . $session_id,
 				array(
 					'user_id'     => $user->ID,
 					'username'    => $user->user_login,
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 					'redirect_to' => isset( $_POST['redirect_to'] ) ? sanitize_text_field( wp_unslash( $_POST['redirect_to'] ) ) : sanitize_url( admin_url() ),
 				),
 				self::TRANSIENT_EXPIRY
 			);
 			return new WP_Error(
 				'bromate_totp_required',
-				__( 'Two-factor authentication is enabled for your account. Please enter your verification code.', 'bromate-security-api-firewall' )
+				esc_html__( 'Two-factor authentication is enabled for your account. Please enter your verification code.', 'bromate-security-api-firewall' )
 			);
 		}
 
 		return new WP_Error(
 			'bromate_totp_required',
-			__( 'Please verify your code using the button below.', 'bromate-security-api-firewall' )
+			esc_html__( 'Please verify your code using the button below.', 'bromate-security-api-firewall' )
 		);
 	}
 
@@ -424,34 +414,9 @@ final class TOTPLoginService {
 		}
 	}
 
-	private function store_trusted_token( int $user_id, string $token ): void {
-		$tokens = get_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, true );
-		if ( ! is_array( $tokens ) ) {
-			$tokens = array();
-		}
-
-		$tokens[ $token ] = array(
-			'token'      => $token,
-			'created'    => time(),
-			'expires'    => time() + ( self::TOKEN_EXPIRY_DAYS * DAY_IN_SECONDS ),
-			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
-		);
-
-		if ( count( $tokens ) > 10 ) {
-			uasort(
-				$tokens,
-				function ( $a, $b ) {
-					return $a['created'] - $b['created'];
-				}
-			);
-			$tokens = array_slice( $tokens, -10, 10, true );
-		}
-
-		update_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, $tokens );
-	}
-
 	private function verify_trusted_token( int $user_id, string $token ): bool {
-		$tokens = get_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, true );
+
+		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
 		if ( ! is_array( $tokens ) || ! isset( $tokens[ $token ] ) ) {
 			return false;
 		}
@@ -459,8 +424,7 @@ final class TOTPLoginService {
 		$token_data = $tokens[ $token ];
 
 		if ( $token_data['expires'] < time() ) {
-			unset( $tokens[ $token ] );
-			update_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, $tokens );
+			TOTPRepository::get_instance()->remove_trusted_token( $user_id, $token );
 			return false;
 		}
 
@@ -473,22 +437,18 @@ final class TOTPLoginService {
 	}
 
 	private function cleanup_expired_tokens( int $user_id ): void {
-		$tokens = get_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, true );
+		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
 		if ( ! is_array( $tokens ) ) {
 			return;
 		}
 
-		$now     = time();
-		$changed = false;
+		$now = time();
+
 		foreach ( $tokens as $key => $data ) {
 			if ( $data['expires'] < $now ) {
 				unset( $tokens[ $key ] );
-				$changed = true;
+				TOTPRepository::get_instance()->remove_trusted_token( $user_id, $key );
 			}
-		}
-
-		if ( $changed ) {
-			update_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, $tokens );
 		}
 	}
 
@@ -520,11 +480,11 @@ final class TOTPLoginService {
 		$user_id  = (int) $pending['user_id'];
 		$verified = false;
 
-		if ( $this->totp_repo->verify_totp_code_for_login( $user_id, $code ) ) {
+		if ( TOTPRepository::get_instance()->verify_totp_code_for_login( $user_id, $code ) ) {
 			$verified = true;
 		}
 
-		if ( ! $verified && $this->totp_repo->verify_backup_code( $user_id, $code ) ) {
+		if ( ! $verified && TOTPRepository::get_instance()->verify_backup_code( $user_id, $code ) ) {
 			$verified = true;
 		}
 
@@ -566,7 +526,7 @@ final class TOTPLoginService {
 		$remember_device = isset( $_POST['remember_device'] ) && filter_var( wp_unslash( $_POST['remember_device'] ), FILTER_VALIDATE_BOOLEAN );
 		if ( $remember_device ) {
 			$token = $this->generate_trusted_token();
-			$this->store_trusted_token( $user_id, $token );
+			TOTPRepository::get_instance()->store_trusted_token( $user_id, $token, array() );
 
 			setcookie(
 				self::TRUSTED_COOKIE_NAME,
@@ -599,10 +559,9 @@ final class TOTPLoginService {
 
 			$user_id = get_current_user_id();
 			if ( $user_id ) {
-				$tokens = get_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, true );
+				$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
 				if ( is_array( $tokens ) && isset( $tokens[ $token ] ) ) {
-					unset( $tokens[ $token ] );
-					update_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY, $tokens );
+					TOTPRepository::get_instance()->remove_trusted_token( $user_id, $token );
 				}
 			}
 

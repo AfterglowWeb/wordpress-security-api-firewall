@@ -53,10 +53,12 @@ class SessionManager {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
 		if ( ! isset( $_POST['user_id'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing argument' ), 403 );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
 		$user_id = absint( wp_unslash( $_POST['user_id'] ) );
 
 		self::revoke_user_sessions( $user_id );
@@ -89,10 +91,12 @@ class SessionManager {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
 		if ( ! isset( $_POST['user_id'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing argument' ), 403 );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
 		$user_id = absint( wp_unslash( $_POST['user_id'] ) );
 
 		wp_send_json_success(
@@ -178,11 +182,11 @@ class SessionManager {
 
 	private static function revoke_user_sessions( int $user_id ): void {
 		WP_Session_Tokens::get_instance( $user_id )->destroy_all();
-		( new TOTPRepository() )->revoke_all_trusted_devices( $user_id );
+		TOTPRepository::get_instance()->revoke_all_trusted_devices( $user_id );
 	}
 
 	private static function revoke_users_sessions(): int {
-		( new TOTPRepository() )->revoke_all_trusted_devices_everywhere();
+		TOTPRepository::get_instance()->revoke_all_trusted_devices_everywhere();
 
 		$user_ids = get_users( array( 'fields' => 'ID' ) );
 		$affected = 0;

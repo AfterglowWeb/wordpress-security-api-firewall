@@ -4,7 +4,8 @@ use League\ISO3166\ISO3166;
 
 class GeoIpApi {
 
-	private const CACHE_KEY_PREFIX = 'rest_api_fw_geoip_';
+	private const CACHE_KEY_PREFIX = 'bromate_security_api_firewall_fw_geoip_';
+	private const CACHE_GROUP_KEY  = 'bromate_security_api_firewall_geoip';
 	private const CACHE_TTL        = 86400 * 7;
 	private const API_ENDPOINT     = 'https://ipapi.co/%s/json/';
 
@@ -140,25 +141,25 @@ class GeoIpApi {
 		}
 
 		return array(
-			'country'     => $data['country_code'] ?? null,
-			'countryName' => $data['country_name'] ?? null,
-			'city'        => $data['city'] ?? null,
-			'latitude'    => $data['latitude'] ?? null,
-			'longitude'   => $data['longitude'] ?? null,
-			'isp'         => $data['org'] ?? null,
+			'country'     => isset( $data['country_code'] ) ? sanitize_key( $data['country_code'] ) : null,
+			'countryName' => isset( $data['country_name'] ) ? sanitize_text_field( $data['country_name'] ) : null,
+			'city'        => isset( $data['city'] ) ? sanitize_text_field( $data['city'] ) : null,
+			'latitude'    => isset( $data['latitude'] ) && is_numeric( $data['latitude'] ) ? (float) $data['latitude'] : null,
+			'longitude'   => isset( $data['longitude'] ) && is_numeric( $data['longitude'] ) ? (float) $data['longitude'] : null,
+			'isp'         => isset( $data['org'] ) ? sanitize_text_field( $data['org'] ) : null,
 		);
 	}
 
 	private static function get_cached( string $ip ): ?array {
 		$key    = self::CACHE_KEY_PREFIX . md5( $ip );
-		$cached = wp_cache_get( $key, 'security_api_firewall' );
+		$cached = wp_cache_get( $key, self::CACHE_GROUP_KEY );
 		if ( false !== $cached ) {
 			return $cached;
 		}
 
 		$from_transient = get_transient( $key );
 		if ( false !== $from_transient ) {
-			wp_cache_set( $key, $from_transient, 'security_api_firewall', self::CACHE_TTL );
+			wp_cache_set( $key, $from_transient, self::CACHE_GROUP_KEY, self::CACHE_TTL );
 			return $from_transient;
 		}
 
@@ -167,10 +168,27 @@ class GeoIpApi {
 
 	private static function cache_result( string $ip, array $data ): void {
 		$key = self::CACHE_KEY_PREFIX . md5( $ip );
-		wp_cache_set( $key, $data, 'security_api_firewall', self::CACHE_TTL );
+		wp_cache_set( $key, $data, self::CACHE_GROUP_KEY, self::CACHE_TTL );
 
 		if ( wp_using_ext_object_cache() || is_admin() ) {
 			set_transient( $key, $data, self::CACHE_TTL );
 		}
+	}
+
+	public static function delete_all_geoip_transients(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix; uninstall-only cleanup.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::CACHE_KEY_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::CACHE_KEY_PREFIX ) . '%'
+			)
+		);
+
+		wp_cache_flush_group( self::CACHE_GROUP_KEY );
 	}
 }
