@@ -101,7 +101,7 @@ final class Bootstrap {
 		ViolationTracker::delete_all_violation_transients();
 		LoginRateLimiter::delete_all_rate_limit_transients();
 
-		TOTPRepository::delete_totp_users_metas();
+		TOTPRepository::revoke_all_users_totp_enrollment();
 		RestAuthorizedUserRepository::delete_authorized_users_meta_and_cap();
 
 		SettingsConfig::delete_settings();

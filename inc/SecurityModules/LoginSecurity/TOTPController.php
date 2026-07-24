@@ -23,7 +23,7 @@ final class TOTPController {
 		add_action( 'wp_ajax_bromate_verify_login_code', array( self::class, 'ajax_verify_login_code' ) );
 		add_action( 'wp_ajax_bromate_generate_totp_secret', array( self::class, 'ajax_generate_secret' ) );
 		add_action( 'wp_ajax_bromate_verify_totp_enrollment', array( self::class, 'ajax_verify_enrollment' ) );
-		add_action( 'wp_ajax_bromate_disable_totp', array( self::class, 'ajax_disable_totp' ) );
+		add_action( 'wp_ajax_bromate_revoke_user_totp_enrollment', array( self::class, 'ajax_revoke_user_totp_enrollment' ) );
 		add_action( 'wp_ajax_bromate_regenerate_backup_codes', array( self::class, 'ajax_regenerate_backup_codes' ) );
 		add_action( 'wp_ajax_bromate_get_totp_user_status', array( self::class, 'ajax_get_status' ) );
 		add_action( 'wp_ajax_bromate_dismiss_totp_reminder', array( self::class, 'ajax_dismiss_reminder' ) );
@@ -165,7 +165,7 @@ final class TOTPController {
 		}
 	}
 
-	public static function ajax_disable_totp(): void {
+	public static function ajax_revoke_user_totp_enrollment(): void {
 		if ( ! self::validate_ajax_nonce() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid security token', 'bromate-security-api-firewall' ) ), 403 );
 			return;
@@ -178,7 +178,7 @@ final class TOTPController {
 		}
 
 		try {
-			$result = TOTPRepository::get_instance()->disable_totp( $user_id );
+			$result = TOTPRepository::get_instance()->revoke_user_totp_enrollment( $user_id );
 			if ( $result ) {
 				wp_send_json_success( array( 'message' => esc_html__( '2FA disabled successfully', 'bromate-security-api-firewall' ) ) );
 			} else {

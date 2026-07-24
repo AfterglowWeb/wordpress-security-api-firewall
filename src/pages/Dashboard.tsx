@@ -100,7 +100,7 @@ export default function Dashboard(): JSX.Element {
 				title: 'Login Security',
 				description: 'Rate limiting, reCAPTCHA, 2FA, salt rotation',
 				enabled: getGroupEnabledStatus(settings, [
-					'login_rate_limit_enabled',
+					'login_attempts_limit_enabled',
 					'login_recaptcha_enabled',
 					'login_totp_enabled',
 					'salts_rotation_enabled',

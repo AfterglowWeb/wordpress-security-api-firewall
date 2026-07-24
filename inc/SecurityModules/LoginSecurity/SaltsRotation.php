@@ -151,7 +151,7 @@ class SaltsRotation {
 
 	public static function sanitize_recurrence( $value ): string {
 		if ( empty( $value ) ) {
-			return '';
+			return 'weekly';
 		}
 		return in_array(
 			$value,

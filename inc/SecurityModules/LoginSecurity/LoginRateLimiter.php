@@ -89,16 +89,16 @@ final class LoginRateLimiter {
 	}
 
 	private function is_enabled(): bool {
-		return (bool) SettingsRepository::read_option( 'login_rate_limit_enabled' );
+		return (bool) SettingsRepository::read_option( 'login_attempts_limit_enabled' );
 	}
 
 	private function get_options(): array {
 		$opts = SettingsRepository::read_options();
 		return array(
-			'attempts'       => max( 1, (int) ( $opts['login_rate_limit_attempts'] ?? 5 ) ),
-			'window'         => max( 1, (int) ( $opts['login_rate_limit_window'] ?? 300 ) ),
-			'blacklist_time' => max( 1, (int) ( $opts['login_rate_limit_blacklist_time'] ?? 3600 ) ),
-			'promote_after'  => max( 0, (int) ( $opts['login_rate_limit_promote_after'] ?? 3 ) ),
+			'attempts'       => max( 1, (int) ( $opts['login_attempts_limit'] ?? 5 ) ),
+			'window'         => max( 1, (int) ( $opts['login_attempts_limit_window'] ?? 300 ) ),
+			'blacklist_time' => max( 1, (int) ( $opts['login_attempts_violation_block_time'] ?? 3600 ) ),
+			'promote_after'  => max( 0, (int) ( $opts['login_attempts_blacklist_after_violations'] ?? 3 ) ),
 		);
 	}
 

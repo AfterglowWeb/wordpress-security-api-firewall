@@ -7,6 +7,12 @@ use Exception;
 
 final class TOTPRepository {
 
+
+	private const TOTP_DIGITS       = 6;
+	private const TOKEN_EXPIRY_DAYS = 30;
+	private const TOTP_ALGORITHM    = 'SHA1';
+
+
 	private const PENDING_META_KEY       = '_bromate_security_api_firewall_totp_secret_pending';
 	private const PENDING_TIME_META_KEY  = '_bromate_security_api_firewall_totp_secret_pending_time';
 	private const SECRET_META_KEY        = '_bromate_security_api_firewall_totp_secret';
@@ -16,10 +22,6 @@ final class TOTPRepository {
 	private const DIGITS_META_KEY        = '_bromate_security_api_firewall_totp_digits';
 	private const PERIOD_META_KEY        = '_bromate_security_api_firewall_totp_period';
 	private const ALGORITHM_META_KEY     = '_bromate_security_api_firewall_totp_algorithm';
-
-	private const TOTP_DIGITS       = 6;
-	private const TOKEN_EXPIRY_DAYS = 30;
-	private const TOTP_ALGORITHM    = 'SHA1';
 
 	private const ENABLED_META_KEY            = '_bromate_security_api_firewall_totp_enabled';
 	private const USER_SETTINGS_META_KEY      = '_bromate_security_api_firewall_totp_settings';
@@ -87,8 +89,6 @@ final class TOTPRepository {
 			'account_name' => $account_name,
 		);
 	}
-
-
 
 	public function verify_totp_enrollment( int $user_id, string $code ): array {
 		$secret = get_user_meta( $user_id, self::PENDING_META_KEY, true );
@@ -164,25 +164,6 @@ final class TOTPRepository {
 		}
 
 		return false;
-	}
-
-	public function disable_totp( int $user_id ): bool {
-		$enabled = get_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
-		if ( ! $enabled ) {
-			throw new Exception( '2FA is not enabled for this user' );
-		}
-
-		delete_user_meta( $user_id, self::SECRET_META_KEY );
-		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
-		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
-		delete_user_meta( $user_id, self::BACKUP_CODES_META_KEY );
-		delete_user_meta( $user_id, self::DIGITS_META_KEY );
-		delete_user_meta( $user_id, self::PERIOD_META_KEY );
-		delete_user_meta( $user_id, self::ALGORITHM_META_KEY );
-
-		$this->clear_pending_secret( $user_id );
-
-		return true;
 	}
 
 	public function regenerate_backup_codes( int $user_id ): array {
@@ -317,36 +298,6 @@ final class TOTPRepository {
 		}
 	}
 
-	public function revoke_all_trusted_devices( int $user_id ): void {
-		delete_user_meta( $user_id, self::SECRET_META_KEY );
-		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
-		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
-	}
-
-	public function revoke_all_trusted_devices_everywhere(): void {
-
-		$current_user_id = get_current_user_id();
-		if ( 0 === $current_user_id ) {
-			return;
-		}
-
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bulk DELETE on logout/revoke; not a cacheable read query.
-		$wpdb->query(
-			$wpdb->prepare(
-				"
-				DELETE FROM {$wpdb->usermeta}
-				WHERE user_id != %d
-				AND meta_key IN (%s, %s, %s)
-				",
-				$current_user_id,
-				self::SECRET_META_KEY,
-				self::USER_ENROLLED_META_KEY,
-				self::ENABLED_TIME_META_KEY
-			)
-		);
-	}
-
 	public static function sanitize_totp_policy( $value ): string {
 		$allowed = array( 'free', 'grace', 'mandatory' );
 		$value   = sanitize_text_field( $value );
@@ -371,7 +322,28 @@ final class TOTPRepository {
 		return $value;
 	}
 
-	public static function delete_totp_users_metas(): void {
+	public function revoke_user_totp_enrollment( int $user_id ): bool {
+		$enabled = get_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
+		if ( ! $enabled ) {
+			throw new Exception( '2FA is not enabled for this user' );
+		}
+
+		delete_user_meta( $user_id, self::SECRET_META_KEY );
+		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
+		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
+		delete_user_meta( $user_id, self::BACKUP_CODES_META_KEY );
+		delete_user_meta( $user_id, self::DIGITS_META_KEY );
+		delete_user_meta( $user_id, self::PERIOD_META_KEY );
+		delete_user_meta( $user_id, self::ALGORITHM_META_KEY );
+
+		$this->clear_pending_secret( $user_id );
+
+		return true;
+	}
+
+	public static function revoke_all_users_totp_enrollment(): void {
+		delete_metadata( 'user', 0, self::USER_SETTINGS_META_KEY, '', true );
+
 		delete_metadata( 'user', 0, self::PENDING_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::PENDING_TIME_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::SECRET_META_KEY, '', true );
@@ -382,7 +354,6 @@ final class TOTPRepository {
 		delete_metadata( 'user', 0, self::PERIOD_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::ALGORITHM_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::ENABLED_META_KEY, '', true );
-		delete_metadata( 'user', 0, self::USER_SETTINGS_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::SESSION_VERIFIED_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::REMINDER_DISMISSED_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::TRUSTED_TOKEN_META_KEY, '', true );

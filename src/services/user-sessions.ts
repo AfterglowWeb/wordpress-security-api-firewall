@@ -5,9 +5,8 @@ export interface SaltsRotationStatus {
   next_rotation: string | null;
 }
 
-export interface RevokeAllUsersResult {
+export interface RevokeTotpResult {
   message: string;
-  affected: number;
 }
 
 export const UserSessionsAPI = {
@@ -21,8 +20,13 @@ export const UserSessionsAPI = {
       'bromate_security_api_firewall_rotate_salts_now'
     ),
 
-  revokeAllTrustedDevices: () =>
-   apiRequest<RevokeAllUsersResult>(
-      'bromate_security_api_firewall_revoke_all_users'
+  revokeAllUsersTotpEnrollment: () =>
+   apiRequest<RevokeTotpResult>(
+      'bromate_security_api_firewall_revoke_all_users_totp_enrollment'
+    ),
+
+  revokeUserTotpEnrollment: () =>
+   apiRequest<RevokeTotpResult>(
+      'bromate_security_api_firewall_revoke_user_totp_enrollment'
     ),
 };

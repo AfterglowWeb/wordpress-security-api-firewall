@@ -199,35 +199,35 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			'login_rate_limit_enabled'                    => array(
+			'login_attempts_limit_enabled'                    => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_attempts'                   => array(
+			'login_attempts_limit'                   => array(
 				'default_value'     => 5,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_window'                     => array(
+			'login_attempts_limit_window'                     => array(
 				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_blacklist_time'             => array(
+			'login_attempts_violation_block_time'             => array(
 				'default_value'     => 3600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_rate_limit_promote_after'              => array(
+			'login_attempts_blacklist_after_violations'              => array(
 				'default_value'     => 3,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -331,7 +331,7 @@ final class SettingsConfig {
 
 			'salts_rotation_recurrence'                   => array(
 				'default_value'     => 'week',
-				'type'              => 'select',
+				'type'              => 'string',
 				'options'           => array( 'daily', 'weekly', 'monthly' ),
 				'sanitize_callback' => array( SaltsRotation::class, 'sanitize_recurrence' ),
 				'group'             => 'login-hardening',

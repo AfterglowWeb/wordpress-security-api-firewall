@@ -76,17 +76,11 @@ function validateAuthSettings(settings: AuthSettings): Partial<Record<ValidatedF
   }
 
   if (!settings.auth_jwt_audience?.trim()) {
-    errors.auth_jwt_audience = __(
-      'Required by JWT authentication.',
-      'bromate-security-api-firewall'
-    );
+    errors.auth_jwt_audience = __( 'Required by JWT authentication.', 'bromate-security-api-firewall' );
   }
 
   if (!settings.auth_jwt_issuer?.trim()) {
-    errors.auth_jwt_issuer = __(
-      'Required by JWT authentication.',
-      'bromate-security-api-firewall'
-    );
+    errors.auth_jwt_issuer = __( 'Required by JWT authentication.', 'bromate-security-api-firewall' );
   }
 
   return errors;
@@ -122,6 +116,9 @@ export default function AuthOptions({
   );
 
   const fieldErrors = useMemo(() => validateAuthSettings(settings), [settings]);
+
+const audienceDirty = settings.auth_jwt_audience !== loadedSettings.auth_jwt_audience;
+const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
 
   const needsAuthorizedUsers = settings.auth_control_enabled
     && (authorizedUsersLoading || authorizedUsersCount === 0);
@@ -274,9 +271,9 @@ export default function AuthOptions({
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="flex-end" alignItems="center" gap={1}>
         {isDirty && hasValidationErrors && (
-          <Alert color="error">
+          <Alert severity="info">
             {__('Complete required fields before saving: ', 'bromate-security-api-firewall')}
-            {missingRequirements.length > 0 ? missingRequirements.join(', ') : ''}
+            <strong>{missingRequirements.length > 0 ? missingRequirements.join(', ') : ''}</strong>
           </Alert>
         )}
         <Tooltip
@@ -603,10 +600,10 @@ export default function AuthOptions({
                 onChange={(e) => update('auth_jwt_audience', e.target.value)}
                 disabled={!settings.auth_control_enabled}
                 required={settings.auth_control_enabled}
-                error={isDirty && !!fieldErrors.auth_jwt_audience}
+                error={audienceDirty && !!fieldErrors.auth_jwt_audience}
                 helperText={
-                  fieldErrors.auth_jwt_audience
-                    ?? __('Expected audience (aud) claim in the token.', 'bromate-security-api-firewall')
+                  (audienceDirty && fieldErrors.auth_jwt_audience)
+                    || __('Expected audience (aud) claim in the token.', 'bromate-security-api-firewall')
                 }
                 size="small"
               />
@@ -617,10 +614,10 @@ export default function AuthOptions({
                 onChange={(e) => update('auth_jwt_issuer', e.target.value)}
                 disabled={!settings.auth_control_enabled}
                 required={settings.auth_control_enabled}
-                error={isDirty && !!fieldErrors.auth_jwt_issuer}
+                error={issuerDirty && !!fieldErrors.auth_jwt_issuer}
                 helperText={
-                  fieldErrors.auth_jwt_issuer
-                    ?? __('Expected issuer (iss) claim in the token.', 'bromate-security-api-firewall')
+                  (issuerDirty && fieldErrors.auth_jwt_issuer)
+                    || __('Expected issuer (iss) claim in the token.', 'bromate-security-api-firewall')
                 }
                 size="small"
               />
