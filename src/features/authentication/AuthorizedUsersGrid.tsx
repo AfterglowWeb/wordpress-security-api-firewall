@@ -231,7 +231,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
   const user = authorizedUsers.find((u) => u.id === id);
   openDialog({
     type: DIALOG_TYPES.CONFIRM,
-    title: __('Remove user?', 'bromate-security-api-firewall'),
+    title: __('Remove User?', 'bromate-security-api-firewall'),
     content: `${__('Remove', 'bromate-security-api-firewall')} ${user?.display_name ?? id} ${__('from authorized users?', 'bromate-security-api-firewall')}`,
     confirmLabel: __('Remove', 'bromate-security-api-firewall'),
     onConfirm: () => {
@@ -353,7 +353,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Typography variant="h6" mb={2}>{__('Application authorized users', 'bromate-security-api-firewall')}</Typography>
+      <Typography variant="h6" mb={2}>{__('REST API Authorized Users', 'bromate-security-api-firewall')}</Typography>
       <DataGrid
         rows={authorizedUsers}
         columns={columns}

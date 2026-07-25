@@ -10,7 +10,7 @@ final class Logger {
 		string $event,
 		string $severity = 'info',
 		array $details = array(),
-		string $ip = '',
+		string $ip = ''
 	): bool {
 
 		$event    = LogsRepository::sanitize_event( $event );

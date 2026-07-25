@@ -148,7 +148,7 @@ export default function UserDialog({
 
   openDialog({
     type: DIALOG_TYPES.CONFIRM,
-    title: __('Revoke user access?', 'bromate-security-api-firewall'),
+    title: __('Revoke User Access?', 'bromate-security-api-firewall'),
     content: __(
       'This revokes REST API access for this user once saved. It cannot be undone. Continue?',
       'bromate-security-api-firewall'
