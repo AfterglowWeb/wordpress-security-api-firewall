@@ -4,13 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\WordPressApplicationPassword;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
 use WP_User;
 
 class RestAuthorizedUserRepository {
 
-	private const REST_API_ACCESS_CUSTOM_CAP = 'bromate_security_api_firewall_rest_api_access';
 	private const USER_JWT_SUBCLAIM_METAKEY  = 'jwt_subclaim';
 
 	public static function authorized_users_options(): array {
@@ -70,15 +68,19 @@ class RestAuthorizedUserRepository {
 		);
 	}
 
-	public static function sanitize_authorized_user( array $user ): array {
+	private static function sanitize_authorized_user( array $user ): array {
 
-		if ( ! is_array( $user ) || empty( $user['id'] ) ) {
+		if ( ! is_array( $user ) || !isset( $user['id'] ) ) {
 			return array();
 		}
 
+		$user_id     = is_numeric($user['id']) ? absint( $user['id'] ) : 0;
+		if(! $user_id ) {
+			return array();
+		}
 		$user_status = isset( $user['status'] ) && in_array( $user['status'], array( 'active', 'revoked', 'disabled' ), true ) ? sanitize_key( $user['status'] ) : '';
-		$user_id     = absint( $user['id'] );
-		'active' === $user_status ? self::add_cap_to_user( $user_id ) : self::remove_cap_from_user( $user_id );
+		//'active' === $user_status ? self::add_cap_to_user( $user_id ) : self::remove_cap_from_user( $user_id );
+		
 		return array(
 			'id'           => $user_id,
 			'jwt_subclaim' => isset( $user['jwt_subclaim'] ) ? sanitize_text_field( $user['jwt_subclaim'] ) : '',
@@ -87,25 +89,79 @@ class RestAuthorizedUserRepository {
 		);
 	}
 
-	public static function user_has_rest_api_access_cap( $user ): bool {
-		if ( $user instanceof WP_User ) {
-			return $user->has_cap( self::REST_API_ACCESS_CUSTOM_CAP );
+	public static function update_authorized_users( array $users ): array {
+
+		$existing_users = SettingsRepository::read_option( 'auth_users' );
+
+		if ( empty( $existing_users ) || ! is_array( $existing_users ) ) {
+			$existing_users = array();
 		}
-		return false;
+
+		$merged = array();
+
+		foreach ( $existing_users as $existing_user ) {
+			if ( ! is_array( $existing_user ) || empty( $existing_user['id'] ) ) {
+				continue;
+			}
+			$merged[ (int) $existing_user['id'] ] = $existing_user;
+		}
+
+		foreach ( $users as $user ) {
+			if ( ! is_array( $user ) || empty( $user['id'] ) ) {
+				continue;
+			}
+			$merged[ (int) $user['id'] ] = $user;
+		}
+
+		$merged_users = array_values( $merged );
+
+		error_log(print_r($merged_users,true));
+
+
+		return SettingsRepository::update_option( 'auth_users', $merged_users );
 	}
 
-	private static function add_cap_to_user( int $user_id ): void {
-		$user = get_user_by( 'id', $user_id );
-		if ( $user instanceof WP_User ) {
-			$user->add_cap( self::REST_API_ACCESS_CUSTOM_CAP );
-		}
+	public static function get_authorized_users(): array {
+		return SettingsRepository::read_option( 'auth_users' );
 	}
 
-	private static function remove_cap_from_user( int $user_id ): void {
-		$user = get_user_by( 'id', $user_id );
-		if ( $user instanceof WP_User ) {
-			$user->remove_cap( self::REST_API_ACCESS_CUSTOM_CAP );
+	public static function delete_authorized_users( array $users ): int {
+
+		$existing_users = SettingsRepository::read_option( 'auth_users' );
+
+		if ( empty( $existing_users ) || ! is_array( $existing_users ) ) {
+			return 0;
 		}
+
+		$ids_to_delete = array_map( 'absint', $users );
+		$ids_to_delete = array_filter( $ids_to_delete );
+
+		if ( empty( $ids_to_delete ) ) {
+			return 0;
+		}
+
+		$ids_to_delete_set = array_flip( $ids_to_delete );
+
+		$remaining_users = array_filter(
+			$existing_users,
+			static function ( $user ) use ( $ids_to_delete_set ): bool {
+				if ( ! is_array( $user ) || empty( $user['id'] ) ) {
+					return true;
+				}
+				return ! isset( $ids_to_delete_set[ (int) $user['id'] ] );
+			}
+		);
+
+		$remaining_users = array_values( $remaining_users );
+
+		$deleted_count = count( $existing_users ) - count( $remaining_users );
+
+		if ( $deleted_count > 0 ) {
+			SettingsRepository::update_option( 'auth_users', $remaining_users );
+			RestAccessCustomCap::add_api_access_cap_on_authorized_users();
+		}
+
+		return $deleted_count;
 	}
 
 	public static function create_user_jwt_subclaim( int $user_id, array $options = array() ): string {
@@ -198,19 +254,7 @@ class RestAuthorizedUserRepository {
 	}
 
 
-	private static function remove_rest_api_access_custom_cap(): void {
-		$wp_roles = wp_roles()->roles;
-
-		foreach ( array_keys( $wp_roles ) as $role_name ) {
-			$role = get_role( $role_name );
-			if ( $role ) {
-				$role->remove_cap( self::REST_API_ACCESS_CUSTOM_CAP );
-			}
-		}
-	}
-
-	public static function delete_authorized_users_meta_and_cap(): void {
+	public static function delete_authorized_users_jwt_subclaim(): void {
 		delete_metadata( 'user', 0, self::USER_JWT_SUBCLAIM_METAKEY, '', true );
-		self::remove_rest_api_access_custom_cap();
 	}
 }

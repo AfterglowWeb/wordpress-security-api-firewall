@@ -13,9 +13,9 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import type { AuthorizedUser, AuthorizedUserDialogProps, AuthorizedUserMeta } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
-import { IpAPI } from '@services/ip';
 import { apiRequest } from '@services/api';
-import { SettingsAPI } from '@services/settings';
+import { computeIpEntriesDiff, syncIpEntries } from '@services/ip-entries-sync';
+
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import CopyButton from '@components/CopyButton';
 
@@ -34,7 +34,7 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
 
 export default function UserDialog({
   open, user, onSave, onClose,
-  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers, onIpAdded,
+  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers,
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
 
@@ -147,53 +147,22 @@ export default function UserDialog({
 
     let finalIpEntries = ipEntries;
 
-    if (currentUserId) {
-      const desiredReferrer = ipListReferrer.trim() || null;
-      const desiredLines = Array.from(
-        new Set(ipListValue.split('\n').map((l) => l.trim()).filter(Boolean))
-      );
-      const desiredSet = new Set(desiredLines);
+  if (currentUserId) {
+    const diff = computeIpEntriesDiff(ipEntries, ipListValue, ipListReferrer);
 
-      const toDelete = ipEntries.filter(
-        (e) => !desiredSet.has(e.ip) || (e.referrer ?? null) !== desiredReferrer
-      );
-      const keptIps = new Set(
-        ipEntries
-          .filter((e) => desiredSet.has(e.ip) && (e.referrer ?? null) === desiredReferrer)
-          .map((e) => e.ip)
-      );
-      const toAdd = desiredLines.filter((ip) => !keptIps.has(ip));
+    if (diff.toDelete.length || diff.toAdd.length) {
+      const result = await syncIpEntries(currentUserId, diff);
 
-      if (toDelete.length || toAdd.length) {
-        const [deleteResults, addResults] = await Promise.all([
-          Promise.allSettled(toDelete.map((e) => IpAPI.deleteEntry(e.id))),
-          Promise.allSettled(toAdd.map((ip) => IpAPI.addEntry(ip, 'whitelist', currentUserId, desiredReferrer))),
-        ]);
-
-        const failures = [
-          ...deleteResults
-            .map((r, i) => ({ r, ip: toDelete[i].ip }))
-            .filter(({ r }) => r.status === 'rejected')
-            .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`),
-          ...addResults
-            .map((r, i) => ({ r, ip: toAdd[i] }))
-            .filter(({ r }) => r.status === 'rejected')
-            .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`),
-        ];
-
-        if (failures.length) {
-          setIpError(failures.join('\n'));
-          setSaving(false);
-          return;
-        }
-
-        const fresh = await IpAPI.getUserEntries(currentUserId);
-        finalIpEntries = fresh.entries;
-        applyIpEntries(fresh.entries);
-
-        if (onIpAdded) onIpAdded();
+      if (!result.ok) {
+        setIpError(result.error ?? __('Failed to sync IP entries', 'bromate-security-api-firewall'));
+        setSaving(false);
+        return;
       }
+
+      finalIpEntries = result.entries;
+      applyIpEntries(result.entries);
     }
+  }
 
     const meta: AuthorizedUserMeta = {
       id: wpUserId as number,
@@ -207,7 +176,9 @@ export default function UserDialog({
       : [...authorizedUsers, meta];
 
     try {
-      await SettingsAPI.updateOption('auth_users', newAuthUsers);
+      await apiRequest<AuthorizedUserMeta[]>('bromate_update_authorized_users', {
+        users: JSON.stringify(newAuthUsers),
+      });
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : __('Failed to save user', 'bromate-security-api-firewall'));
       setSaving(false);
@@ -340,9 +311,6 @@ export default function UserDialog({
           <Stack sx={{ position: 'relative' }}>
           <TextField
             label={__('JWT sub claim', 'bromate-security-api-firewall')} 
-            // Single source of truth: server-generated/persisted value in
-            // `form.jwt_subclaim` (never the separately-fetched wpUsers
-            // list, which goes stale — see the loading effect above).
             value={form.jwt_subclaim}
             disabled={noUser}
             size="small"

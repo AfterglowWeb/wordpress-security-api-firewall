@@ -32,7 +32,7 @@ use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\SaltsRotation;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthorizedUserRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwtAuthentication;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\WordPressApplicationPassword;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAccessCustomCap;
 
 final class Bootstrap {
 
@@ -42,9 +42,10 @@ final class Bootstrap {
 		add_action( 'plugins_loaded', array( SchemaManager::class, 'install' ) );
 
 		RestRequestBootstrap::register();
-		PublicRequestBootstrap::register();
 		LoginBootstrap::register();
+		PublicRequestBootstrap::register();
 		GlobalSecurityBootstrap::register();
+
 		JwksEndpoint::register();
 
 		Cron::register();
@@ -53,11 +54,14 @@ final class Bootstrap {
 
 		if ( is_admin() ) {
 			AdminPage::register();
+
 			SettingsAjaxController::register();
 			RestAuthenticationAjaxController::register();
+
 			IpEntriesAjaxController::register();
 			LogsAjaxController::register();
 			Documentation::register();
+		
 		}
 	}
 
@@ -102,10 +106,11 @@ final class Bootstrap {
 		LoginRateLimiter::delete_all_rate_limit_transients();
 
 		TOTPRepository::revoke_all_users_totp_enrollment();
-		RestAuthorizedUserRepository::delete_authorized_users_meta_and_cap();
+		RestAuthorizedUserRepository::delete_authorized_users_jwt_subclaim();
+		RestAccessCustomCap::delete_authorized_users_api_access_cap();
 
-		SettingsConfig::delete_settings();
 		JwtAuthentication::delete_jwt_settings();
+		SettingsConfig::delete_settings();
 
 		AdminPage::remove_edit_options_custom_cap();
 

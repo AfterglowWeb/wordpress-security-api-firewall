@@ -22,44 +22,40 @@ const DEFAULT_AUTHORIZED_USERS_INFO: AuthorizedUsersInfo = { count: 0, loading: 
 export default function Authentication(): JSX.Element {
   const [settings, setSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
   const [loadedSettings, setLoadedSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [authorizedUsersInfo, setAuthorizedUsersInfo] = useState<AuthorizedUsersInfo>(DEFAULT_AUTHORIZED_USERS_INFO);
 
   useEffect(() => {
-    setLoading(true);
     SettingsAPI.readOptions()
       .then((options) => {
         const { auth_users, ...rest } = options as any;
         setSettings(rest);
         setLoadedSettings(rest);
-        setLoading(false);
+        setLoadingSettings(false);
       })
       .catch(() => setLoadError(__('Failed to load settings', 'bromate-security-api-firewall')));
   }, []);
 
-  if (loading) {
-		return (
-			<Stack spacing={3}>
-        <Stack flexDirection={"row"} justifyContent={"flex-end"}>
-				  <Skeleton variant="rounded" width={65} height={35} />
-        </Stack>
-				<Skeleton variant="rectangular" width={'100%'} height={800} />
-        <Skeleton variant="rectangular" width={'100%'} height={300} />
-			</Stack>
-		);
-	}
-
   return (
     <Stack spacing={3}>
+
+      {loadingSettings ? (
+        <Stack spacing={3}>
+          <Stack flexDirection={"row"} justifyContent={"flex-end"}>
+            <Skeleton variant="rounded" width={65} height={35} />
+          </Stack>
+          <Skeleton variant="rectangular" width={'100%'} height={800} />
+        </Stack>
+        ) : (
       <AuthOptions
         settings={settings}
         loadedSettings={loadedSettings}
         onChange={setSettings}
-        onSaved={setLoadedSettings}
+        onSaved={setSettings}
         authorizedUsersCount={authorizedUsersInfo.count}
         authorizedUsersLoading={authorizedUsersInfo.loading}
-      />
+      />)}
 
       <AuthorizedUsersGrid
         authMethod={settings.auth_methods}

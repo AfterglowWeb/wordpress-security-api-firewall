@@ -11,11 +11,11 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import type { AuthorizedUser, AuthorizedUserMeta, AuthSettings } from '@app-types/auth';
-import UserDialog from '@features/authentication/UserDialog';
 import { apiRequest } from '@services/api';
-import { SettingsAPI } from '@services/settings';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
+
+import UserDialog from '@features/authentication/UserDialog';
 
 interface AuthenticationToolbarProps {
   onAddUser?: () => void;
@@ -68,7 +68,7 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
   );
 }
 
-export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
+export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
   const [authUsersLoading, setAuthUsersLoading] = useState(true);
   const portalContainer = usePortalContainer();
@@ -84,7 +84,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error';
+    severity: 'success' | 'error' | 'info';
   }>({ open: false, message: '', severity: 'success' });
 
   const authorizedUsers = useMemo<AuthorizedUser[]>(
@@ -108,8 +108,8 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     onUsersChange?.({ count: authUsers.length, loading: authUsersLoading });
   }, [authUsers, authUsersLoading, onUsersChange]);
 
-  const resolveDisplayStatus = (user: AuthorizedUser): 'active' | 'expiring' | 'revoked' => {
-    if (user.status === 'revoked') return 'revoked';
+  const resolveDisplayStatus = (user: AuthorizedUser): 'active' | 'expiring' | 'revoked' | 'disabled' => {
+    if (user.status === 'revoked' || user.status === 'disabled') return 'revoked';
     if (user.expires_at) {
       const days = Math.ceil(
         (new Date(user.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
@@ -120,10 +120,11 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     return 'active';
   };
 
-  const statusLabels: Record<'active' | 'expiring' | 'revoked', string> = {
+  const statusLabels: Record<'active' | 'expiring' | 'revoked' | 'disabled', string> = {
     active: __('active', 'bromate-security-api-firewall'),
     expiring: __('expiring', 'bromate-security-api-firewall'),
     revoked: __('revoked', 'bromate-security-api-firewall'),
+    disabled: __('disabled', 'bromate-security-api-firewall'),
   };
 
   const fetchWordPressUsers = useCallback(async () => {
@@ -147,36 +148,36 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
   }, [fetchWordPressUsers]);
 
   useEffect(() => {
-    SettingsAPI.readOptions()
-      .then((options) => {
-        const users = (options as any).auth_users;
-        if (Array.isArray(users)) {
-          const valid = users.filter(
-            (u: any): u is AuthorizedUserMeta =>
-              u !== null && typeof u === 'object' && typeof u.id === 'number'
-          );
+    const fetchAuthorizedUsers = async () => {
+      try {
+        const users = await apiRequest<AuthorizedUserMeta[]>('bromate_get_authorized_users');
+        const valid = Array.isArray(users)
+          ? users.filter(
+              (u): u is AuthorizedUserMeta =>
+                u !== null && typeof u === 'object' && typeof u.id === 'number'
+            )
+          : [];
+        if(valid.length > 0) {
           setAuthUsers(valid);
+        } else {
+          setSnackbar({
+            open: true,
+            message: __('No authorized users set', 'bromate-security-api-firewall'),
+            severity: 'info',
+          });
         }
-      })
-      .catch(() =>
+      } catch {
         setSnackbar({
           open: true,
           message: __('Failed to load authorized users', 'bromate-security-api-firewall'),
           severity: 'error',
-        })
-      )
-      .finally(() => setAuthUsersLoading(false));
-  }, []);
+        });
+      } finally {
+        setAuthUsersLoading(false);
+      }
+    };
 
-  const persistUsers = useCallback((users: AuthorizedUserMeta[]) => {
-    setAuthUsers(users);
-    SettingsAPI.updateOption('auth_users', users).catch(() =>
-      setSnackbar({
-        open: true,
-        message: __('Failed to save changes', 'bromate-security-api-firewall'),
-        severity: 'error',
-      })
-    );
+    fetchAuthorizedUsers();
   }, []);
 
   const applySavedUser = useCallback((user: AuthorizedUser) => {
@@ -206,6 +207,26 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
     setEditingUser(null);
   }, [authUsers, applySavedUser]);
 
+  const deleteUsers = useCallback((ids: number[]) => {
+    setAuthUsers((prev) => {
+      const previous = prev;
+      const next = prev.filter((u) => !ids.includes(u.id));
+
+      apiRequest<{ deleted: number }>('bromate_delete_authorized_users', {
+        users: JSON.stringify(ids),
+      }).catch(() => {
+        setAuthUsers(previous);
+        setSnackbar({
+          open: true,
+          message: __('Failed to delete users', 'bromate-security-api-firewall'),
+          severity: 'error',
+        });
+      });
+
+      return next;
+    });
+  }, []);
+
   const handleDeleteUser = useCallback((id: GridRowId) => {
     const user = authorizedUsers.find((u) => u.id === id);
     openDialog({
@@ -214,8 +235,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
       content: `${__('Remove', 'bromate-security-api-firewall')} ${user?.display_name ?? id} ${__('from authorized users?', 'bromate-security-api-firewall')}`,
       confirmLabel: __('Remove', 'bromate-security-api-firewall'),
       onConfirm: () => {
-        const newUsers = authUsers.filter((u) => u.id !== id);
-        persistUsers(newUsers);
+        deleteUsers([Number(id)]);
         setSnackbar({
           open: true,
           message: __('User removed', 'bromate-security-api-firewall'),
@@ -223,11 +243,11 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
         });
       },
     });
-  }, [authUsers, authorizedUsers, openDialog, persistUsers]);
+  }, [authorizedUsers, openDialog, deleteUsers]);
 
   const handleDeleteSelected = useCallback((rows: Map<GridRowId, AuthorizedUser>) => {
     if (rows.size === 0) return;
-    const ids = new Set(rows.keys());
+    const ids = Array.from(rows.keys()).map(Number);
     const names = Array.from(rows.values()).map((u) => u.display_name).join(', ');
 
     openDialog({
@@ -236,8 +256,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
       content: `${__('This will remove:', 'bromate-security-api-firewall')} ${names}`,
       confirmLabel: __('Remove all', 'bromate-security-api-firewall'),
       onConfirm: () => {
-        const newUsers = authUsers.filter((u) => !ids.has(u.id));
-        persistUsers(newUsers);
+        deleteUsers(ids);
         setSnackbar({
           open: true,
           message: `${__('Removed', 'bromate-security-api-firewall')} ${rows.size} ${__('user(s)', 'bromate-security-api-firewall')}`,
@@ -246,7 +265,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
         setRowSelectionModel({ type: 'include', ids: new Set() });
       },
     });
-  }, [authUsers, openDialog, persistUsers]);
+  }, [openDialog, deleteUsers]);
 
   const handleAddUser = useCallback(() => {
     setEditingUser(null);
@@ -303,7 +322,7 @@ export default function AuthorizedUsersGrid({ authMethod, authEnabled, onUsersCh
         const s = resolveDisplayStatus(row);
         return (
           <Chip label={statusLabels[s]} size="small" sx={{
-            backgroundColor: { active: '#4caf50', expiring: '#ff9800', revoked: '#f44336' }[s],
+            backgroundColor: { active: '#4caf50', expiring: '#ff9800', revoked: '#f44336', disabled: '#5f5e5e' }[s],
             color: 'white',
           }} />
         );
