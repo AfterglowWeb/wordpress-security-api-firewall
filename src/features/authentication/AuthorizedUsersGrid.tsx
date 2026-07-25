@@ -227,23 +227,24 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
     });
   }, []);
 
-  const handleDeleteUser = useCallback((id: GridRowId) => {
-    const user = authorizedUsers.find((u) => u.id === id);
-    openDialog({
-      type: DIALOG_TYPES.CONFIRM,
-      title: __('Remove user?', 'bromate-security-api-firewall'),
-      content: `${__('Remove', 'bromate-security-api-firewall')} ${user?.display_name ?? id} ${__('from authorized users?', 'bromate-security-api-firewall')}`,
-      confirmLabel: __('Remove', 'bromate-security-api-firewall'),
-      onConfirm: () => {
-        deleteUsers([Number(id)]);
-        setSnackbar({
-          open: true,
-          message: __('User removed', 'bromate-security-api-firewall'),
-          severity: 'success',
-        });
-      },
-    });
-  }, [authorizedUsers, openDialog, deleteUsers]);
+  const handleDeleteUser = useCallback((id: GridRowId, onDeleted?: () => void) => {
+  const user = authorizedUsers.find((u) => u.id === id);
+  openDialog({
+    type: DIALOG_TYPES.CONFIRM,
+    title: __('Remove User?', 'bromate-security-api-firewall'),
+    content: `${__('Remove', 'bromate-security-api-firewall')} ${user?.display_name ?? id} ${__('from authorized users?', 'bromate-security-api-firewall')}`,
+    confirmLabel: __('Remove', 'bromate-security-api-firewall'),
+    onConfirm: () => {
+      deleteUsers([Number(id)]);
+      setSnackbar({
+        open: true,
+        message: __('User removed', 'bromate-security-api-firewall'),
+        severity: 'success',
+      });
+      onDeleted?.();
+    },
+  });
+}, [authorizedUsers, openDialog, deleteUsers]);
 
   const handleDeleteSelected = useCallback((rows: Map<GridRowId, AuthorizedUser>) => {
     if (rows.size === 0) return;
@@ -352,7 +353,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Typography variant="h6" mb={2}>{__('Application authorized users', 'bromate-security-api-firewall')}</Typography>
+      <Typography variant="h6" mb={2}>{__('REST API Authorized Users', 'bromate-security-api-firewall')}</Typography>
       <DataGrid
         rows={authorizedUsers}
         columns={columns}
@@ -378,6 +379,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
         user={editingUser}
         onSave={handleSaveUser}
         onClose={() => setDialogOpen(false)}
+        onDelete={handleDeleteUser}
         wpUsers={wpUsers}
         wpUsersLoading={wpUsersLoading}
         fetchWordPressUsers={fetchWordPressUsers}

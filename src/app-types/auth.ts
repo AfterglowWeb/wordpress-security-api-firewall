@@ -1,5 +1,5 @@
 import type { IpEntry } from "@services/ip";
-
+import { GridRowId } from '@mui/x-data-grid';
 export type JwtAlgorithm =
   | 'RS256' | 'RS384' | 'RS512'
   | 'HS256' | 'HS384' | 'HS512'
@@ -45,7 +45,7 @@ export interface AuthorizedUserDialogProps {
   user: AuthorizedUser | null;
   onSave: (user: AuthorizedUser) => void;
   onClose: () => void;
-  wpUsers: AuthorizedUser[];
+  onDelete: (id: GridRowId, onDeleted?: () => void) => void;  wpUsers: AuthorizedUser[];
   wpUsersLoading: boolean;
   fetchWordPressUsers: () => void;
   authorizedUserIds: number[];
