@@ -1,5 +1,11 @@
 import { useState, useEffect } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
+import type { AuthorizedUser, AuthorizedUserDialogProps, AuthorizedUserMeta } from '@app-types/auth';
+import type { IpEntry } from '@services/ip';
+import { apiRequest } from '@services/api';
+import { computeIpEntriesDiff, syncIpEntries } from '@services/ip-entries-sync';
+import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
+
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Stack, Autocomplete, CircularProgress,
@@ -11,10 +17,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 
-import type { AuthorizedUser, AuthorizedUserDialogProps, AuthorizedUserMeta } from '@app-types/auth';
-import type { IpEntry } from '@services/ip';
-import { apiRequest } from '@services/api';
-import { computeIpEntriesDiff, syncIpEntries } from '@services/ip-entries-sync';
+
 
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import CopyButton from '@components/CopyButton';
@@ -33,7 +36,7 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
 };
 
 export default function UserDialog({
-  open, user, onSave, onClose,
+  open, user, onSave, onDelete, onClose,
   wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers,
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
@@ -59,7 +62,8 @@ export default function UserDialog({
 
   const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
   const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
-
+  const { openDialog } = useDialog();
+  
   const applyIpEntries = (entries: IpEntry[]) => {
     setIpEntries(entries);
     setIpListValue(entries.map((e) => e.ip).join('\n'));
@@ -139,6 +143,28 @@ export default function UserDialog({
   const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const handleRevokeUser = () => {
+  if (!isEditing) return;
+
+  openDialog({
+    type: DIALOG_TYPES.CONFIRM,
+    title: __('Revoke user access?', 'bromate-security-api-firewall'),
+    content: __(
+      'This revokes REST API access for this user once saved. It cannot be undone. Continue?',
+      'bromate-security-api-firewall'
+    ),
+    confirmLabel: __('Revoke', 'bromate-security-api-firewall'),
+    onConfirm: () => {
+      updateField('status', 'revoked');
+    },
+  });
+};
+
+const handleDeleteClick = () => {
+  if (!isEditing || currentUserId === null) return;
+  onDelete(currentUserId, onClose);
+};
+
   const handleSave = async () => {
     if (wpUserId === '') return;
     setSaving(true);
@@ -210,8 +236,8 @@ export default function UserDialog({
   return (
     <Dialog container={portalContainer} open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
-        {isEditing ? sprintf(__('Edit — %s', 'bromate-security-api-firewall' ), user?.display_name) 
-        : __('Add authorized user', 'bromate-security-api-firewall')}
+        {isEditing ? sprintf(__('Edit Authorized User — %s', 'bromate-security-api-firewall' ), user?.display_name) 
+        : __('Add Authorized User', 'bromate-security-api-firewall')}
         <IconButton onClick={onClose} sx={{position:'absolute', right:'8px', top:'8px', zIndex:10}}>
           <CloseIcon fontSize="large" />
         </IconButton>
@@ -268,21 +294,43 @@ export default function UserDialog({
 
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <FormControlLabel
-              label={__('User Active', 'bromate-security-api-firewall')}
+              label={form.status === 'active' 
+                ? __('User Active', 'bromate-security-api-firewall') 
+                :  form.status === 'disabled' ? __('User Disabled', 'bromate-security-api-firewall')
+                :  __('User Revoked', 'bromate-security-api-firewall')
+              }
               control={
                 <Switch
                   checked={form.status === 'active'}
                   disabled={noUser}
-                  onChange={(e) => updateField('status', e.target.checked ? 'active' : 'revoked')}
+                  onChange={(e) => updateField('status', e.target.checked ? 'active' : 'disabled')}
                 />
               }
             />
-            <Button
-              variant="outlined" size="small" disabled={noUser}
-              endIcon={<OpenInNewIcon />}
-              href={selectedWpUser?.admin_url ?? form.admin_url}
-              target="_blank"
-            >{__('Profile', 'bromate-security-api-firewall')}</Button>
+    
+            <Stack sx={{color:'text.secondary'}} direction="row" justifyContent="flex-end" gap={2} alignItems="center">
+              
+             <Button
+                color="inherit"
+                size="small"
+                disabled={!isEditing || form.status === 'revoked'}
+                onClick={handleRevokeUser}
+              >
+                {__('Revoke', 'bromate-security-api-firewall')}
+              </Button>
+
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                disabled={!isEditing}
+                onClick={handleDeleteClick}
+              >
+                {__('Delete', 'bromate-security-api-firewall')}
+              </Button>
+
+            </Stack>
+
           </Stack>
 
           {showAppPasswordWarning && (
@@ -295,7 +343,7 @@ export default function UserDialog({
           )}
 
           {/* ── Readonly user info ── */}
-          <Stack direction="row" gap={3} p={1} flexWrap="wrap">
+          <Stack direction="row" gap={3} p={1} flexWrap="wrap" alignItems={"flex-end"}>
             <ReadonlyField label={__('ID', 'bromate-security-api-firewall')}  value={selectedWpUser?.id.toString() ?? '' } />
             <Stack direction="row" alignItems="flex-end" gap={1}>
               <ReadonlyField label={__('Name', 'bromate-security-api-firewall')}  value={selectedWpUser?.display_name ?? form.display_name} />
@@ -305,6 +353,16 @@ export default function UserDialog({
             </Stack>
             <ReadonlyField label={__('Email', 'bromate-security-api-firewall')} value={selectedWpUser?.email ?? form.email} />
             <ReadonlyField label={__('Roles', 'bromate-security-api-firewall')} value={(selectedWpUser?.roles ?? form.roles).join(', ')} />
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={noUser}
+              endIcon={<OpenInNewIcon />}
+              href={selectedWpUser?.admin_url ?? form.admin_url}
+              target="_blank"
+            >
+              {__('Profile', 'bromate-security-api-firewall')}
+            </Button>
           </Stack>
 
           { !isWpAuth && 
@@ -370,7 +428,7 @@ export default function UserDialog({
         </Stack>
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{color:'text.secondary'}}>
         <Button
         onClick={onClose} 
         disableElevation 
@@ -385,7 +443,7 @@ export default function UserDialog({
           disabled={!isValid || saving || subclaimLoading}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
         >
-          {saving ? __('Saving…', 'bromate-security-api-firewall') : isEditing ? __('Save changes', 'bromate-security-api-firewall') : __('Add user', 'bromate-security-api-firewall') }
+          {saving ? __('Saving…', 'bromate-security-api-firewall') : isEditing ? __('Save', 'bromate-security-api-firewall') : __('Add user', 'bromate-security-api-firewall') }
         </Button>
       </DialogActions>
     </Dialog>
