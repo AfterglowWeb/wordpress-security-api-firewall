@@ -18,6 +18,9 @@ class RestAuthenticationAjaxController {
 		add_action( 'wp_ajax_bromate_delete_jwt_key', array( $self, 'ajax_delete_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_generate_jwt_subclaim', array( $self, 'ajax_generate_jwt_subclaim' ) );
 		add_action( 'wp_ajax_bromate_refresh_jwt_subclaim', array( $self, 'ajax_refresh_jwt_subclaim' ) );
+		add_action( 'wp_ajax_bromate_get_authorized_users', array( $self, 'ajax_get_authorized_users' ) );
+		add_action( 'wp_ajax_bromate_update_authorized_users', array( $self, 'ajax_update_authorized_users' ) );
+		add_action( 'wp_ajax_bromate_delete_authorized_users', array( $self, 'ajax_delete_authorized_users' ) );
 	}
 
 	public function ajax_authorized_users_options(): void {
@@ -26,6 +29,84 @@ class RestAuthenticationAjaxController {
 		}
 		$wordpress_users = RestAuthorizedUserRepository::authorized_users_options();
 		wp_send_json_success( $wordpress_users );
+	}
+
+	public function ajax_get_authorized_users(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+
+		$authorized_users = RestAuthorizedUserRepository::get_authorized_users();
+
+		if( empty( $authorized_users ) ) {
+			wp_send_json_success( [] );
+		}
+		
+		wp_send_json_success( $authorized_users );
+	}
+
+	public function ajax_update_authorized_user(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+		if( ! isset($_POST['user'])) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Missing args.', 'bromate-security-api-firewall' ) ), 400 );
+		}
+		
+		$new_user = json_decode( sanitize_text_field( wp_unslash($_POST['users']) ), true );
+		$authorized_users = [];
+		if( is_array( $new_user ) && !empty( $new_user )) {
+			$authorized_users = RestAuthorizedUserRepository::update_authorized_users( [$new_user] );
+		}
+
+		if( empty( $authorized_users ) ) {
+			wp_send_json_success( [] );
+		}
+		
+		wp_send_json_success( $authorized_users );
+	}
+
+
+	public function ajax_update_authorized_users(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+		if( ! isset($_POST['users'])) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Missing args.', 'bromate-security-api-firewall' ) ), 400 );
+		}
+
+		
+		$new_users = json_decode( sanitize_text_field( wp_unslash($_POST['users']) ), true );
+
+		$authorized_users = [];
+		if( is_array( $new_users ) && !empty( $new_users )) {
+			$authorized_users = RestAuthorizedUserRepository::update_authorized_users( $new_users );
+		}
+
+		if( empty( $authorized_users ) ) {
+			wp_send_json_success( [] );
+		}
+		
+		wp_send_json_success( $authorized_users );
+	}
+
+	public function ajax_delete_authorized_users(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+		if ( ! isset( $_POST['users'] ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Missing args.', 'bromate-security-api-firewall' ) ), 400 );
+		}
+
+		$users_to_delete = json_decode( sanitize_text_field( wp_unslash( $_POST['users'] ) ), true );
+
+		if ( ! is_array( $users_to_delete ) || empty( $users_to_delete ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'No users to delete.', 'bromate-security-api-firewall' ) ), 400 );
+		}
+
+		$deleted_count = RestAuthorizedUserRepository::delete_authorized_users( $users_to_delete );
+
+		wp_send_json_success( array( 'deleted' => $deleted_count ) );
 	}
 
 	public function ajax_get_jwks_endpoint(): void {

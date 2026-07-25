@@ -6,6 +6,7 @@ defined( 'ABSPATH' ) || exit;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
+use Exception;
 use WP_Error;
 
 final class TOTPLoginService {
@@ -48,7 +49,7 @@ final class TOTPLoginService {
 		try {
 			$bytes = random_bytes( 32 );
 			return bin2hex( $bytes );
-		} catch ( \Exception $e ) {
+		} catch ( Exception $e ) {
 			return md5( uniqid( 'bromate_totp_', true ) );
 		}
 	}
@@ -196,7 +197,7 @@ final class TOTPLoginService {
 			if ( isset( $_POST['log'] ) && ! empty( $_POST['log'] ) ) {
 				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 				$username = sanitize_user( wp_unslash( $_POST['log'] ) );
-				$user     = get_user_by( 'login', $username );
+				/*$user     = \get_user_by( 'login', $username );
 
 				if ( $user && TOTPRepository::get_instance()->is_user_enrolled( $user->ID ) ) {
 					set_transient(
@@ -209,7 +210,7 @@ final class TOTPLoginService {
 						self::TRANSIENT_EXPIRY
 					);
 					$pending = get_transient( 'bromate_totp_pending_' . $session_id );
-				}
+				}*/
 			}
 
 			if ( ! $pending || ! isset( $pending['user_id'] ) ) {
@@ -299,7 +300,7 @@ final class TOTPLoginService {
 		}
 
 		$user_id = (int) $pending['user_id'];
-		$user    = get_user_by( 'id', $user_id );
+		$user    = get_user( $user_id );
 
 		if ( ! $user ) {
 			wp_send_json_error( array( 'message' => 'User not found' ), 404 );
@@ -333,7 +334,7 @@ final class TOTPLoginService {
 		}
 
 		$user_id = (int) $pending['user_id'];
-		$user    = get_user_by( 'id', $user_id );
+		$user    = get_user( $user_id );
 
 		if ( ! $user || $user->user_login !== $username ) {
 			return;

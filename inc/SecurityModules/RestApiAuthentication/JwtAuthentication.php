@@ -76,7 +76,7 @@ class JwtAuthentication {
 			return false;
 		}
 
-		return RestAuthorizedUserRepository::user_has_rest_api_access_cap( $user_id );
+		return RestAccessCustomCap::user_has_rest_api_access_cap( $user_id );
 	}
 
 	private static function get_remote_jwks( string $url ): array {
@@ -172,15 +172,14 @@ class JwtAuthentication {
 		$kid               = self::generate_kid();
 
 		$keys = self::get_all_key_records();
-
-		if ( $keep_previous_for_grace_period ) {
+		if ( $keep_previous_for_grace_period && !empty( $keys ) ) {
 			$now = time();
 			foreach ( $keys as &$existing ) {
 				if ( null === ( $existing['expires_at'] ?? null ) ) {
 					$existing['expires_at'] = $now + self::KEY_GRACE_PERIOD_SECONDS;
 				}
 			}
-			unset( $existing );
+			
 		} else {
 			$keys = array();
 		}
@@ -314,10 +313,13 @@ class JwtAuthentication {
 	}
 
 	public static function get_active_key_record(): ?array {
+		$key_records = self::get_all_key_records();
+		if(! empty( $key_records ) ){
 		foreach ( self::get_all_key_records() as $record ) {
 			if ( null === ( $record['expires_at'] ?? null ) ) {
 				return $record;
 			}
+		}
 		}
 		return null;
 	}
@@ -347,25 +349,27 @@ class JwtAuthentication {
 		$now      = time();
 		$active   = null;
 		$rotating = array();
+		$key_records = self::get_all_key_records();
+		if(! empty( $key_records ) ){
+			foreach ( self::get_all_key_records() as $record ) {
+				$is_active = null === ( $record['expires_at'] ?? null );
 
-		foreach ( self::get_all_key_records() as $record ) {
-			$is_active = null === ( $record['expires_at'] ?? null );
+				if ( $is_active ) {
+					$active = array(
+						'kid'        => $record['kid'],
+						'public_key' => $record['public_pem'],
+						'created_at' => $record['created_at'],
+					);
+					continue;
+				}
 
-			if ( $is_active ) {
-				$active = array(
-					'kid'        => $record['kid'],
-					'public_key' => $record['public_pem'],
-					'created_at' => $record['created_at'],
-				);
-				continue;
-			}
-
-			if ( $record['expires_at'] > $now ) {
-				$rotating[] = array(
-					'kid'        => $record['kid'],
-					'created_at' => $record['created_at'],
-					'expires_at' => $record['expires_at'],
-				);
+				if ( $record['expires_at'] > $now ) {
+					$rotating[] = array(
+						'kid'        => $record['kid'],
+						'created_at' => $record['created_at'],
+						'expires_at' => $record['expires_at'],
+					);
+				}
 			}
 		}
 
@@ -383,20 +387,23 @@ class JwtAuthentication {
 		$now  = time();
 		$keys = array();
 
-		foreach ( self::get_all_key_records() as $record ) {
-			$expires_at = isset( $record['expires_at'] ) ? $record['expires_at'] : null;
-			$is_active  = null === $expires_at;
-			$in_grace   = null !== $expires_at && $expires_at > $now;
+		$key_records = self::get_all_key_records();
+		if(! empty( $key_records ) ){
+			foreach ( self::get_all_key_records() as $record ) {
+				$expires_at = isset( $record['expires_at'] ) ? $record['expires_at'] : null;
+				$is_active  = null === $expires_at;
+				$in_grace   = null !== $expires_at && $expires_at > $now;
 
-			if ( ! $is_active && ! ( $include_grace_period_keys && $in_grace ) ) {
-				continue;
-			}
+				if ( ! $is_active && ! ( $include_grace_period_keys && $in_grace ) ) {
+					continue;
+				}
 
-			$jwk = self::pem_to_jwk( $record['public_pem'], $record['kid'], $record['algorithm'] ?? 'RS256' );
-			if ( ! empty( $jwk ) ) {
-				$keys[] = $jwk;
+				$jwk = self::pem_to_jwk( $record['public_pem'], $record['kid'], $record['algorithm'] ?? 'RS256' );
+				if ( ! empty( $jwk ) ) {
+					$keys[] = $jwk;
+				}
 			}
-		}
+		}		
 
 		return array( 'keys' => $keys );
 	}

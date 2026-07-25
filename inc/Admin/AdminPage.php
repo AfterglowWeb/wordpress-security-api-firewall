@@ -105,7 +105,6 @@ class AdminPage {
 			array(
 				'nonce'               => wp_create_nonce( 'bromate_security_api_firewall_update_options_nonce' ),
 				'ajaxurl'             => admin_url( 'admin-ajax.php' ),
-				'options'             => SettingsRepository::read_options(),
 				'plugin'              => array(
 					'name'    => 'WP Security & API Firewall',
 					'version' => BROMATE_SECURITY_API_FIREWALL_VERSION,

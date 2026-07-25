@@ -19,9 +19,6 @@ const appTheme = createTheme({
     success: {
       main: '#00a32a',
     },
-    info: {
-      main: '#72aee6',
-    },
     background: {
       default: '#f0f0f1',
       paper: '#ffffff',

@@ -7,7 +7,7 @@ export type JwtAlgorithm =
 
 export type AuthMethod = 'jwt' | 'wp_auth';
 
-export type UserStatus = 'active' | 'revoked';
+export type UserStatus = 'active' | 'revoked' | 'disabled';
 
 export interface AuthorizedUser {
   id: number;
@@ -26,7 +26,7 @@ export interface AuthorizedUser {
 export interface AuthorizedUserMeta {
   id:            number;
   jwt_subclaim: string;
-  status:        'active' | 'revoked';
+  status:        'active' | 'revoked' | 'disabled';
   expires_at:    string;
 }
 
@@ -50,6 +50,5 @@ export interface AuthorizedUserDialogProps {
   fetchWordPressUsers: () => void;
   authorizedUserIds: number[];
   authorizedUsers: AuthorizedUserMeta[];
-  onIpAdded?: () => void;
   authMethod: AuthMethod;
 }

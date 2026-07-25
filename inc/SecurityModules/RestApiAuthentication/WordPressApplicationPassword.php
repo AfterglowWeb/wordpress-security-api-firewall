@@ -53,8 +53,7 @@ class WordPressApplicationPassword {
 	public static function validate_wp_application_password(): bool {
 		$user    = wp_get_current_user();
 		$exists  = $user && $user->exists();
-		$has_cap = $exists && RestAuthorizedUserRepository::user_has_rest_api_access_cap( $user );
-
+		$has_cap = $exists && RestAccessCustomCap::user_has_rest_api_access_cap( $user );
 		return $has_cap;
 	}
 }
