@@ -1,19 +1,27 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useMemo, useRef } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import type { AuthorizedUser, AuthorizedUserDialogProps, AuthorizedUserMeta } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
 import { apiRequest } from '@services/api';
-import { computeIpEntriesDiff, syncIpEntries } from '@services/ip-entries-sync';
+import { computeIpEntriesDiff, syncUserIpEntries } from '@services/ip-entries-sync';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
+import { findInvalidIpLines, isValidOrigin } from '@app-utils/ipValidation';
 
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, TextField, Stack, Autocomplete, CircularProgress,
-  Typography, Box, Alert, Chip,
-  IconButton
-} from '@mui/material';
 import Switch from '@mui/material/Switch';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Stack from '@mui/material/Stack';
+import Autocomplete from '@mui/material/Autocomplete';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -41,6 +49,7 @@ export default function UserDialog({
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
 
+  const portalContainer = usePortalContainer();
   const isEditing = user !== null;
   const isWpAuth = authMethod === 'wp_auth';
   const [wpUserId, setWpUserId]           = useState<number | ''>('');
@@ -55,7 +64,43 @@ export default function UserDialog({
   const [ipListReferrer, setIpListReferrer] = useState('');
   const [ipError, setIpError]         = useState<string | null>(null);
 
-  const portalContainer = usePortalContainer();
+  const [ipFormatError, setIpFormatError] = useState<string | null>(null);
+  const [originFormatError, setOriginFormatError] = useState<string | null>(null);
+
+  interface DirtySnapshot {
+    wpUserId: number | '';
+    status: AuthorizedUser['status'];
+    expiresAt: string;
+    ipListValue: string;
+    ipListReferrer: string;
+  }
+  const baselineRef = useRef<DirtySnapshot | null>(null);
+
+  const isDirty = useMemo(() => {
+    if (!baselineRef.current) return false;
+    const b = baselineRef.current;
+    return (
+      wpUserId !== b.wpUserId ||
+      form.status !== b.status ||
+      (form.expires_at || '') !== b.expiresAt ||
+      ipListValue !== b.ipListValue ||
+      ipListReferrer !== b.ipListReferrer
+    );
+  }, [wpUserId, form.status, form.expires_at, ipListValue, ipListReferrer]);
+
+  const hasFormatErrors = Boolean(ipFormatError) || Boolean(originFormatError);
+
+  const hasWhitelistedIps = useMemo(
+    () => ipListValue.split('\n').some((line) => line.trim() !== ''),
+    [ipListValue]
+  );
+
+  useEffect(() => {
+    if (!hasWhitelistedIps) {
+      setOriginFormatError(null);
+    }
+  }, [hasWhitelistedIps]);
+
   const noUser = !isEditing && selectedWpUser === null;
   const currentUserId = isEditing ? user!.id : (selectedWpUser?.id ?? null);
   const isValid = wpUserId !== '' && form.display_name.trim() !== '';
@@ -74,8 +119,9 @@ export default function UserDialog({
     if (!open) return;
 
     if (user) {
-
       const resolvedIpEntries = user.ip_entries ?? [];
+      const resolvedIpListValue = resolvedIpEntries.map((e) => e.ip).join('\n');
+      const resolvedReferrer = resolvedIpEntries.length > 0 ? (resolvedIpEntries[0].referrer ?? '') : '';
 
       setWpUserId(user.id);
       setForm({
@@ -92,13 +138,31 @@ export default function UserDialog({
       });
       applyIpEntries(resolvedIpEntries);
       setSelectedWpUser(user);
+
+      baselineRef.current = {
+        wpUserId: user.id,
+        status: user.status || 'active',
+        expiresAt: user.expires_at ?? '',
+        ipListValue: resolvedIpListValue,
+        ipListReferrer: resolvedReferrer,
+      };
     } else {
       setWpUserId('');
       setForm(EMPTY_FORM);
       setSelectedWpUser(null);
       applyIpEntries([]);
+
+      baselineRef.current = {
+        wpUserId: '',
+        status: 'active',
+        expiresAt: '',
+        ipListValue: '',
+        ipListReferrer: '',
+      };
     }
     setIpError(null);
+    setIpFormatError(null);
+    setOriginFormatError(null);
     setSaveError(null);
     setSaving(false);
   }, [open, user]);
@@ -143,27 +207,48 @@ export default function UserDialog({
   const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const handleIpListBlur = () => {
+    const invalid = findInvalidIpLines(ipListValue);
+    setIpFormatError(
+      invalid.length > 0
+        ? sprintf(__('Invalid IP or CIDR: %s', 'bromate-security-api-firewall'), invalid.join(', '))
+        : null
+    );
+  };
+
+  const handleOriginBlur = () => {
+    if (!ipListReferrer.trim()) {
+      setOriginFormatError(null);
+      return;
+    }
+    setOriginFormatError(
+      isValidOrigin(ipListReferrer)
+        ? null
+        : __('Enter a valid origin, e.g. https://app.example.com', 'bromate-security-api-firewall')
+    );
+  };
+
   const handleRevokeUser = () => {
-  if (!isEditing) return;
+    if (!isEditing) return;
 
-  openDialog({
-    type: DIALOG_TYPES.CONFIRM,
-    title: __('Revoke User Access?', 'bromate-security-api-firewall'),
-    content: __(
-      'This revokes REST API access for this user once saved. It cannot be undone. Continue?',
-      'bromate-security-api-firewall'
-    ),
-    confirmLabel: __('Revoke', 'bromate-security-api-firewall'),
-    onConfirm: () => {
-      updateField('status', 'revoked');
-    },
-  });
-};
+    openDialog({
+      type: DIALOG_TYPES.CONFIRM,
+      title: __('Revoke User Access?', 'bromate-security-api-firewall'),
+      content: __(
+        'This revokes REST API access for this user once saved. It cannot be undone. Continue?',
+        'bromate-security-api-firewall'
+      ),
+      confirmLabel: __('Revoke', 'bromate-security-api-firewall'),
+      onConfirm: () => {
+        updateField('status', 'revoked');
+      },
+    });
+  };
 
-const handleDeleteClick = () => {
-  if (!isEditing || currentUserId === null) return;
-  onDelete(currentUserId, onClose);
-};
+  const handleDeleteClick = () => {
+    if (!isEditing || currentUserId === null) return;
+    onDelete(currentUserId, onClose);
+  };
 
   const handleSave = async () => {
     if (wpUserId === '') return;
@@ -173,22 +258,22 @@ const handleDeleteClick = () => {
 
     let finalIpEntries = ipEntries;
 
-  if (currentUserId) {
-    const diff = computeIpEntriesDiff(ipEntries, ipListValue, ipListReferrer);
+    if (currentUserId) {
+      const diff = computeIpEntriesDiff(ipEntries, ipListValue, ipListReferrer);
 
-    if (diff.toDelete.length || diff.toAdd.length) {
-      const result = await syncIpEntries(currentUserId, diff);
+      if (diff.toDelete.length || diff.toAdd.length) {
+        const result = await syncUserIpEntries(currentUserId, diff);
 
-      if (!result.ok) {
-        setIpError(result.error ?? __('Failed to sync IP entries', 'bromate-security-api-firewall'));
-        setSaving(false);
-        return;
+        if (!result.ok) {
+          setIpError(result.error ?? __('Failed to sync IP entries', 'bromate-security-api-firewall'));
+          setSaving(false);
+          return;
+        }
+
+        finalIpEntries = result.entries;
+        applyIpEntries(result.entries);
       }
-
-      finalIpEntries = result.entries;
-      applyIpEntries(result.entries);
     }
-  }
 
     const meta: AuthorizedUserMeta = {
       id: wpUserId as number,
@@ -258,7 +343,7 @@ const handleDeleteClick = () => {
               disablePortal
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
-                  <Box>
+                  <Stack>
                     <Stack direction="row" alignItems="center" gap={1}>
                       <Typography variant="body2" fontWeight={500}>
                         {option.display_name}
@@ -270,7 +355,7 @@ const handleDeleteClick = () => {
                     <Typography variant="caption" color="text.secondary">
                       {option.email} · ID #{option.id} · {option.roles.join(', ')}
                     </Typography>
-                  </Box>
+                  </Stack>
                 </li>
               )}
               renderInput={(params) => (
@@ -348,7 +433,7 @@ const handleDeleteClick = () => {
             <Stack direction="row" alignItems="flex-end" gap={1}>
               <ReadonlyField label={__('Name', 'bromate-security-api-firewall')}  value={selectedWpUser?.display_name ?? form.display_name} />
               {selectedWpUser?.current_user && (
-                  <Box mt={0.5}><Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} /></Box>
+                  <Stack mt={0.5}><Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} /></Stack>
                 )}
             </Stack>
             <ReadonlyField label={__('Email', 'bromate-security-api-firewall')} value={selectedWpUser?.email ?? form.email} />
@@ -395,25 +480,35 @@ const handleDeleteClick = () => {
           />
 
           <TextField
-            label={__('Whitelisted IPs (one per line)', 'bromate-security-api-firewall')}
+            label={__('Add Whitelisted IPs (optional)', 'bromate-security-api-firewall')}
             placeholder={'203.0.113.1\n203.0.113.0/24'}
             value={ipListValue}
             onChange={(e) => setIpListValue(e.target.value)}
+            onBlur={handleIpListBlur}
             multiline
             minRows={3}
             fullWidth size="small"
             disabled={noUser}
-            helperText={__('Add or remove a line to grant or revoke that IP on save.', 'bromate-security-api-firewall')}
+            error={Boolean(ipFormatError)}
+            helperText={ipFormatError ?? __('Add IPv4 or IPv6, one IP per line.', 'bromate-security-api-firewall')}
           />
           <TextField
             label={__('Allowed origin (optional)', 'bromate-security-api-firewall')}
             placeholder="https://app.example.com"
             value={ipListReferrer}
             onChange={(e) => setIpListReferrer(e.target.value)}
+            onBlur={handleOriginBlur}
             fullWidth size="small"
-            disabled={noUser}
-            helperText={__('If set, all IPs above are restricted to this origin.', 'bromate-security-api-firewall')}
+            disabled={noUser || !hasWhitelistedIps}
+            error={Boolean(originFormatError)}
+            helperText={
+              originFormatError
+                ?? (hasWhitelistedIps
+                  ? __('If set, all IPs above are restricted to this origin.', 'bromate-security-api-firewall')
+                  : __('Add at least one whitelisted IP to set an origin.', 'bromate-security-api-firewall'))
+            }
           />
+
           {ipError && (
             <Alert severity="error" variant="outlined">
               <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{ipError}</Typography>
@@ -440,7 +535,7 @@ const handleDeleteClick = () => {
           onClick={handleSave}
           disableElevation
           variant="contained"
-          disabled={!isValid || saving || subclaimLoading}
+          disabled={!isValid || saving || subclaimLoading || !isDirty || hasFormatErrors}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
         >
           {saving ? __('Saving…', 'bromate-security-api-firewall') : isEditing ? __('Save', 'bromate-security-api-firewall') : __('Add user', 'bromate-security-api-firewall') }

@@ -6,12 +6,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Logger {
 
-	public static function log(
-		string $event,
-		string $severity = 'info',
-		array $details = array(),
-		string $ip = ''
-	): bool {
+	public static function log( string $event, string $severity = 'info', array $details = array(), string $ip = '' ): bool {
 
 		$event    = LogsRepository::sanitize_event( $event );
 		$severity = LogsRepository::sanitize_severity( $severity );
