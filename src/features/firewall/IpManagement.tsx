@@ -223,7 +223,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
             ip: e.ip,
             referrer: e.referrer || null,
             expires_at: e.expires_at || null,
-            user_id: e.user_id || null,
           }))
         ),
         list_type: form.list_type,
@@ -418,8 +417,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
         onSave={handleEditEntry}
         onClose={() => setEditingIp(null)}
         wpUsers={wpUsers}
-        wpUsersLoading={wpUsersLoading}
-        authorizedUserIds={authorizedUserIds}
       />
 
     </>

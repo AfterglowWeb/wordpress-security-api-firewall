@@ -169,6 +169,7 @@ class IpEntriesAjaxController {
 		$common_data = array(
 			// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 			'list_type' => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
+			'user_id'   => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
 		);
 
 		$ip_entries = array();
@@ -187,7 +188,6 @@ class IpEntriesAjaxController {
 				array(
 					'ip'         => $ip,
 					'referrer'   => ! empty( $raw_entry['referrer'] ) ? sanitize_url( $raw_entry['referrer'] ) : null,
-					'user_id'    => ! empty( $raw_entry['user_id'] ) ? absint( $raw_entry['user_id'] ) : null,
 					'expires_at' => ! empty( $raw_entry['expires_at'] ) ? sanitize_text_field( $raw_entry['expires_at'] ) : null,
 				)
 			);
