@@ -5,6 +5,7 @@ import { __ } from '@wordpress/i18n';
 export interface DesiredIpEntry {
   ip: string;
   referrer: string | null;
+  expires_at: string | null;
 }
 
 interface IpEntriesDiff {
@@ -31,27 +32,34 @@ export function computeIpEntriesDiff(
   ipEntries: IpEntry[],
   desired: DesiredIpEntry[]
 ): IpEntriesDiff {
-  const desiredMap = new Map<string, string | null>();
-  desired.forEach(({ ip, referrer }) => {
+  const desiredMap = new Map<string, { referrer: string | null; expires_at: string | null }>();
+  desired.forEach(({ ip, referrer, expires_at }) => {
     const trimmedIp = ip.trim();
     if (!trimmedIp) return;
-    desiredMap.set(trimmedIp, referrer?.trim() || null);
+    desiredMap.set(trimmedIp, {
+      referrer: referrer?.trim() || null,
+      expires_at: expires_at?.trim() || null,
+    });
   });
 
   const toDelete = ipEntries.filter((e) => {
-    if (!desiredMap.has(e.ip)) return true;
-    return desiredMap.get(e.ip) !== (e.referrer ?? null);
+    const desired = desiredMap.get(e.ip);
+    if (!desired) return true;
+    return desired.referrer !== (e.referrer ?? null) || desired.expires_at !== (e.expires_at ?? null);
   });
 
   const matchedIps = new Set(
     ipEntries
-      .filter((e) => desiredMap.has(e.ip) && desiredMap.get(e.ip) === (e.referrer ?? null))
+      .filter((e) => {
+        const desired = desiredMap.get(e.ip);
+        return desired && desired.referrer === (e.referrer ?? null) && desired.expires_at === (e.expires_at ?? null);
+      })
       .map((e) => e.ip)
   );
 
   const toAdd: DesiredIpEntry[] = [];
-  desiredMap.forEach((referrer, ip) => {
-    if (!matchedIps.has(ip)) toAdd.push({ ip, referrer });
+  desiredMap.forEach((value, ip) => {
+    if (!matchedIps.has(ip)) toAdd.push({ ip, referrer: value.referrer, expires_at: value.expires_at });
   });
 
   return { toDelete, toAdd };

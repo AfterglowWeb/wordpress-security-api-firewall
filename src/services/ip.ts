@@ -10,7 +10,7 @@ export interface LineResult {
 }
 
 export interface AddIpEntriesForm {
-  entries: { ip: string; referrer: string | null, expires_at:string | null, user_id:number | null}[];
+  entries: { ip: string; referrer: string | null, expires_at:string | null}[];
   list_type: ListType;
 }
 

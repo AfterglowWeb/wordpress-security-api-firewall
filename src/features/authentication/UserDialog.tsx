@@ -44,7 +44,7 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
 function serializeIpRows(rows: IpOriginRow[]): string {
   return JSON.stringify(
     rows
-      .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim(), expires_at: r.expires_at.trim() }))
+      .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim(), expires_at: r.expires_at?.trim() || '' }))
       .filter((r) => r.ip !== '')
       .sort((a, b) => a.ip.localeCompare(b.ip))
   );
@@ -235,11 +235,16 @@ export default function UserDialog({
 
     let finalIpEntries = ipEntries;
 
+    
     if (currentUserId) {
       const diff = computeIpEntriesDiff(
         ipEntries,
         ipRows
-          .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim() || null }))
+          .map((r) => ({
+            ip: r.ip.trim(),
+            referrer: r.referrer.trim() || null,
+            expires_at: r.expires_at?.trim() || null,
+          }))
           .filter((r) => r.ip !== '')
       );
 
@@ -479,6 +484,7 @@ export default function UserDialog({
                 onChange={setIpRows}
                 disabled={noUser}
                 onValidityChange={setIpRowsHaveErrors}
+                listType="whitelist"
               />
           </Stack>
 
