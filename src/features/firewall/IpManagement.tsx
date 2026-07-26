@@ -22,8 +22,11 @@ import * as Flags from 'country-flag-icons/react/3x2';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import { useNavigation } from '@contexts/NavigationContext';
 import { IpAPI, type IpEntry, type ListType, type AddIpEntriesForm, type LineResult } from '@services/ip';
-import type { AuthorizedUser } from '@app-types/auth';
-import IpEntryDialog from '@features/firewall/IpEntryDialog';
+import type { AuthorizedUser, AuthorizedUserMeta } from '@app-types/auth';
+import AddIpEntriesDialog from '@features/firewall/AddIpEntriesDialog';
+import EditIpEntryDialog, { type EditIpEntryPayload } from '@features/firewall/EditIpEntryDialog';
+import { apiRequest } from '@services/api';
+
 
 function FilterToolbar() {
   const apiRef = useGridApiContext();
@@ -144,11 +147,16 @@ interface IpManagementProps {
   wpUsersLoading: boolean;
 }
 
+interface AddIpEntriesResponse {
+  add_count: number;
+  update_count: number;
+}
+
 export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementProps) {
   const [listType, setListType] = useState<ListType>('blacklist');
   const [rows, setRows] = useState<IpEntry[]>([]);
   const { openDialog } = useDialog();
-  const [entryDialogOpen, setEntryDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selection, setSelection] = useState<GridRowSelectionModel>({
     type: 'include',
     ids: new Set(),
@@ -158,6 +166,8 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
     items: [],
     quickFilterExcludeHiddenColumns: false,
   });
+
+  const [authorizedUserIds, setAuthorizedUserIds] = useState<number[]>([]);
 
   const { consumePanelParams } = useNavigation();
 
@@ -171,6 +181,25 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const fetchAuthorizedUsers = async () => {
+      try {
+        const users = await apiRequest<AuthorizedUserMeta[]>('bromate_get_authorized_users');
+        const valid = Array.isArray(users)
+          ? users.filter(
+              (u): u is AuthorizedUserMeta =>
+                u !== null && typeof u === 'object' && typeof u.id === 'number'
+            )
+          : [];
+        setAuthorizedUserIds(valid.map((u) => u.id));
+      } catch {
+        setAuthorizedUserIds([]);
+      }
+    };
+
+    fetchAuthorizedUsers();
+  }, []);
+
   const load = useCallback(async () => {
     const [black, white] = await Promise.all([
       IpAPI.getEntries('blacklist'),
@@ -178,45 +207,58 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
     ]);
     setRows([...black.entries, ...white.entries]);
   }, []);
+  
 
   const handleAddEntries = async (form: AddIpEntriesForm): Promise<LineResult[]> => {
-    if (editingIp) {
-      await IpAPI.updateEntry(editingIp.id, {
-        list_type: form.list_type,
-        user_id: form.user_id,
-        referrer: form.referrer || null,
-        expires_at: form.expires_at || null,
-      });
-      await load();
-      setEntryDialogOpen(false);
-      setEditingIp(null);
+    if (form.entries.length === 0) {
       return [];
     }
 
-    const lines = form.value.split('\n').map((l) => l.trim()).filter(Boolean);
+    let result: AddIpEntriesResponse;
 
-    const results = await Promise.allSettled(
-      lines.map((val) => IpAPI.addEntry(val, form.list_type, form.user_id, form.referrer || null, form.expires_at || null))
-    );
-
-    const errors: LineResult[] = results
-      .map((result, i) => ({ result, val: lines[i] }))
-      .filter(({ result }) => result.status === 'rejected')
-      .map(({ result, val }) => ({
-        value: val,
-        error: (result as PromiseRejectedResult).reason?.message ?? 'Unknown error',
+    try {
+      result = await apiRequest<AddIpEntriesResponse>('bromate_add_ip_entries', {
+        ips: JSON.stringify(
+          form.entries.map((e) => ({
+            ip: e.ip,
+            referrer: e.referrer || null,
+            expires_at: e.expires_at || null,
+            user_id: e.user_id || null,
+          }))
+        ),
+        list_type: form.list_type,
+      });
+    } catch (error) {
+      return form.entries.map((e) => ({
+        value: e.ip,
+        error: error instanceof Error ? error.message : __('Unknown error', 'bromate-security-api-firewall'),
       }));
+    }
 
-    const anySuccess = results.some((r) => r.status === 'fulfilled');
-    if (anySuccess) {
+    const totalSaved = (result.add_count ?? 0) + (result.update_count ?? 0);
+
+    if (totalSaved > 0) {
       if (form.list_type !== listType) setListType(form.list_type);
       await load();
     }
 
-    if (errors.length === 0) setEntryDialogOpen(false);
-    return errors;
+    if (totalSaved >= form.entries.length) {
+      setAddDialogOpen(false);
+      return [];
+    }
+
+    return [{
+      value: __('one or more entries', 'bromate-security-api-firewall'),
+      error: __('Some entries were not saved. Check the IP/CIDR format.', 'bromate-security-api-firewall'),
+    }];
   };
 
+  const handleEditEntry = async (payload: EditIpEntryPayload): Promise<void> => {
+    if (!editingIp) return;
+    await IpAPI.updateEntry(editingIp.id, payload);
+    await load();
+    setEditingIp(null);
+  };
 
   const handleDeleteSelected = useCallback(async (rows: Map<GridRowId, IpEntry>) => {
     if (rows.size === 0) return;
@@ -231,19 +273,16 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
       confirmLabel: __('Remove all', 'bromate-security-api-firewall'),
       cancelLabel: __('Cancel', 'bromate-security-api-firewall'),
       onConfirm: async () => {
-  
-          const ids = Array.from(rows.keys()).map(Number);
-          await IpAPI.deleteEntries(ids);
-          setSelection({ type: 'include', ids: new Set() });
-          await load();
-        
+        const ids = Array.from(rows.keys()).map(Number);
+        await IpAPI.deleteEntries(ids);
+        setSelection({ type: 'include', ids: new Set() });
+        await load();
       },
     });
   }, [openDialog, load]);
 
   const handleEditIp = useCallback((ip: IpEntry) => {
     setEditingIp(ip);
-    setEntryDialogOpen(true);
   }, []);
 
   const handleDeleteIp = useCallback((id: GridRowId) => {
@@ -353,7 +392,7 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
             slots={toolbarSlots}
             slotProps={{
               toolbar: {
-                onAdd: () => setEntryDialogOpen(true),
+                onAdd: () => setAddDialogOpen(true),
                 onDeleteSelectedIps: handleDeleteSelected,
               } as any,
             }}
@@ -363,17 +402,24 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
         </Stack>
       </Paper>
 
-      <IpEntryDialog
-        open={entryDialogOpen}
+      <AddIpEntriesDialog
+        open={addDialogOpen}
         defaultListType={listType}
-        editingEntry={editingIp}
         onSave={handleAddEntries}
-        onClose={() => {
-          setEntryDialogOpen(false);
-          setEditingIp(null);
-        }}
+        onClose={() => setAddDialogOpen(false)}
         wpUsers={wpUsers}
         wpUsersLoading={wpUsersLoading}
+        authorizedUserIds={authorizedUserIds}
+      />
+
+      <EditIpEntryDialog
+        open={editingIp !== null}
+        entry={editingIp}
+        onSave={handleEditEntry}
+        onClose={() => setEditingIp(null)}
+        wpUsers={wpUsers}
+        wpUsersLoading={wpUsersLoading}
+        authorizedUserIds={authorizedUserIds}
       />
 
     </>

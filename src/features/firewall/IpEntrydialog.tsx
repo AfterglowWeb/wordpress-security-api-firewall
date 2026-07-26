@@ -16,7 +16,7 @@ import {
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import IpOriginRepeater, { type IpOriginRow, createEmptyRow } from '@components/IpOriginRepeater';
+import AddIpEntriesRepeater, { type IpOriginRow, createEmptyRow } from '@components/AddIpEntriesRepeater';
 
 interface IpEntryDialogProps {
   open: boolean;
@@ -43,7 +43,6 @@ export default function IpEntryDialog({
   const [ipRowsHaveErrors, setIpRowsHaveErrors] = useState(false);
   const [listType, setListType] = useState<ListType>(defaultListType);
   const [userId, setUserId] = useState<number | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<LineResult[]>([]);
@@ -57,15 +56,15 @@ export default function IpEntryDialog({
           key: `existing-${editingEntry.id}`, 
           ip: editingEntry.ip, 
           referrer: editingEntry.referrer ?? '', 
-          expires_at: editingEntry.expires_at ?? '' }]);
+          user_id: editingEntry.user_id ?? null, 
+          expires_at: editingEntry.expires_at ?? '',
+          entry_origin: editingEntry.entry_origin ?? '' }]);
         setListType(editingEntry.list_type);
         setUserId(editingEntry.user_id ?? null);
-        setExpiresAt(editingEntry.expires_at ?? null);
       } else {
         setIpRows([createEmptyRow()]);
         setListType(defaultListType);
         setUserId(null);
-        setExpiresAt(null);
       }
       setErrors([]);
       setIpRowsHaveErrors(false);
@@ -81,10 +80,14 @@ export default function IpEntryDialog({
 
     const form: AddIpEntriesForm = {
       entries: ipRows
-        .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim(), expires_at: r.expires_at.trim() }))
+        .map((r) => ({ 
+          ip: r.ip.trim(), 
+          referrer: r.referrer.trim(), 
+          user_id: r.user_id ?? null, 
+          expires_at: r.expires_at?.trim() ?? null })
+        )
         .filter((r) => r.ip !== ''),
       list_type: listType,
-      user_id: listType === 'whitelist' ? userId : null,
     };
 
     const lineErrors = await onSave(form);
@@ -149,11 +152,12 @@ export default function IpEntryDialog({
             </Stack>
           )}
 
-          <IpOriginRepeater
+          <AddIpEntriesRepeater
             rows={ipRows}
             onChange={setIpRows}
             disabled={saving || isEditing}
             onValidityChange={setIpRowsHaveErrors}
+            listType={listType}
           />
 
          
