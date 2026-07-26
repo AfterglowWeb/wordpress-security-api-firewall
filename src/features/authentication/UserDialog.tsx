@@ -5,7 +5,7 @@ import type { IpEntry } from '@services/ip';
 import { apiRequest } from '@services/api';
 import { computeIpEntriesDiff, syncUserIpEntries } from '@services/ip-entries-sync';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
-import { findInvalidIpLines, isValidOrigin } from '@app-utils/ipValidation';
+import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 import Switch from '@mui/material/Switch';
 import Dialog from '@mui/material/Dialog';
@@ -25,10 +25,8 @@ import IconButton from '@mui/material/IconButton';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 
-
-
-import { usePortalContainer } from '@contexts/PortalContainerContext';
 import CopyButton from '@components/CopyButton';
+import IpOriginRepeater, { type IpOriginRow } from '@components/IpOriginRepeater';
 
 const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
   display_name: '',
@@ -43,12 +41,22 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
   has_wp_app_password: false,
 };
 
+function serializeIpRows(rows: IpOriginRow[]): string {
+  return JSON.stringify(
+    rows
+      .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim(), expires_at: r.expires_at.trim() }))
+      .filter((r) => r.ip !== '')
+      .sort((a, b) => a.ip.localeCompare(b.ip))
+  );
+}
+
 export default function UserDialog({
   open, user, onSave, onDelete, onClose,
   wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers,
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
 
+  const { openDialog } = useDialog();
   const portalContainer = usePortalContainer();
   const isEditing = user !== null;
   const isWpAuth = authMethod === 'wp_auth';
@@ -58,21 +66,24 @@ export default function UserDialog({
   const [saving, setSaving]               = useState(false);
   const [saveError, setSaveError]         = useState<string | null>(null);
   const [subclaimLoading, setSubclaimLoading] = useState(false);
+  const noUser = !isEditing && selectedWpUser === null;
+  const currentUserId = isEditing ? user!.id : (selectedWpUser?.id ?? null);
+  const isValid = wpUserId !== '' && form.display_name.trim() !== '';
+
+  const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
+  const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
 
   const [ipEntries, setIpEntries]     = useState<IpEntry[]>([]);
-  const [ipListValue, setIpListValue] = useState('');
-  const [ipListReferrer, setIpListReferrer] = useState('');
   const [ipError, setIpError]         = useState<string | null>(null);
 
-  const [ipFormatError, setIpFormatError] = useState<string | null>(null);
-  const [originFormatError, setOriginFormatError] = useState<string | null>(null);
+  const [ipRows, setIpRows] = useState<IpOriginRow[]>([]);
+  const [ipRowsHaveErrors, setIpRowsHaveErrors] = useState(false);
 
   interface DirtySnapshot {
     wpUserId: number | '';
     status: AuthorizedUser['status'];
     expiresAt: string;
-    ipListValue: string;
-    ipListReferrer: string;
+    ipRowsSnapshot: string;
   }
   const baselineRef = useRef<DirtySnapshot | null>(null);
 
@@ -83,36 +94,20 @@ export default function UserDialog({
       wpUserId !== b.wpUserId ||
       form.status !== b.status ||
       (form.expires_at || '') !== b.expiresAt ||
-      ipListValue !== b.ipListValue ||
-      ipListReferrer !== b.ipListReferrer
+      serializeIpRows(ipRows) !== b.ipRowsSnapshot
     );
-  }, [wpUserId, form.status, form.expires_at, ipListValue, ipListReferrer]);
+  }, [wpUserId, form.status, form.expires_at, ipRows]);
 
-  const hasFormatErrors = Boolean(ipFormatError) || Boolean(originFormatError);
+  const hasFormatErrors = ipRowsHaveErrors;
 
-  const hasWhitelistedIps = useMemo(
-    () => ipListValue.split('\n').some((line) => line.trim() !== ''),
-    [ipListValue]
-  );
-
-  useEffect(() => {
-    if (!hasWhitelistedIps) {
-      setOriginFormatError(null);
-    }
-  }, [hasWhitelistedIps]);
-
-  const noUser = !isEditing && selectedWpUser === null;
-  const currentUserId = isEditing ? user!.id : (selectedWpUser?.id ?? null);
-  const isValid = wpUserId !== '' && form.display_name.trim() !== '';
-
-  const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
-  const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
-  const { openDialog } = useDialog();
-  
   const applyIpEntries = (entries: IpEntry[]) => {
     setIpEntries(entries);
-    setIpListValue(entries.map((e) => e.ip).join('\n'));
-    setIpListReferrer(entries.length > 0 ? (entries[0].referrer ?? '') : '');
+    setIpRows(entries.map((e) => ({ 
+      key: `existing-${e.id}`, 
+      ip: e.ip, 
+      referrer: e.referrer ?? '', 
+      expires_at: e.expires_at ?? '' 
+    })));
   };
 
   useEffect(() => {
@@ -120,8 +115,12 @@ export default function UserDialog({
 
     if (user) {
       const resolvedIpEntries = user.ip_entries ?? [];
-      const resolvedIpListValue = resolvedIpEntries.map((e) => e.ip).join('\n');
-      const resolvedReferrer = resolvedIpEntries.length > 0 ? (resolvedIpEntries[0].referrer ?? '') : '';
+      const resolvedRows: IpOriginRow[] = resolvedIpEntries.map((e) => ({
+        key: `existing-${e.id}`,
+        ip: e.ip,
+        referrer: e.referrer ?? '',
+        expires_at: e.expires_at ?? '',
+      }));
 
       setWpUserId(user.id);
       setForm({
@@ -136,33 +135,32 @@ export default function UserDialog({
         ip_entries:   resolvedIpEntries,
         has_wp_app_password: user.has_wp_app_password ?? false,
       });
-      applyIpEntries(resolvedIpEntries);
+      setIpEntries(resolvedIpEntries);
+      setIpRows(resolvedRows);
       setSelectedWpUser(user);
 
       baselineRef.current = {
         wpUserId: user.id,
         status: user.status || 'active',
         expiresAt: user.expires_at ?? '',
-        ipListValue: resolvedIpListValue,
-        ipListReferrer: resolvedReferrer,
+        ipRowsSnapshot: serializeIpRows(resolvedRows),
       };
     } else {
       setWpUserId('');
       setForm(EMPTY_FORM);
       setSelectedWpUser(null);
-      applyIpEntries([]);
+      setIpEntries([]);
+      setIpRows([]);
 
       baselineRef.current = {
         wpUserId: '',
         status: 'active',
         expiresAt: '',
-        ipListValue: '',
-        ipListReferrer: '',
+        ipRowsSnapshot: serializeIpRows([]),
       };
     }
     setIpError(null);
-    setIpFormatError(null);
-    setOriginFormatError(null);
+    setIpRowsHaveErrors(false);
     setSaveError(null);
     setSaving(false);
   }, [open, user]);
@@ -207,27 +205,6 @@ export default function UserDialog({
   const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleIpListBlur = () => {
-    const invalid = findInvalidIpLines(ipListValue);
-    setIpFormatError(
-      invalid.length > 0
-        ? sprintf(__('Invalid IP or CIDR: %s', 'bromate-security-api-firewall'), invalid.join(', '))
-        : null
-    );
-  };
-
-  const handleOriginBlur = () => {
-    if (!ipListReferrer.trim()) {
-      setOriginFormatError(null);
-      return;
-    }
-    setOriginFormatError(
-      isValidOrigin(ipListReferrer)
-        ? null
-        : __('Enter a valid origin, e.g. https://app.example.com', 'bromate-security-api-firewall')
-    );
-  };
-
   const handleRevokeUser = () => {
     if (!isEditing) return;
 
@@ -259,7 +236,12 @@ export default function UserDialog({
     let finalIpEntries = ipEntries;
 
     if (currentUserId) {
-      const diff = computeIpEntriesDiff(ipEntries, ipListValue, ipListReferrer);
+      const diff = computeIpEntriesDiff(
+        ipEntries,
+        ipRows
+          .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim() || null }))
+          .filter((r) => r.ip !== '')
+      );
 
       if (diff.toDelete.length || diff.toAdd.length) {
         const result = await syncUserIpEntries(currentUserId, diff);
@@ -288,7 +270,7 @@ export default function UserDialog({
 
     try {
       await apiRequest<AuthorizedUserMeta[]>('bromate_update_authorized_users', {
-        users: JSON.stringify(newAuthUsers),
+        authorized_users: JSON.stringify(newAuthUsers),
       });
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : __('Failed to save user', 'bromate-security-api-firewall'));
@@ -319,7 +301,13 @@ export default function UserDialog({
   );
 
   return (
-    <Dialog container={portalContainer} open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog 
+    container={portalContainer} 
+    open={open} 
+    onClose={onClose} 
+    fullWidth 
+    maxWidth="md"
+    >
       <DialogTitle>
         {isEditing ? sprintf(__('Edit Authorized User — %s', 'bromate-security-api-firewall' ), user?.display_name) 
         : __('Add Authorized User', 'bromate-security-api-firewall')}
@@ -332,49 +320,51 @@ export default function UserDialog({
         <Stack direction="column" gap={2}>
 
           {!isEditing && (
-            <Autocomplete<AuthorizedUser>
-              options={wpUsers}
-              loading={wpUsersLoading}
-              getOptionLabel={(o) => o.display_name}
-              isOptionEqualToValue={(o, v) => o.id === v.id}
-              value={selectedWpUser}
-              onChange={handleWpUserSelect}
-              getOptionDisabled={(o) => authorizedUserIds.includes(o.id)}
-              disablePortal
-              renderOption={(props, option) => (
-                <li {...props} key={option.id}>
-                  <Stack>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                      <Typography variant="body2" fontWeight={500}>
-                        {option.display_name}
+      
+              <Autocomplete<AuthorizedUser>
+                options={wpUsers}
+                loading={wpUsersLoading}
+                getOptionLabel={(o) => o.display_name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                value={selectedWpUser}
+                onChange={handleWpUserSelect}
+                getOptionDisabled={(o) => authorizedUserIds.includes(o.id)}
+                disablePortal
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <Stack>
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <Typography variant="body2" fontWeight={500}>
+                          {option.display_name}
+                        </Typography>
+                        {option.current_user && (
+                          <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
+                        )}
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email} · ID #{option.id} · {option.roles.join(', ')}
                       </Typography>
-                      {option.current_user && (
-                        <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
-                      )}
                     </Stack>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.email} · ID #{option.id} · {option.roles.join(', ')}
-                    </Typography>
-                  </Stack>
-                </li>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={__('Select WordPress user', 'bromate-security-api-firewall')}
-                  size="small"
-                  slotProps={{ input: {
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {wpUsersLoading && <CircularProgress size={16} />}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}}
-                />
-              )}
-            />
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={__('Select WordPress user', 'bromate-security-api-firewall')}
+                    size="small"
+                    slotProps={{ input: {
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {wpUsersLoading && <CircularProgress size={16} />}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}}
+                  />
+                )}
+              />
+         
           )}
 
           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -451,21 +441,21 @@ export default function UserDialog({
           </Stack>
 
           { !isWpAuth && 
-          <Stack sx={{ position: 'relative' }}>
-          <TextField
-            label={__('JWT sub claim', 'bromate-security-api-firewall')} 
-            value={form.jwt_subclaim}
-            disabled={noUser}
-            size="small"
-            slotProps={{
-              htmlInput: { readOnly: true },
-              input: {
-                endAdornment: subclaimLoading ? <CircularProgress size={16} /> : undefined,
-              },
-            }}
-            helperText={ __('Expected value in the incoming token\'s subclaim.', 'bromate-security-api-firewall')}
-          />
-          {form.jwt_subclaim && !subclaimLoading && <CopyButton toCopy={form.jwt_subclaim} sx={{ position: 'absolute', top: '4px', right: '12px', height: '32px', width: '32px' }} />}
+          <Stack sx={{ position: 'relative', maxWidth:400 }}>
+            <TextField
+              label={__('JWT sub claim', 'bromate-security-api-firewall')} 
+              value={form.jwt_subclaim}
+              disabled={noUser}
+              size="small"
+              slotProps={{
+                htmlInput: { readOnly: true },
+                input: {
+                  endAdornment: subclaimLoading ? <CircularProgress size={16} /> : undefined,
+                },
+              }}
+              helperText={ __('Expected value in the incoming token\'s subclaim.', 'bromate-security-api-firewall')}
+            />
+            {form.jwt_subclaim && !subclaimLoading && <CopyButton toCopy={form.jwt_subclaim} sx={{ position: 'absolute', top: '4px', right: '12px', height: '32px', width: '32px' }} />}
           </Stack>
           }
           <TextField
@@ -479,35 +469,18 @@ export default function UserDialog({
             sx={{maxWidth:200}}
           />
 
-          <TextField
-            label={__('Add Whitelisted IPs (optional)', 'bromate-security-api-firewall')}
-            placeholder={'203.0.113.1\n203.0.113.0/24'}
-            value={ipListValue}
-            onChange={(e) => setIpListValue(e.target.value)}
-            onBlur={handleIpListBlur}
-            multiline
-            minRows={3}
-            fullWidth size="small"
-            disabled={noUser}
-            error={Boolean(ipFormatError)}
-            helperText={ipFormatError ?? __('Add IPv4 or IPv6, one IP per line.', 'bromate-security-api-firewall')}
-          />
-          <TextField
-            label={__('Allowed origin (optional)', 'bromate-security-api-firewall')}
-            placeholder="https://app.example.com"
-            value={ipListReferrer}
-            onChange={(e) => setIpListReferrer(e.target.value)}
-            onBlur={handleOriginBlur}
-            fullWidth size="small"
-            disabled={noUser || !hasWhitelistedIps}
-            error={Boolean(originFormatError)}
-            helperText={
-              originFormatError
-                ?? (hasWhitelistedIps
-                  ? __('If set, all IPs above are restricted to this origin.', 'bromate-security-api-firewall')
-                  : __('Add at least one whitelisted IP to set an origin.', 'bromate-security-api-firewall'))
-            }
-          />
+          <Stack spacing={2}>
+            <Stack sx={{pl:2, opacity: noUser ? 0.5 : 1}}>
+            <Typography variant="body2">{__('IPs Whitelist (optional)')}</Typography>
+            <Typography variant="caption" color="text.secondary">{__('IPv4, IPv6 and CIDR are supported.')}</Typography>
+            </Stack>
+              <IpOriginRepeater
+                rows={ipRows}
+                onChange={setIpRows}
+                disabled={noUser}
+                onValidityChange={setIpRowsHaveErrors}
+              />
+          </Stack>
 
           {ipError && (
             <Alert severity="error" variant="outlined">

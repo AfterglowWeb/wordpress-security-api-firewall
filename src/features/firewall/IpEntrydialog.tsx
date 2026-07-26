@@ -1,10 +1,9 @@
 import { useState, useEffect } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
-import { type IpEntry, type ListType, type AddEntryForm, type LineResult } from '@services/ip';
+import { type IpEntry, type ListType, type AddIpEntriesForm, type LineResult } from '@services/ip';
 import type { AuthorizedUser } from '@app-types/auth';
 import { apiRequest } from '@services/api';
-import { findInvalidIpLines, isValidOrigin } from '@app-utils/ipValidation';
 
 import {
   Box, Typography,
@@ -17,19 +16,12 @@ import {
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-
-const EMPTY_FORM: AddEntryForm = {
-  value: '',
-  list_type: 'blacklist',
-  user_id: null,
-  referrer: '',
-  expires_at: null,
-};
+import IpOriginRepeater, { type IpOriginRow, createEmptyRow } from '@components/IpOriginRepeater';
 
 interface IpEntryDialogProps {
   open: boolean;
   defaultListType: ListType;
-  onSave: (form: AddEntryForm) => Promise<LineResult[]>;
+  onSave: (form: AddIpEntriesForm) => Promise<LineResult[]>;
   onClose: () => void;
   wpUsers: AuthorizedUser[];
   wpUsersLoading: boolean;
@@ -45,38 +37,56 @@ export default function IpEntryDialog({
   wpUsersLoading, 
   editingEntry 
 }: IpEntryDialogProps) {
-  const [form, setForm] = useState<AddEntryForm>({ ...EMPTY_FORM, list_type: defaultListType });
+  const isEditing = editingEntry !== null;
+
+  const [ipRows, setIpRows] = useState<IpOriginRow[]>([createEmptyRow()]);
+  const [ipRowsHaveErrors, setIpRowsHaveErrors] = useState(false);
+  const [listType, setListType] = useState<ListType>(defaultListType);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<LineResult[]>([]);
   const portalContainer = usePortalContainer();
   const [currentUserIp, setCurrentUserIp] = useState('');
 
-    const [ipFormatError, setIpFormatError] = useState<string | null>(null);
-    const [originFormatError, setOriginFormatError] = useState<string | null>(null);
-
   useEffect(() => {
     if (open) {
       if (editingEntry) {
-        setForm({
-          value: editingEntry.ip,
-          list_type: editingEntry.list_type,
-          user_id: editingEntry.user_id ?? null,
-          referrer: editingEntry.referrer ?? '',
-          expires_at: editingEntry.expires_at ?? null,
-        });
+        setIpRows([{ 
+          key: `existing-${editingEntry.id}`, 
+          ip: editingEntry.ip, 
+          referrer: editingEntry.referrer ?? '', 
+          expires_at: editingEntry.expires_at ?? '' }]);
+        setListType(editingEntry.list_type);
+        setUserId(editingEntry.user_id ?? null);
+        setExpiresAt(editingEntry.expires_at ?? null);
       } else {
-        setForm({ ...EMPTY_FORM, list_type: defaultListType });
+        setIpRows([createEmptyRow()]);
+        setListType(defaultListType);
+        setUserId(null);
+        setExpiresAt(null);
       }
       setErrors([]);
+      setIpRowsHaveErrors(false);
     }
   }, [open, defaultListType, editingEntry]);
 
-  const update = <K extends keyof AddEntryForm>(key: K, value: AddEntryForm[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const hasAnyIp = ipRows.some((r) => r.ip.trim() !== '');
+  const canSave = hasAnyIp && !ipRowsHaveErrors && !saving;
 
   const handleSave = async () => {
     setSaving(true);
     setErrors([]);
+
+    const form: AddIpEntriesForm = {
+      entries: ipRows
+        .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim(), expires_at: r.expires_at.trim() }))
+        .filter((r) => r.ip !== ''),
+      list_type: listType,
+      user_id: listType === 'whitelist' ? userId : null,
+    };
+
     const lineErrors = await onSave(form);
     setSaving(false);
     if (lineErrors.length > 0) setErrors(lineErrors);
@@ -93,11 +103,17 @@ export default function IpEntryDialog({
     fetchUserIp();
   }, [fetchUserIp]);
 
-  const handleAddUserIp = async () => {
-    if(currentUserIp) {
-      update('value', currentUserIp);
-    }
-  }
+  const handleAddUserIp = () => {
+    if (!currentUserIp) return;
+
+    setIpRows((prev) => {
+      const emptyIndex = prev.findIndex((r) => r.ip.trim() === '');
+      if (emptyIndex !== -1) {
+        return prev.map((r, i) => (i === emptyIndex ? { ...r, ip: currentUserIp } : r));
+      }
+      return [...prev, { ...createEmptyRow(), ip: currentUserIp }];
+    });
+  };
 
   return (
     <Dialog
@@ -105,10 +121,10 @@ export default function IpEntryDialog({
       open={open}
       onClose={saving ? undefined : onClose}
       fullWidth 
-      maxWidth="xs"
+      maxWidth="md"
     >
       <DialogTitle>
-        {editingEntry ? __('Edit IP Entry', 'bromate-security-api-firewall') : __('Add IP Entry', 'bromate-security-api-firewall') }
+        {isEditing ? __('Edit IP Entry', 'bromate-security-api-firewall') : __('Add IP Entries', 'bromate-security-api-firewall') }
          <IconButton onClick={onClose} sx={{position:'absolute', right:'8px', top:'8px', zIndex:10}}>
           <CloseIcon fontSize="large" />
         </IconButton>
@@ -119,60 +135,37 @@ export default function IpEntryDialog({
             <FormLabel>List</FormLabel>
             <RadioGroup 
               row 
-              value={form.list_type}
-              onChange={(e) => update('list_type', e.target.value as ListType)}
+              value={listType}
+              onChange={(e) => setListType(e.target.value as ListType)}
             >
-              <FormControlLabel value="blacklist" control={<Radio size="small" />} label="Blacklist" />
-              <FormControlLabel value="whitelist" control={<Radio size="small" />} label="Whitelist" />
+              <FormControlLabel value="blacklist" control={<Radio size="small" />} label="Blacklist" disabled={isEditing} />
+              <FormControlLabel value="whitelist" control={<Radio size="small" />} label="Whitelist" disabled={isEditing} />
             </RadioGroup>
           </FormControl>
 
-          {form.list_type === 'whitelist' && (
+          {listType === 'whitelist' && !isEditing && (
             <Stack flexDirection={"row"}>
-            <Button variant="text" size="small" endIcon={<AddIcon />} onClick={handleAddUserIp} >{__('Add my IP')}</Button>
+            <Button variant="text" size="small" endIcon={<AddIcon />} onClick={handleAddUserIp} >{__('Add my IP', 'bromate-security-api-firewall')}</Button>
             </Stack>
           )}
 
-          <TextField
-            label="IP / CIDR"
-            placeholder={'203.0.113.1'}
-            value={form.value}
-            onChange={(e) => update('value', e.target.value)}
-            fullWidth 
-            size="small" 
-            disabled={saving}
+          <IpOriginRepeater
+            rows={ipRows}
+            onChange={setIpRows}
+            disabled={saving || isEditing}
+            onValidityChange={setIpRowsHaveErrors}
           />
 
-          <TextField
-            label="Referrer (optional)"
-            placeholder="https://app.example.com"
-            value={form.referrer}
-            onChange={(e) => update('referrer', e.target.value)}
-            fullWidth 
-            size="small" 
-            disabled={saving}
-            helperText="If set, access is only allowed from this origin"
-          />
-
-          <TextField
-            label="Expires at (optional)"
-            type="datetime-local"
-            value={form.expires_at ?? ''}
-            onChange={(e) => update('expires_at', e.target.value || null)}
-            fullWidth 
-            size="small" 
-            disabled={saving}
-            helperText="Leave empty for no expiration"
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-
-          {form.list_type === 'whitelist' && (
+         
+          {listType === 'whitelist' && (
             <Autocomplete<AuthorizedUser>
               options={wpUsers}
               loading={wpUsersLoading}
               getOptionLabel={(o) => o.display_name}
               isOptionEqualToValue={(o, v) => o.id === v.id}
-              onChange={(_, v) => update('user_id', v?.id ?? null)}
+              value={wpUsers.find((u) => u.id === userId) ?? null}
+              onChange={(_, v) => setUserId(v?.id ?? null)}
+              disabled={saving}
               disablePortal
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
@@ -189,7 +182,7 @@ export default function IpEntryDialog({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Bind to user (optional)"
+                  label={__('Bind to user (optional)', 'bromate-security-api-firewall')}
                   size="small"
                   slotProps={{ 
                     input: {
@@ -210,7 +203,12 @@ export default function IpEntryDialog({
           {errors.length > 0 && (
             <Alert severity="error" variant="outlined">
               <Typography variant="body2" fontWeight={600} mb={0.5}>
-                {errors.length} entr{errors.length > 1 ? 'ies' : 'y'} failed:
+                {sprintf(
+                  errors.length > 1
+                    ? __('%d entries failed:', 'bromate-security-api-firewall')
+                    : __('%d entry failed:', 'bromate-security-api-firewall'),
+                  errors.length
+                )}
               </Typography>
               <List dense disablePadding>
                 {errors.map((e) => (
@@ -236,16 +234,16 @@ export default function IpEntryDialog({
           color="inherit" 
           disabled={saving}
         >
-          Cancel
+          {__('Cancel', 'bromate-security-api-firewall')}
         </Button>
         <Button
           onClick={handleSave} 
           variant="contained" 
           disableElevation
-          disabled={form.value.trim() === '' || saving}
+          disabled={!canSave}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
         >
-          {saving ? 'Adding…' : 'Add entries'}
+          {saving ? __('Saving…', 'bromate-security-api-firewall') : isEditing ? __('Save', 'bromate-security-api-firewall') : __('Add entries', 'bromate-security-api-firewall')}
         </Button>
       </DialogActions>
     </Dialog>

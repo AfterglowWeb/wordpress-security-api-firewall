@@ -213,7 +213,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
       const next = prev.filter((u) => !ids.includes(u.id));
 
       apiRequest<{ deleted: number }>('bromate_delete_authorized_users', {
-        users: JSON.stringify(ids),
+        authorized_users: JSON.stringify(ids),
       }).catch(() => {
         setAuthUsers(previous);
         setSnackbar({

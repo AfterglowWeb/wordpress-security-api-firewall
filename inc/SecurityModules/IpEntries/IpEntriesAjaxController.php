@@ -27,7 +27,6 @@ class IpEntriesAjaxController {
 		add_action( 'wp_ajax_bromate_get_user_ip_entries', array( $self, 'ajax_get_user_ip_entries' ) );
 		add_action( 'wp_ajax_bromate_get_login_ip_entries', array( $self, 'ajax_get_login_ip_entries' ) );
 		add_action( 'wp_ajax_bromate_get_current_user_ip', array( $self, 'ajax_get_current_user_ip' ) );
-
 	}
 
 	public function ajax_get_ip_entries(): void {
@@ -64,15 +63,15 @@ class IpEntriesAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing
-		$data = [
-		'ip'         => isset( $_POST['ip'] ) && IpUtils::is_valid_ip_or_cidr( $_POST['ip'] ) ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : '',
-		'list_type'  => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
-		'user_id'    => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
-		'referrer'   => isset( $_POST['referrer'] ) ? sanitize_url( wp_unslash( $_POST['referrer'] ) ) : null,
-		'expires_at' => isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null,
-		];
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		$data = array(
+			// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+			'ip'         => isset( $_POST['ip'] ) && IpUtils::is_valid_ip_or_cidr( sanitize_text_field( wp_unslash( $_POST['ip'] ) ) ) ? IpUtils::sanitize_ip_or_cidr( sanitize_text_field( wp_unslash( $_POST['ip'] ) ) ) : '',
+			'list_type'  => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
+			'user_id'    => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
+			'referrer'   => isset( $_POST['referrer'] ) ? sanitize_url( wp_unslash( $_POST['referrer'] ) ) : null,
+			'expires_at' => isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null,
+			// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		);
 
 		if ( empty( $data['ip'] ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Invalid IP address or CIDR', 'bromate-security-api-firewall' ) ), 400 );
@@ -214,23 +213,26 @@ class IpEntriesAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		if( empty( $_POST['add_ips'] ) && empty( $_POST['delete_ips'] ) ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		if ( empty( $_POST['add_ips'] ) && empty( $_POST['delete_ips'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Vérifié via ajax_validate_has_firewall_admin_caps().
-		$add_ips = array_map( array(IpUtils::class, 'sanitize_ip_or_cidr'), (array) wp_unslash( $_POST['add_ips'] ) );
-		$delete_ips = array_map( array(IpUtils::class, 'sanitize_ip_or_cidr'), (array) wp_unslash( $_POST['delete_ips'] ) );
-		if( empty( $add_ips ) && empty($delete_ips ) ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		$add_ips    = array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['add_ips'] ) ) );
+		$delete_ips = array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['delete_ips'] ) ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+
+		if ( empty( $add_ips ) && empty( $delete_ips ) ) {
 			wp_send_json_error( array( 'message' => 'Bad format.' ), 401 );
 		}
 
 		$delete_count = 0;
-		if(! empty( $delete_ips ) ) {
+		if ( ! empty( $delete_ips ) ) {
 			$delete_count = IpEntriesRepository::delete_many_ips( $delete_ips );
 		}
 
-		$common_data = [
+		$common_data = array(
 			'ip'         => '',
 			// phpcs:disable WordPress.Security.NonceVerification.Missing
 			'list_type'  => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
@@ -238,17 +240,17 @@ class IpEntriesAjaxController {
 			'referrer'   => isset( $_POST['referrer'] ) ? sanitize_url( wp_unslash( $_POST['referrer'] ) ) : null,
 			'expires_at' => isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null,
 			// phpcs:enable WordPress.Security.NonceVerification.Missing
-		];
+		);
 
-		$ip_entries = [];
-		foreach( $add_ips as $ip ) {
+		$ip_entries = array();
+		foreach ( $add_ips as $ip ) {
 			$common_data['ip'] = $ip;
-			$ip_entries[] = $common_data;
+			$ip_entries[]      = $common_data;
 		}
 
 		$counts = IpEntriesRepository::insert_many( $ip_entries );
 
-		wp_send_json_success( array_merge( array( 'delete_count' => $delete_count), $counts ), 200 );
+		wp_send_json_success( array_merge( array( 'delete_count' => $delete_count ), $counts ), 200 );
 	}
 
 	public function ajax_add_ip_entries(): void {
@@ -256,18 +258,19 @@ class IpEntriesAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		if( empty( $_POST['ips'] ) ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		if ( empty( $_POST['ips'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Vérifié via ajax_validate_has_firewall_admin_caps().
-		$ips = array_map( array(IpUtils::class, 'sanitize_ip_or_cidr'), (array) wp_unslash( $_POST['ips'] ) );
-		
-		if( empty( $ips ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		$ips = array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['ips'] ) ) );
+
+		if ( empty( $ips ) ) {
 			wp_send_json_error( array( 'message' => 'Bad format.' ), 401 );
 		}
 
-		$common_data = [
+		$common_data = array(
 			'ip'         => '',
 			// phpcs:disable WordPress.Security.NonceVerification.Missing
 			'list_type'  => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
@@ -275,12 +278,12 @@ class IpEntriesAjaxController {
 			'referrer'   => isset( $_POST['referrer'] ) ? sanitize_url( wp_unslash( $_POST['referrer'] ) ) : null,
 			'expires_at' => isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null,
 			// phpcs:enable WordPress.Security.NonceVerification.Missing
-		];
+		);
 
-		$ip_entries = [];
-		foreach( $ips as $ip ) {
+		$ip_entries = array();
+		foreach ( $ips as $ip ) {
 			$common_data['ip'] = $ip;
-			$ip_entries[] = $common_data;
+			$ip_entries[]      = $common_data;
 		}
 
 		IpEntriesRepository::insert_many( $ip_entries );

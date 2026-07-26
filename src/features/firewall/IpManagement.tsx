@@ -21,7 +21,7 @@ import * as Flags from 'country-flag-icons/react/3x2';
 
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import { useNavigation } from '@contexts/NavigationContext';
-import { IpAPI, type IpEntry, type ListType, type AddEntryForm, type LineResult } from '@services/ip';
+import { IpAPI, type IpEntry, type ListType, type AddIpEntriesForm, type LineResult } from '@services/ip';
 import type { AuthorizedUser } from '@app-types/auth';
 import IpEntryDialog from '@features/firewall/IpEntryDialog';
 
@@ -179,7 +179,7 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
     setRows([...black.entries, ...white.entries]);
   }, []);
 
-  const handleAddEntries = async (form: AddEntryForm): Promise<LineResult[]> => {
+  const handleAddEntries = async (form: AddIpEntriesForm): Promise<LineResult[]> => {
     if (editingIp) {
       await IpAPI.updateEntry(editingIp.id, {
         list_type: form.list_type,

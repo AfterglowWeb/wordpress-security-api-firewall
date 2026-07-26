@@ -9,7 +9,7 @@ use WP_User;
 
 class RestAuthorizedUserRepository {
 
-	private const USER_JWT_SUBCLAIM_METAKEY  = 'jwt_subclaim';
+	private const USER_JWT_SUBCLAIM_METAKEY = 'jwt_subclaim';
 
 	public static function authorized_users_options(): array {
 		$users = get_users(
@@ -70,17 +70,16 @@ class RestAuthorizedUserRepository {
 
 	private static function sanitize_authorized_user( array $user ): array {
 
-		if ( ! is_array( $user ) || !isset( $user['id'] ) ) {
+		if ( ! is_array( $user ) || ! isset( $user['id'] ) ) {
 			return array();
 		}
 
-		$user_id     = is_numeric($user['id']) ? absint( $user['id'] ) : 0;
-		if(! $user_id ) {
+		$user_id = is_numeric( $user['id'] ) ? absint( $user['id'] ) : 0;
+		if ( ! $user_id ) {
 			return array();
 		}
 		$user_status = isset( $user['status'] ) && in_array( $user['status'], array( 'active', 'revoked', 'disabled' ), true ) ? sanitize_key( $user['status'] ) : '';
-		//'active' === $user_status ? self::add_cap_to_user( $user_id ) : self::remove_cap_from_user( $user_id );
-		
+
 		return array(
 			'id'           => $user_id,
 			'jwt_subclaim' => isset( $user['jwt_subclaim'] ) ? sanitize_text_field( $user['jwt_subclaim'] ) : '',
