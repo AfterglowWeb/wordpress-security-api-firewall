@@ -9,12 +9,13 @@ export interface IpOriginRow {
   key: string;
   ip: string;
   referrer: string;
+  expires_at: string;
 }
 
 let rowCounter = 0;
 export function createEmptyRow(): IpOriginRow {
   rowCounter += 1;
-  return { key: `row-${Date.now()}-${rowCounter}`, ip: '', referrer: '' };
+  return { key: `row-${Date.now()}-${rowCounter}`, ip: '', referrer: '', expires_at: '' };
 }
 
 interface IpOriginRepeaterProps {
@@ -27,13 +28,13 @@ interface IpOriginRepeaterProps {
 export default function IpOriginRepeater({
   rows, onChange, disabled, onValidityChange,
 }: IpOriginRepeaterProps): JSX.Element {
-  const [errors, setErrors] = useState<Record<string, { ip?: string; referrer?: string }>>({});
+  const [errors, setErrors] = useState<Record<string, { ip?: string; referrer?: string, expires_at?: string }>>({});
 
   const reportValidity = (errs: typeof errors) => {
     onValidityChange?.(Object.values(errs).some((e) => e.ip || e.referrer));
   };
 
-  const updateRow = (key: string, field: 'ip' | 'referrer', value: string) => {
+  const updateRow = (key: string, field: 'ip' | 'referrer' | 'expires_at', value: string) => {
     onChange(rows.map((r) => (r.key === key ? { ...r, [field]: value } : r)));
   };
 
@@ -101,6 +102,19 @@ export default function IpOriginRepeater({
             helperText={errors[row.key]?.referrer}
             sx={{ flex: 1 }}
           />
+
+           <TextField
+            label={__('Expires at (optional)', 'bromate-security-api-firewall')}
+            type="datetime-local"
+            value={row.expires_at ?? ''}
+            onChange={(e) => updateRow(row.key, 'expires_at', e.target.value)}
+            size="small" 
+            disabled={disabled}
+            helperText={__('Leave empty for no expiration', 'bromate-security-api-firewall')}
+            sx={{ flex: 1, maxWidth:200}}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          
           <IconButton onClick={() => removeRow(row.key)} disabled={disabled} size="small" sx={{ mt: 0.5 }}>
             <DeleteIcon fontSize="small" />
           </IconButton>

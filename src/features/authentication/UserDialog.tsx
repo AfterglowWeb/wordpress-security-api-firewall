@@ -44,7 +44,7 @@ const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
 function serializeIpRows(rows: IpOriginRow[]): string {
   return JSON.stringify(
     rows
-      .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim() }))
+      .map((r) => ({ ip: r.ip.trim(), referrer: r.referrer.trim(), expires_at: r.expires_at.trim() }))
       .filter((r) => r.ip !== '')
       .sort((a, b) => a.ip.localeCompare(b.ip))
   );
@@ -102,7 +102,12 @@ export default function UserDialog({
 
   const applyIpEntries = (entries: IpEntry[]) => {
     setIpEntries(entries);
-    setIpRows(entries.map((e) => ({ key: `existing-${e.id}`, ip: e.ip, referrer: e.referrer ?? '' })));
+    setIpRows(entries.map((e) => ({ 
+      key: `existing-${e.id}`, 
+      ip: e.ip, 
+      referrer: e.referrer ?? '', 
+      expires_at: e.expires_at ?? '' 
+    })));
   };
 
   useEffect(() => {
@@ -114,6 +119,7 @@ export default function UserDialog({
         key: `existing-${e.id}`,
         ip: e.ip,
         referrer: e.referrer ?? '',
+        expires_at: e.expires_at ?? '',
       }));
 
       setWpUserId(user.id);
@@ -295,7 +301,13 @@ export default function UserDialog({
   );
 
   return (
-    <Dialog container={portalContainer} open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog 
+    container={portalContainer} 
+    open={open} 
+    onClose={onClose} 
+    fullWidth 
+    maxWidth="md"
+    >
       <DialogTitle>
         {isEditing ? sprintf(__('Edit Authorized User — %s', 'bromate-security-api-firewall' ), user?.display_name) 
         : __('Add Authorized User', 'bromate-security-api-firewall')}
@@ -308,49 +320,51 @@ export default function UserDialog({
         <Stack direction="column" gap={2}>
 
           {!isEditing && (
-            <Autocomplete<AuthorizedUser>
-              options={wpUsers}
-              loading={wpUsersLoading}
-              getOptionLabel={(o) => o.display_name}
-              isOptionEqualToValue={(o, v) => o.id === v.id}
-              value={selectedWpUser}
-              onChange={handleWpUserSelect}
-              getOptionDisabled={(o) => authorizedUserIds.includes(o.id)}
-              disablePortal
-              renderOption={(props, option) => (
-                <li {...props} key={option.id}>
-                  <Stack>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                      <Typography variant="body2" fontWeight={500}>
-                        {option.display_name}
+      
+              <Autocomplete<AuthorizedUser>
+                options={wpUsers}
+                loading={wpUsersLoading}
+                getOptionLabel={(o) => o.display_name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                value={selectedWpUser}
+                onChange={handleWpUserSelect}
+                getOptionDisabled={(o) => authorizedUserIds.includes(o.id)}
+                disablePortal
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <Stack>
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <Typography variant="body2" fontWeight={500}>
+                          {option.display_name}
+                        </Typography>
+                        {option.current_user && (
+                          <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
+                        )}
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email} · ID #{option.id} · {option.roles.join(', ')}
                       </Typography>
-                      {option.current_user && (
-                        <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
-                      )}
                     </Stack>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.email} · ID #{option.id} · {option.roles.join(', ')}
-                    </Typography>
-                  </Stack>
-                </li>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={__('Select WordPress user', 'bromate-security-api-firewall')}
-                  size="small"
-                  slotProps={{ input: {
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {wpUsersLoading && <CircularProgress size={16} />}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}}
-                />
-              )}
-            />
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={__('Select WordPress user', 'bromate-security-api-firewall')}
+                    size="small"
+                    slotProps={{ input: {
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {wpUsersLoading && <CircularProgress size={16} />}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}}
+                  />
+                )}
+              />
+         
           )}
 
           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -427,20 +441,20 @@ export default function UserDialog({
           </Stack>
 
           { !isWpAuth && 
-          <Stack sx={{ position: 'relative' }}>
-          <TextField
-            label={__('JWT sub claim', 'bromate-security-api-firewall')} 
-            value={form.jwt_subclaim}
-            disabled={noUser}
-            size="small"
-            slotProps={{
-              htmlInput: { readOnly: true },
-              input: {
-                endAdornment: subclaimLoading ? <CircularProgress size={16} /> : undefined,
-              },
-            }}
-            helperText={ __('Expected value in the incoming token\'s subclaim.', 'bromate-security-api-firewall')}
-          />
+          <Stack sx={{ position: 'relative', maxWidth:400 }}>
+            <TextField
+              label={__('JWT sub claim', 'bromate-security-api-firewall')} 
+              value={form.jwt_subclaim}
+              disabled={noUser}
+              size="small"
+              slotProps={{
+                htmlInput: { readOnly: true },
+                input: {
+                  endAdornment: subclaimLoading ? <CircularProgress size={16} /> : undefined,
+                },
+              }}
+              helperText={ __('Expected value in the incoming token\'s subclaim.', 'bromate-security-api-firewall')}
+            />
             {form.jwt_subclaim && !subclaimLoading && <CopyButton toCopy={form.jwt_subclaim} sx={{ position: 'absolute', top: '4px', right: '12px', height: '32px', width: '32px' }} />}
           </Stack>
           }
@@ -455,12 +469,18 @@ export default function UserDialog({
             sx={{maxWidth:200}}
           />
 
-          <IpOriginRepeater
-            rows={ipRows}
-            onChange={setIpRows}
-            disabled={noUser}
-            onValidityChange={setIpRowsHaveErrors}
-          />
+          <Stack spacing={2}>
+            <Stack sx={{pl:2, opacity: noUser ? 0.5 : 1}}>
+            <Typography variant="body2">{__('IPs Whitelist (optional)')}</Typography>
+            <Typography variant="caption" color="text.secondary">{__('IPv4, IPv6 and CIDR are supported.')}</Typography>
+            </Stack>
+              <IpOriginRepeater
+                rows={ipRows}
+                onChange={setIpRows}
+                disabled={noUser}
+                onValidityChange={setIpRowsHaveErrors}
+              />
+          </Stack>
 
           {ipError && (
             <Alert severity="error" variant="outlined">
