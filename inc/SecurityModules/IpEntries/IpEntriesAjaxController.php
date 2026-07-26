@@ -154,12 +154,12 @@ class IpEntriesAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 		if ( empty( $_POST['ips'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
 		}
 
-		// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 		$raw_entries = json_decode( sanitize_text_field( wp_unslash( $_POST['ips'] ) ), true );
 
 		if ( empty( $raw_entries ) || ! is_array( $raw_entries ) ) {
@@ -167,8 +167,10 @@ class IpEntriesAjaxController {
 		}
 
 		$common_data = array(
-			// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+			// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 			'list_type' => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
+			'user_id'   => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
+			// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 		);
 
 		$ip_entries = array();
@@ -187,7 +189,6 @@ class IpEntriesAjaxController {
 				array(
 					'ip'         => $ip,
 					'referrer'   => ! empty( $raw_entry['referrer'] ) ? sanitize_url( $raw_entry['referrer'] ) : null,
-					'user_id'    => ! empty( $raw_entry['user_id'] ) ? absint( $raw_entry['user_id'] ) : null,
 					'expires_at' => ! empty( $raw_entry['expires_at'] ) ? sanitize_text_field( $raw_entry['expires_at'] ) : null,
 				)
 			);
@@ -207,11 +208,12 @@ class IpEntriesAjaxController {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
 		}
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 		if ( empty( $_POST['add_entries'] ) && empty( $_POST['delete_ips'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
 		}
 
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 		$raw_entries = isset( $_POST['add_entries'] )
 			? json_decode( sanitize_text_field( wp_unslash( $_POST['add_entries'] ) ), true )
 			: array();
@@ -236,9 +238,10 @@ class IpEntriesAjaxController {
 		}
 
 		$common_data = array(
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+			// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 			'list_type' => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
 			'user_id'   => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
+			// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
 		);
 
 		$ip_entries = array();

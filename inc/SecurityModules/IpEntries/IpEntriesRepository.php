@@ -326,7 +326,6 @@ class IpEntriesRepository {
 	}
 
 	public static function insert_many( array $ip_entries ) {
-		global $wpdb;
 
 		if ( empty( $ip_entries ) ) {
 			return array(
@@ -335,44 +334,16 @@ class IpEntriesRepository {
 			);
 		}
 
-		$now            = current_time( 'mysql' );
 		$inserted_count = 0;
 		$updated_count  = 0;
 
 		foreach ( $ip_entries as $ip_entry ) {
-			$sanitized_entry = self::sanitize_entry( $ip_entry );
-			if ( empty( $sanitized_entry ) ) {
-				continue;
-			}
-
-			$existing = self::ip_in_db( $sanitized_entry['ip'] );
-
-			if ( $existing ) {
-				$update_data               = $sanitized_entry;
-				$update_data['updated_at'] = $now;
-				unset( $update_data['ip'] );
-
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$result = $wpdb->update(
-					self::table(),
-					$update_data,
-					array( 'id' => $existing['id'] )
-				);
-
-				if ( false !== $result ) {
-					++$updated_count;
-				}
-				continue;
-			}
-
-			$sanitized_entry['created_at'] = $now;
-			$sanitized_entry['updated_at'] = $now;
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-			$result = $wpdb->insert( self::table(), $sanitized_entry );
-
-			if ( $result ) {
+			$result = self::insert( $ip_entry );
+			if ( 'inserted' === $result ) {
 				++$inserted_count;
+			}
+			if ( 'updated' === $result ) {
+				++$updated_count;
 			}
 		}
 
@@ -382,15 +353,39 @@ class IpEntriesRepository {
 		);
 	}
 
-	public static function insert( array $data ) {
+	public static function insert( array $data ): string {
 		global $wpdb;
 
 		$sanitized = self::sanitize_entry( $data );
 		if ( ! $sanitized ) {
-			return false;
+			return '';
 		}
 
-		$now                     = current_time( 'mysql' );
+		$now = current_time( 'mysql' );
+
+		$existing = self::ip_in_db( $sanitized['ip'] );
+
+		if ( $existing ) {
+			$update_data               = $sanitized;
+			$update_data['updated_at'] = $now;
+			unset( $update_data['ip'] );
+
+			if ( empty( $existing['country_code'] ) ) {
+				$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
+				if ( $geoip ) {
+					$update_data['country_code'] = $geoip['country'] ?? null;
+					$update_data['country_name'] = $geoip['countryName'] ?? null;
+				}
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$result = $wpdb->update( self::table(), $update_data, array( 'id' => $existing['id'] ) );
+
+			if ( false !== $result ) {
+				return 'updated';
+			}
+		}
+
 		$sanitized['created_at'] = $now;
 		$sanitized['updated_at'] = $now;
 
@@ -400,10 +395,10 @@ class IpEntriesRepository {
 			$sanitized['country_name'] = $geoip['countryName'] ?? null;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert( self::table(), $sanitized );
 
-		return $result ? $wpdb->insert_id : false;
+		return $result ? 'inserted' : '';
 	}
 
 	public static function update( int $id, array $data ): bool {
