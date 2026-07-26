@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
 
 class IpEntriesRepository {
 
@@ -269,15 +270,106 @@ class IpEntriesRepository {
 			)
 			';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
-		$cidrs = $wpdb->get_col( $wpdb->prepare( $sql, $list_type, '%/%' ) );
+		$may_be_cidrs = $wpdb->get_col( $wpdb->prepare( $sql, $list_type, '%/%' ) );
 
-		foreach ( $cidrs as $cidr ) {
+		foreach ( $may_be_cidrs as $cidr ) {
 			if ( IpUtils::ip_matches( $ip, $cidr ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	public static function ip_in_db( string $ip ): ?array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$exact = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::table() . ' WHERE ip = %s',
+				$ip
+			),
+			ARRAY_A
+		);
+
+		if ( $exact ) {
+			return $exact;
+		}
+
+		if ( false !== strpos( $ip, '/' ) ) {
+			return null;
+		}
+
+		$cidr_entries = $wpdb->get_results(
+			'SELECT * FROM ' . self::table() . " WHERE ip LIKE '%/%'",
+			ARRAY_A
+		);
+
+		foreach ( (array) $cidr_entries as $entry ) {
+			if ( IpUtils::ip_matches( $ip, $entry['ip'] ) ) {
+				return $entry;
+			}
+		}
+
+		return null;
+	}
+
+	public static function insert_many( array $ip_entries ) {
+		global $wpdb;
+
+		if ( empty( $ip_entries ) ) {
+			return array(
+				'add_count'    => 0,
+				'update_count' => 0,
+			);
+		}
+
+		$now            = current_time( 'mysql' );
+		$inserted_count = 0;
+		$updated_count  = 0;
+
+		foreach ( $ip_entries as $ip_entry ) {
+			$sanitized_entry = self::sanitize_entry( $ip_entry );
+			if ( empty( $sanitized_entry ) ) {
+				continue;
+			}
+
+			$existing = self::ip_in_db( $sanitized_entry['ip'] );
+
+			if ( $existing ) {
+				$update_data = $sanitized_entry;
+				$update_data['updated_at'] = $now;
+				unset( $update_data['ip'] );
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$result = $wpdb->update(
+					self::table(),
+					$update_data,
+					array( 'id' => $existing['id'] )
+				);
+
+				if ( false !== $result ) {
+					++$updated_count;
+				}
+				continue;
+			}
+
+			$sanitized_entry['created_at'] = $now;
+			$sanitized_entry['updated_at'] = $now;
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$result = $wpdb->insert( self::table(), $sanitized_entry );
+
+			if ( $result ) {
+				$inserted_count++;
+			}
+		}
+
+		return array(
+			'add_count'    => $inserted_count,
+			'update_count' => $updated_count,
+		);
 	}
 
 	public static function insert( array $data ) {
@@ -291,6 +383,13 @@ class IpEntriesRepository {
 		$now                     = current_time( 'mysql' );
 		$sanitized['created_at'] = $now;
 		$sanitized['updated_at'] = $now;
+
+
+		$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
+		if ( $geoip ) {
+			$sanitized['country_code'] = $geoip['country'] ?? null;
+			$sanitized['country_name'] = $geoip['countryName'] ?? null;
+		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert( self::table(), $sanitized );
@@ -316,6 +415,20 @@ class IpEntriesRepository {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (bool) $wpdb->delete( self::table(), array( 'id' => $id ) );
+	}
+
+	public static function delete_many_ips( array $ips ): int {
+		global $wpdb;
+
+		if ( empty( $ips ) ) {
+			return 0;
+		}
+
+		$placeholders = implode( ',', array_fill( 0, count( $ips ), '%d' ) );
+		$sql          = 'DELETE FROM ' . self::table() . " WHERE ip IN ({$placeholders})";
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders generated from validated integer IDs
+		return (int) $wpdb->query( $wpdb->prepare( $sql, $ips ) );
 	}
 
 	public static function delete_many( array $ids ): int {
@@ -392,7 +505,7 @@ class IpEntriesRepository {
 		return false !== $result;
 	}
 
-	protected static function sanitize_entry( array $data, bool $require_ip = true ): ?array {
+	protected static function sanitize_entry( array $data ): array {
 		$config    = self::entry_config();
 		$sanitized = array();
 
@@ -418,8 +531,8 @@ class IpEntriesRepository {
 			$sanitized[ $key ] = $value;
 		}
 
-		if ( $require_ip && ( empty( $sanitized['ip'] ) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) ) {
-			return null;
+		if ( empty( $sanitized['ip']) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) {
+			return array();
 		}
 
 		return $sanitized;

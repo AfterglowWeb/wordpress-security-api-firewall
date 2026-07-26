@@ -1,5 +1,7 @@
+import { __ } from '@wordpress/i18n';
 import type { IpEntry } from '@services/ip';
 import { IpAPI } from '@services/ip';
+import { apiRequest } from '@services/api';
 
 interface IpEntriesDiff {
   toDelete: IpEntry[];
@@ -10,7 +12,16 @@ interface IpEntriesDiff {
 interface SyncIpEntriesResult {
   ok: boolean;
   entries: IpEntry[];
+  addCount: number;
+  deleteCount: number;
+  updateCount: number;
   error?: string;
+}
+
+interface SyncIpEntriesResponse {
+  delete_count: number;
+  add_count: number;
+  update_count: number;
 }
 
 export function computeIpEntriesDiff(
@@ -38,36 +49,44 @@ export function computeIpEntriesDiff(
   return { toDelete, toAdd, desiredReferrer };
 }
 
-export async function syncIpEntries(
+export async function syncUserIpEntries(
   userId: number,
   diff: IpEntriesDiff
 ): Promise<SyncIpEntriesResult> {
   const { toDelete, toAdd, desiredReferrer } = diff;
 
   if (toDelete.length === 0 && toAdd.length === 0) {
-    return { ok: true, entries: [] };
+    return { ok: true, entries: [], addCount: 0, deleteCount: 0, updateCount: 0 };
   }
 
-  const [deleteResults, addResults] = await Promise.all([
-    Promise.allSettled(toDelete.map((e) => IpAPI.deleteEntry(e.id))),
-    Promise.allSettled(toAdd.map((ip) => IpAPI.addEntry(ip, 'whitelist', userId, desiredReferrer))),
-  ]);
+  let result: SyncIpEntriesResponse;
 
-  const failures = [
-    ...deleteResults
-      .map((r, i) => ({ r, ip: toDelete[i].ip }))
-      .filter(({ r }) => r.status === 'rejected')
-      .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`),
-    ...addResults
-      .map((r, i) => ({ r, ip: toAdd[i] }))
-      .filter(({ r }) => r.status === 'rejected')
-      .map(({ r, ip }) => `${ip}: ${(r as PromiseRejectedResult).reason?.message ?? 'error'}`),
-  ];
-
-  if (failures.length) {
-    return { ok: false, entries: [], error: failures.join('\n') };
+  try {
+    result = await apiRequest<SyncIpEntriesResponse>('bromate_sync_ip_entries', {
+      add_ips: toAdd,
+      delete_ips: toDelete.map((e) => e.ip),
+      list_type: 'whitelist',
+      user_id: userId,
+      referrer: desiredReferrer,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      entries: [],
+      addCount: 0,
+      deleteCount: 0,
+      updateCount: 0,
+      error: error instanceof Error ? error.message : __('Failed to sync IP entries', 'bromate-security-api-firewall'),
+    };
   }
 
   const fresh = await IpAPI.getUserEntries(userId);
-  return { ok: true, entries: fresh.entries };
+
+  return {
+    ok: true,
+    entries: fresh.entries,
+    deleteCount: result.delete_count ?? 0,
+    addCount: result.add_count ?? 0,
+    updateCount: result.update_count ?? 0,
+  };
 }
