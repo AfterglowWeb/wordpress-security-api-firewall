@@ -149,6 +149,127 @@ class IpEntriesAjaxController {
 		wp_send_json_success( array( 'entry' => $entry ), 200 );
 	}
 
+	public function ajax_add_ip_entries(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		if ( empty( $_POST['ips'] ) ) {
+			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
+		}
+
+		// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		$raw_entries = json_decode( sanitize_text_field( wp_unslash( $_POST['ips'] ) ), true );
+
+		if ( empty( $raw_entries ) || ! is_array( $raw_entries ) ) {
+			wp_send_json_error( array( 'message' => 'Bad format.' ), 401 );
+		}
+
+		$common_data = array(
+			// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+			'list_type' => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
+		);
+
+		$ip_entries = array();
+		foreach ( $raw_entries as $raw_entry ) {
+			if ( ! is_array( $raw_entry ) || empty( $raw_entry['ip'] ) ) {
+				continue;
+			}
+
+			$ip = IpUtils::sanitize_ip_or_cidr( $raw_entry['ip'] );
+			if ( empty( $ip ) ) {
+				continue;
+			}
+
+			$ip_entries[] = array_merge(
+				$common_data,
+				array(
+					'ip'         => $ip,
+					'referrer'   => ! empty( $raw_entry['referrer'] ) ? sanitize_url( $raw_entry['referrer'] ) : null,
+					'user_id'    => ! empty( $raw_entry['user_id'] ) ? absint( $raw_entry['user_id'] ) : null,
+					'expires_at' => ! empty( $raw_entry['expires_at'] ) ? sanitize_text_field( $raw_entry['expires_at'] ) : null,
+				)
+			);
+		}
+
+		if ( empty( $ip_entries ) ) {
+			wp_send_json_error( array( 'message' => 'No valid entries.' ), 400 );
+		}
+
+		$counts = IpEntriesRepository::insert_many( $ip_entries );
+
+		wp_send_json_success( $counts, 200 );
+	}
+
+	public function ajax_sync_ip_entries(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		if ( empty( $_POST['add_entries'] ) && empty( $_POST['delete_ips'] ) ) {
+			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
+		}
+
+		$raw_entries = isset( $_POST['add_entries'] )
+			? json_decode( sanitize_text_field( wp_unslash( $_POST['add_entries'] ) ), true )
+			: array();
+
+		$delete_ips = isset( $_POST['delete_ips'] )
+			? array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['delete_ips'] ) ) )
+			: array();
+		// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+
+		if ( ! is_array( $raw_entries ) ) {
+			$raw_entries = array();
+		}
+		$delete_ips = array_filter( $delete_ips );
+
+		if ( empty( $raw_entries ) && empty( $delete_ips ) ) {
+			wp_send_json_error( array( 'message' => 'Bad format.' ), 401 );
+		}
+
+		$delete_count = 0;
+		if ( ! empty( $delete_ips ) ) {
+			$delete_count = IpEntriesRepository::delete_many_ips( $delete_ips );
+		}
+
+		$common_data = array(
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+			'list_type' => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
+		);
+
+		$ip_entries = array();
+		foreach ( $raw_entries as $raw_entry ) {
+			if ( ! is_array( $raw_entry ) || empty( $raw_entry['ip'] ) ) {
+				continue;
+			}
+
+			$ip = IpUtils::sanitize_ip_or_cidr( $raw_entry['ip'] );
+			if ( empty( $ip ) ) {
+				continue;
+			}
+
+			$ip_entries[] = array_merge(
+				$common_data,
+				array(
+					'ip'         => $ip,
+					'referrer'   => ! empty( $raw_entry['referrer'] ) ? sanitize_url( $raw_entry['referrer'] ) : null,
+					'user_id'    => ! empty( $raw_ip['user_id'] ) ? absint( $raw_entry['user_id'] ) : null,
+					'expires_at' => ! empty( $raw_entry['expires_at'] ) ? sanitize_text_field( $raw_entry['expires_at'] ) : null,
+				)
+			);
+		}
+
+		$counts = ! empty( $ip_entries ) ? IpEntriesRepository::insert_many( $ip_entries ) : array(
+			'add_count'    => 0,
+			'update_count' => 0,
+		);
+
+		wp_send_json_success( array_merge( array( 'delete_count' => $delete_count ), $counts ), 200 );
+	}
+
 	public function ajax_delete_ip_entry(): void {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
@@ -206,89 +327,6 @@ class IpEntriesAjaxController {
 
 		$entries = IpEntriesRepository::find_by_user( $user_id );
 		wp_send_json_success( array( 'entries' => $entries ), 200 );
-	}
-
-	public function ajax_sync_ip_entries(): void {
-		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-		}
-
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		if ( empty( $_POST['add_ips'] ) && empty( $_POST['delete_ips'] ) ) {
-			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
-		}
-
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		$add_ips    = array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['add_ips'] ) ) );
-		$delete_ips = array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['delete_ips'] ) ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-
-		if ( empty( $add_ips ) && empty( $delete_ips ) ) {
-			wp_send_json_error( array( 'message' => 'Bad format.' ), 401 );
-		}
-
-		$delete_count = 0;
-		if ( ! empty( $delete_ips ) ) {
-			$delete_count = IpEntriesRepository::delete_many_ips( $delete_ips );
-		}
-
-		$common_data = array(
-			'ip'         => '',
-			// phpcs:disable WordPress.Security.NonceVerification.Missing
-			'list_type'  => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
-			'user_id'    => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
-			'referrer'   => isset( $_POST['referrer'] ) ? sanitize_url( wp_unslash( $_POST['referrer'] ) ) : null,
-			'expires_at' => isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null,
-			// phpcs:enable WordPress.Security.NonceVerification.Missing
-		);
-
-		$ip_entries = array();
-		foreach ( $add_ips as $ip ) {
-			$common_data['ip'] = $ip;
-			$ip_entries[]      = $common_data;
-		}
-
-		$counts = IpEntriesRepository::insert_many( $ip_entries );
-
-		wp_send_json_success( array_merge( array( 'delete_count' => $delete_count ), $counts ), 200 );
-	}
-
-	public function ajax_add_ip_entries(): void {
-		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-		}
-
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		if ( empty( $_POST['ips'] ) ) {
-			wp_send_json_error( array( 'message' => 'Missing args.' ), 400 );
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		$ips = array_map( array( IpUtils::class, 'sanitize_ip_or_cidr' ), array_map( 'sanitize_text_field', wp_unslash( $_POST['ips'] ) ) );
-
-		if ( empty( $ips ) ) {
-			wp_send_json_error( array( 'message' => 'Bad format.' ), 401 );
-		}
-
-		$common_data = array(
-			'ip'         => '',
-			// phpcs:disable WordPress.Security.NonceVerification.Missing
-			'list_type'  => isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist',
-			'user_id'    => isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : null,
-			'referrer'   => isset( $_POST['referrer'] ) ? sanitize_url( wp_unslash( $_POST['referrer'] ) ) : null,
-			'expires_at' => isset( $_POST['expires_at'] ) ? sanitize_text_field( wp_unslash( $_POST['expires_at'] ) ) : null,
-			// phpcs:enable WordPress.Security.NonceVerification.Missing
-		);
-
-		$ip_entries = array();
-		foreach ( $ips as $ip ) {
-			$common_data['ip'] = $ip;
-			$ip_entries[]      = $common_data;
-		}
-
-		IpEntriesRepository::insert_many( $ip_entries );
-
-		wp_send_json_success( array( 'entries' => $ip_entries ), 200 );
 	}
 
 	public function ajax_get_current_user_ip(): void {
