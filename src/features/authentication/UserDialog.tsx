@@ -26,7 +26,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 
 import CopyButton from '@components/CopyButton';
-import IpOriginRepeater, { type IpOriginRow } from '@components/IpOriginRepeater';
+import AddIpEntriesRepeater, { type IpOriginRow } from '@components/AddIpEntriesRepeater';
 
 const EMPTY_FORM: Omit<AuthorizedUser, 'id'> = {
   display_name: '',
@@ -474,7 +474,7 @@ export default function UserDialog({
             <Typography variant="body2">{__('IPs Whitelist (optional)')}</Typography>
             <Typography variant="caption" color="text.secondary">{__('IPv4, IPv6 and CIDR are supported.')}</Typography>
             </Stack>
-              <IpOriginRepeater
+              <AddIpEntriesRepeater
                 rows={ipRows}
                 onChange={setIpRows}
                 disabled={noUser}
