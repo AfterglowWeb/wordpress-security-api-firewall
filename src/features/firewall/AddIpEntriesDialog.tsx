@@ -30,10 +30,7 @@ export default function AddIpEntriesDialog({
   open,
   defaultListType,
   onSave,
-  onClose,
-  wpUsers,
-  wpUsersLoading,
-  authorizedUserIds,
+  onClose
 }: AddIpEntriesDialogProps) {
   const [ipRows, setIpRows] = useState<IpOriginRow[]>([createEmptyRow()]);
   const [ipRowsHaveErrors, setIpRowsHaveErrors] = useState(false);
@@ -64,7 +61,6 @@ export default function AddIpEntriesDialog({
         .map((r) => ({
           ip: r.ip.trim(),
           referrer: r.referrer.trim(),
-          user_id: listType === 'whitelist' ? r.user_id : null,
           expires_at: r.expires_at?.trim() || null,
         }))
         .filter((r) => r.ip !== ''),
@@ -76,14 +72,13 @@ export default function AddIpEntriesDialog({
     if (lineErrors.length > 0) setErrors(lineErrors);
   };
 
-
   return (
     <Dialog
       container={portalContainer}
       open={open}
       onClose={saving ? undefined : onClose}
       fullWidth
-      maxWidth={'blacklist' === listType ? 'lg' : 'xl'}
+      maxWidth={'lg'}
       sx={{'& .MuiDialog-paper':{minHeight:500}}}
     >
       <DialogTitle>
@@ -101,12 +96,10 @@ export default function AddIpEntriesDialog({
               value={listType}
               onChange={(e) => setListType(e.target.value as ListType)}
             >
-              <FormControlLabel value="blacklist" control={<Radio size="small" />} label={__('Blacklist', 'bromate-security-api-firewall')} />
-              <FormControlLabel value="whitelist" control={<Radio size="small" />} label={__('Whitelist', 'bromate-security-api-firewall')} />
+              <FormControlLabel value="blacklist" control={<Radio />} label={__('Blacklist', 'bromate-security-api-firewall')} />
+              <FormControlLabel value="whitelist" control={<Radio />} label={__('Whitelist', 'bromate-security-api-firewall')} />
             </RadioGroup>
           </FormControl>
-
-         
 
           <AddIpEntriesRepeater
             rows={ipRows}
@@ -114,9 +107,7 @@ export default function AddIpEntriesDialog({
             disabled={saving}
             onValidityChange={setIpRowsHaveErrors}
             listType={listType}
-            userSelection={{ wpUsers, wpUsersLoading, authorizedUserIds }}
           />
-
 
           {errors.length > 0 && (
             <Alert severity="error" variant="outlined">
@@ -143,6 +134,7 @@ export default function AddIpEntriesDialog({
               </List>
             </Alert>
           )}
+
         </Stack>
       </DialogContent>
       <DialogActions sx={{ color: 'text.secondary' }}>
