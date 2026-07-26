@@ -141,53 +141,6 @@ final class TOTPLoginService {
 		return $classes;
 	}
 
-	public function add_custom_styles(): void {
-		?>
-		<style>
-			body.bromate-totp-active #loginform > p:first-child,
-			body.bromate-totp-active #loginform .user-pass-wrap,
-			body.bromate-totp-active #loginform .wp-pwd,
-			body.bromate-totp-active #loginform > p.forgetmenot,
-			body.bromate-totp-active #loginform > p.submit,
-			body.bromate-totp-active #loginform + p#nav {
-				display: none !important;
-			}
-
-			body.bromate-totp-active #bromate-totp-field {
-				display: block !important;
-			}
-			
-			body.bromate-totp-active #bromate-totp-field .submit {
-				display: block !important;
-				margin-top: 16px;
-			}
-			
-			body.bromate-totp-active #bromate-totp-field .submit input {
-				width: 100%;
-			}
-
-			body.bromate-totp-active #login_error.notice-error {
-				border-left-color: #3858e9 !important;
-				border-left: 4px solid #3858e9 !important;
-				background-color: #fff !important;
-			}
-
-			#bromate-totp-field {
-				display: none !important;
-			}
-			
-			body.bromate-totp-active #wp-submit {
-				display: none !important;
-			}
-			
-			body.bromate-totp-active #bromate-totp-verify-button {
-				width: 100%;
-				font-size: 14px;
-			}
-		</style>
-		<?php
-	}
-
 	public function add_totp_field_to_login(): void {
 
 		$session_id = $this->get_session_id();
@@ -197,7 +150,8 @@ final class TOTPLoginService {
 			if ( isset( $_POST['log'] ) && ! empty( $_POST['log'] ) ) {
 				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
 				$username = sanitize_user( wp_unslash( $_POST['log'] ) );
-				/*$user     = \get_user_by( 'login', $username );
+				/*
+				$user     = \get_user_by( 'login', $username );
 
 				if ( $user && TOTPRepository::get_instance()->is_user_enrolled( $user->ID ) ) {
 					set_transient(
@@ -210,7 +164,8 @@ final class TOTPLoginService {
 						self::TRANSIENT_EXPIRY
 					);
 					$pending = get_transient( 'bromate_totp_pending_' . $session_id );
-				}*/
+				}
+				*/
 			}
 
 			if ( ! $pending || ! isset( $pending['user_id'] ) ) {
@@ -406,53 +361,6 @@ final class TOTPLoginService {
 		);
 	}
 
-	private function generate_trusted_token(): string {
-		try {
-			$bytes = random_bytes( 32 );
-			return bin2hex( $bytes );
-		} catch ( \Exception $e ) {
-			return bin2hex( openssl_random_pseudo_bytes( 32 ) );
-		}
-	}
-
-	private function verify_trusted_token( int $user_id, string $token ): bool {
-
-		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
-		if ( ! is_array( $tokens ) || ! isset( $tokens[ $token ] ) ) {
-			return false;
-		}
-
-		$token_data = $tokens[ $token ];
-
-		if ( $token_data['expires'] < time() ) {
-			TOTPRepository::get_instance()->remove_trusted_token( $user_id, $token );
-			return false;
-		}
-
-		$current_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
-		if ( $token_data['user_agent'] !== $current_agent ) {
-			return false;
-		}
-
-		return true;
-	}
-
-	private function cleanup_expired_tokens( int $user_id ): void {
-		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
-		if ( ! is_array( $tokens ) ) {
-			return;
-		}
-
-		$now = time();
-
-		foreach ( $tokens as $key => $data ) {
-			if ( $data['expires'] < $now ) {
-				unset( $tokens[ $key ] );
-				TOTPRepository::get_instance()->remove_trusted_token( $user_id, $key );
-			}
-		}
-	}
-
 	public function ajax_verify_totp(): void {
 		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'bromate_totp_verify' ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid security token' ), 403 );
@@ -597,6 +505,54 @@ final class TOTPLoginService {
 		delete_transient( 'bromate_totp_attempts_' . $session_id );
 	}
 
+	private function generate_trusted_token(): string {
+		try {
+			$bytes = random_bytes( 32 );
+			return bin2hex( $bytes );
+		} catch ( \Exception $e ) {
+			return bin2hex( openssl_random_pseudo_bytes( 32 ) );
+		}
+	}
+
+	private function verify_trusted_token( int $user_id, string $token ): bool {
+
+		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
+		if ( ! is_array( $tokens ) || ! isset( $tokens[ $token ] ) ) {
+			return false;
+		}
+
+		$token_data = $tokens[ $token ];
+
+		if ( $token_data['expires'] < time() ) {
+			TOTPRepository::get_instance()->remove_trusted_token( $user_id, $token );
+			return false;
+		}
+
+		$current_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		if ( $token_data['user_agent'] !== $current_agent ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private function cleanup_expired_tokens( int $user_id ): void {
+		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
+		if ( ! is_array( $tokens ) ) {
+			return;
+		}
+
+		$now = time();
+
+		foreach ( $tokens as $key => $data ) {
+			if ( $data['expires'] < $now ) {
+				unset( $tokens[ $key ] );
+				TOTPRepository::get_instance()->remove_trusted_token( $user_id, $key );
+			}
+		}
+	}
+
+
 	private function is_trusted_device( int $user_id ): bool {
 		if ( ! isset( $_COOKIE[ self::TRUSTED_COOKIE_NAME ] ) ) {
 			return false;
@@ -607,5 +563,52 @@ final class TOTPLoginService {
 		$this->cleanup_expired_tokens( $user_id );
 
 		return $this->verify_trusted_token( $user_id, $token );
+	}
+
+	public function add_custom_styles(): void {
+		?>
+		<style>
+			body.bromate-totp-active #loginform > p:first-child,
+			body.bromate-totp-active #loginform .user-pass-wrap,
+			body.bromate-totp-active #loginform .wp-pwd,
+			body.bromate-totp-active #loginform > p.forgetmenot,
+			body.bromate-totp-active #loginform > p.submit,
+			body.bromate-totp-active #loginform + p#nav {
+				display: none !important;
+			}
+
+			body.bromate-totp-active #bromate-totp-field {
+				display: block !important;
+			}
+			
+			body.bromate-totp-active #bromate-totp-field .submit {
+				display: block !important;
+				margin-top: 16px;
+			}
+			
+			body.bromate-totp-active #bromate-totp-field .submit input {
+				width: 100%;
+			}
+
+			body.bromate-totp-active #login_error.notice-error {
+				border-left-color: #3858e9 !important;
+				border-left: 4px solid #3858e9 !important;
+				background-color: #fff !important;
+			}
+
+			#bromate-totp-field {
+				display: none !important;
+			}
+			
+			body.bromate-totp-active #wp-submit {
+				display: none !important;
+			}
+			
+			body.bromate-totp-active #bromate-totp-verify-button {
+				width: 100%;
+				font-size: 14px;
+			}
+		</style>
+		<?php
 	}
 }

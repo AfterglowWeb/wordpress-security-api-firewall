@@ -281,13 +281,16 @@ class IpEntriesRepository {
 		return false;
 	}
 
-	public static function ip_in_db( string $ip ): ?array {
+	private static function ip_in_db( string $ip ): ?array {
 		global $wpdb;
+
+		$table = self::table();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$exact = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . self::table() . ' WHERE ip = %s',
+				'SELECT * FROM %i WHERE ip = %s',
+				$table,
 				$ip
 			),
 			ARRAY_A
@@ -301,8 +304,15 @@ class IpEntriesRepository {
 			return null;
 		}
 
+		$like_pattern = '%' . $wpdb->esc_like( '/' ) . '%';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$cidr_entries = $wpdb->get_results(
-			'SELECT * FROM ' . self::table() . " WHERE ip LIKE '%/%'",
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE ip LIKE %s',
+				$table,
+				$like_pattern
+			),
 			ARRAY_A
 		);
 
@@ -338,7 +348,7 @@ class IpEntriesRepository {
 			$existing = self::ip_in_db( $sanitized_entry['ip'] );
 
 			if ( $existing ) {
-				$update_data = $sanitized_entry;
+				$update_data               = $sanitized_entry;
 				$update_data['updated_at'] = $now;
 				unset( $update_data['ip'] );
 
@@ -362,7 +372,7 @@ class IpEntriesRepository {
 			$result = $wpdb->insert( self::table(), $sanitized_entry );
 
 			if ( $result ) {
-				$inserted_count++;
+				++$inserted_count;
 			}
 		}
 
@@ -383,7 +393,6 @@ class IpEntriesRepository {
 		$now                     = current_time( 'mysql' );
 		$sanitized['created_at'] = $now;
 		$sanitized['updated_at'] = $now;
-
 
 		$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
 		if ( $geoip ) {
@@ -531,7 +540,7 @@ class IpEntriesRepository {
 			$sanitized[ $key ] = $value;
 		}
 
-		if ( empty( $sanitized['ip']) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) {
+		if ( empty( $sanitized['ip'] ) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) {
 			return array();
 		}
 

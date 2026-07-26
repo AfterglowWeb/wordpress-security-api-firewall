@@ -372,7 +372,7 @@ final class TOTPRepository {
 		);
 
 		$like_clauses = array();
-		$params       = array();
+		$params       = array( $wpdb->options );
 
 		foreach ( $prefixes as $prefix ) {
 			$like_clauses[] = 'option_name LIKE %s';
@@ -384,7 +384,7 @@ final class TOTPRepository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix.
 		$wpdb->query(
 			$wpdb->prepare(
-				'DELETE FROM ' . $wpdb->options . ' WHERE ' . implode( ' OR ', $like_clauses ),
+				'DELETE FROM %i WHERE ' . implode( ' OR ', $like_clauses ),
 				$params
 			)
 		);

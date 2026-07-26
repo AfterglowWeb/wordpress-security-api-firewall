@@ -61,7 +61,7 @@ final class Bootstrap {
 			IpEntriesAjaxController::register();
 			LogsAjaxController::register();
 			Documentation::register();
-		
+
 		}
 	}
 

@@ -1,12 +1,15 @@
-import { __ } from '@wordpress/i18n';
 import type { IpEntry } from '@services/ip';
-import { IpAPI } from '@services/ip';
 import { apiRequest } from '@services/api';
+import { __ } from '@wordpress/i18n';
+
+export interface DesiredIpEntry {
+  ip: string;
+  referrer: string | null;
+}
 
 interface IpEntriesDiff {
   toDelete: IpEntry[];
-  toAdd: string[];
-  desiredReferrer: string | null;
+  toAdd: DesiredIpEntry[];
 }
 
 interface SyncIpEntriesResult {
@@ -26,34 +29,39 @@ interface SyncIpEntriesResponse {
 
 export function computeIpEntriesDiff(
   ipEntries: IpEntry[],
-  ipListValue: string,
-  ipListReferrer: string
+  desired: DesiredIpEntry[]
 ): IpEntriesDiff {
-  const desiredReferrer = ipListReferrer.trim() || null;
-  const desiredLines = Array.from(
-    new Set(ipListValue.split('\n').map((l) => l.trim()).filter(Boolean))
-  );
-  const desiredSet = new Set(desiredLines);
+  const desiredMap = new Map<string, string | null>();
+  desired.forEach(({ ip, referrer }) => {
+    const trimmedIp = ip.trim();
+    if (!trimmedIp) return;
+    desiredMap.set(trimmedIp, referrer?.trim() || null);
+  });
 
-  const toDelete = ipEntries.filter(
-    (e) => !desiredSet.has(e.ip) || (e.referrer ?? null) !== desiredReferrer
-  );
+  const toDelete = ipEntries.filter((e) => {
+    if (!desiredMap.has(e.ip)) return true;
+    return desiredMap.get(e.ip) !== (e.referrer ?? null);
+  });
 
-  const keptIps = new Set(
+  const matchedIps = new Set(
     ipEntries
-      .filter((e) => desiredSet.has(e.ip) && (e.referrer ?? null) === desiredReferrer)
+      .filter((e) => desiredMap.has(e.ip) && desiredMap.get(e.ip) === (e.referrer ?? null))
       .map((e) => e.ip)
   );
-  const toAdd = desiredLines.filter((ip) => !keptIps.has(ip));
 
-  return { toDelete, toAdd, desiredReferrer };
+  const toAdd: DesiredIpEntry[] = [];
+  desiredMap.forEach((referrer, ip) => {
+    if (!matchedIps.has(ip)) toAdd.push({ ip, referrer });
+  });
+
+  return { toDelete, toAdd };
 }
 
 export async function syncUserIpEntries(
   userId: number,
   diff: IpEntriesDiff
 ): Promise<SyncIpEntriesResult> {
-  const { toDelete, toAdd, desiredReferrer } = diff;
+  const { toDelete, toAdd } = diff;
 
   if (toDelete.length === 0 && toAdd.length === 0) {
     return { ok: true, entries: [], addCount: 0, deleteCount: 0, updateCount: 0 };
@@ -63,11 +71,10 @@ export async function syncUserIpEntries(
 
   try {
     result = await apiRequest<SyncIpEntriesResponse>('bromate_sync_ip_entries', {
-      add_ips: toAdd,
+      add_entries: toAdd, // [{ ip, referrer }] — referrer désormais par entrée, pas partagé
       delete_ips: toDelete.map((e) => e.ip),
       list_type: 'whitelist',
       user_id: userId,
-      referrer: desiredReferrer,
     });
   } catch (error) {
     return {
@@ -80,6 +87,7 @@ export async function syncUserIpEntries(
     };
   }
 
+  const { IpAPI } = await import('@services/ip');
   const fresh = await IpAPI.getUserEntries(userId);
 
   return {

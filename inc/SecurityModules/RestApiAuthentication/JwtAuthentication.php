@@ -172,14 +172,13 @@ class JwtAuthentication {
 		$kid               = self::generate_kid();
 
 		$keys = self::get_all_key_records();
-		if ( $keep_previous_for_grace_period && !empty( $keys ) ) {
+		if ( $keep_previous_for_grace_period && ! empty( $keys ) ) {
 			$now = time();
 			foreach ( $keys as &$existing ) {
 				if ( null === ( $existing['expires_at'] ?? null ) ) {
 					$existing['expires_at'] = $now + self::KEY_GRACE_PERIOD_SECONDS;
 				}
 			}
-			
 		} else {
 			$keys = array();
 		}
@@ -314,12 +313,12 @@ class JwtAuthentication {
 
 	public static function get_active_key_record(): ?array {
 		$key_records = self::get_all_key_records();
-		if(! empty( $key_records ) ){
-		foreach ( self::get_all_key_records() as $record ) {
-			if ( null === ( $record['expires_at'] ?? null ) ) {
-				return $record;
+		if ( ! empty( $key_records ) ) {
+			foreach ( self::get_all_key_records() as $record ) {
+				if ( null === ( $record['expires_at'] ?? null ) ) {
+					return $record;
+				}
 			}
-		}
 		}
 		return null;
 	}
@@ -346,11 +345,11 @@ class JwtAuthentication {
 	}
 
 	public static function get_key_pair_summary(): array {
-		$now      = time();
-		$active   = null;
-		$rotating = array();
+		$now         = time();
+		$active      = null;
+		$rotating    = array();
 		$key_records = self::get_all_key_records();
-		if(! empty( $key_records ) ){
+		if ( ! empty( $key_records ) ) {
 			foreach ( self::get_all_key_records() as $record ) {
 				$is_active = null === ( $record['expires_at'] ?? null );
 
@@ -388,7 +387,7 @@ class JwtAuthentication {
 		$keys = array();
 
 		$key_records = self::get_all_key_records();
-		if(! empty( $key_records ) ){
+		if ( ! empty( $key_records ) ) {
 			foreach ( self::get_all_key_records() as $record ) {
 				$expires_at = isset( $record['expires_at'] ) ? $record['expires_at'] : null;
 				$is_active  = null === $expires_at;
@@ -403,7 +402,7 @@ class JwtAuthentication {
 					$keys[] = $jwk;
 				}
 			}
-		}		
+		}
 
 		return array( 'keys' => $keys );
 	}

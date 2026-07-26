@@ -38,7 +38,7 @@ class SessionManager {
 
 		wp_send_json_success(
 			array(
-				'message'  => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ),
+				'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ),
 			),
 			200
 		);
@@ -92,6 +92,4 @@ class SessionManager {
 			--$excess;
 		}
 	}
-
-
 }
