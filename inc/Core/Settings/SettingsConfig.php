@@ -93,6 +93,13 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
+			'auth_authorized_roles'                                  => array(
+				'default_value'     => array('administrator'),
+				'type'              => 'array',
+				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_roles' ),
+				'group'             => 'authentication',
+			),
+
 			'rate_limit_enabled'                          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',

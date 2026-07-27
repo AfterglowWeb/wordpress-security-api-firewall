@@ -11,17 +11,17 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import HistoryIcon from '@mui/icons-material/History';
 
-import type { AuthSettings } from '@app-types/auth';
+import type { AuthSettings, AuthorizedUser, WordPressRole } from '@app-types/auth';
 import { SettingsAPI } from '@services/settings';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import { apiRequest } from '@services/api';
 import SaveButton from '@components/SaveButton';
 import CopyButton from '@components/CopyButton';
+import MultipleSelect, { OptionType } from '@components/MultipleSelect';
 
 interface AuthOptionsProps {
   settings: AuthSettings;
@@ -30,6 +30,7 @@ interface AuthOptionsProps {
   onSaved: (settings: AuthSettings) => void;
   authorizedUsersCount: number;
   authorizedUsersLoading: boolean;
+  authorizedUsers: AuthorizedUser[];
 }
 
 interface ActiveKeyInfo {
@@ -86,6 +87,40 @@ function validateAuthSettings(settings: AuthSettings): Partial<Record<ValidatedF
   return errors;
 }
 
+interface RolesSelectorProps {
+  wordPressRoles: WordPressRole[];
+  value: string[];
+  onChange: (value: string[]) => void;
+  disabled?: boolean;
+  loading?: boolean;
+}
+
+function RolesSelector({ wordPressRoles, value, onChange, disabled, loading }: RolesSelectorProps): JSX.Element {
+  const options: OptionType[] = useMemo(
+    () => wordPressRoles.map((role) => ({ value: role.name, label: role.label })),
+    [wordPressRoles]
+  );
+
+  return (
+    <Stack spacing={1}>
+      <Typography variant="h6">{__('Authorized roles', 'bromate-security-api-firewall')}</Typography>
+      <MultipleSelect
+        label={__('Authorized roles', 'bromate-security-api-firewall')}
+        name="auth_authorized_roles"
+        value={value}
+        options={options}
+        onChange={onChange}
+        disabled={disabled || loading}
+        helperText= {__(
+          'Leave empty to allow any role.',
+          'bromate-security-api-firewall'
+        )}
+        sx={{ maxWidth: 400 }}
+      />
+    </Stack>
+  );
+}
+
 export default function AuthOptions({
   settings,
   loadedSettings,
@@ -93,6 +128,7 @@ export default function AuthOptions({
   onSaved,
   authorizedUsersCount,
   authorizedUsersLoading,
+  authorizedUsers,
 }: AuthOptionsProps): JSX.Element {
   const portalContainer = usePortalContainer();
   const [jwksEndpoint, setJwksEndpoint] = useState<string>('');
@@ -105,6 +141,9 @@ export default function AuthOptions({
   const [keySummary, setKeySummary] = useState<KeyPairSummary>(EMPTY_SUMMARY);
   const [showPublicKey, setShowPublicKey] = useState<boolean>(false);
 
+  const [wpRoles, setWpRoles] = useState<WordPressRole[]>([]);
+  const [wpRolesLoading, setWpRolesLoading] = useState<boolean>(false);
+
   const hasStoredKey = keySummary.active !== null;
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
@@ -115,13 +154,28 @@ export default function AuthOptions({
     [settings, loadedSettings]
   );
 
+  const rolesDirty = useMemo(
+    () => JSON.stringify(settings.auth_authorized_roles ?? []) !== JSON.stringify(loadedSettings.auth_authorized_roles ?? []),
+    [settings.auth_authorized_roles, loadedSettings.auth_authorized_roles]
+  );
+
   const fieldErrors = useMemo(() => validateAuthSettings(settings), [settings]);
 
-const audienceDirty = settings.auth_jwt_audience !== loadedSettings.auth_jwt_audience;
-const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
+  const audienceDirty = settings.auth_jwt_audience !== loadedSettings.auth_jwt_audience;
+  const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
 
   const needsAuthorizedUsers = settings.auth_control_enabled
     && (authorizedUsersLoading || authorizedUsersCount === 0);
+
+  // Authorized users whose WordPress role would no longer be in the authorized-roles
+  // list if the pending (unsaved) selection were applied.
+  const impactedUsers = useMemo(() => {
+    const roles = settings.auth_authorized_roles ?? [];
+    if (roles.length === 0) return [];
+    return authorizedUsers.filter(
+      (user) => !(user.roles ?? []).some((role) => roles.includes(role))
+    );
+  }, [authorizedUsers, settings.auth_authorized_roles]);
 
   const hasValidationErrors = Object.keys(fieldErrors).length > 0 || needsAuthorizedUsers;
 
@@ -141,6 +195,17 @@ const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
     await SettingsAPI.updateOptions(settings);
     onSaved(settings);
   }, [settings, onSaved]);
+
+  const saveConfirmContent = useMemo(() => {
+    const base = __('Apply these REST API authentication settings now?', 'bromate-security-api-firewall');
+    if (!rolesDirty || impactedUsers.length === 0) return base;
+    const names = impactedUsers.map((u) => u.display_name).join(', ');
+    return `${base}\n\n${sprintf(
+      __('%d authorized user(s) will be disabled because their role is no longer authorized: %s', 'bromate-security-api-firewall'),
+      impactedUsers.length,
+      names
+    )}`;
+  }, [rolesDirty, impactedUsers]);
 
   const fetchJwksEndpoint = useCallback(async () => {
     setLoadingEndpoint(true);
@@ -164,10 +229,23 @@ const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
     }
   }, []);
 
+  const fetchWordPressRoles = useCallback(async () => {
+    setWpRolesLoading(true);
+    try {
+      const roles = await apiRequest<WordPressRole[]>('bromate_authorized_roles_options');
+      setWpRoles(Array.isArray(roles) ? roles : []);
+    } catch {
+      // Ignore, selector will just show no options.
+    } finally {
+      setWpRolesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchJwksEndpoint();
     fetchKeySummary();
-  }, [fetchJwksEndpoint, fetchKeySummary]);
+    fetchWordPressRoles();
+  }, [fetchJwksEndpoint, fetchKeySummary, fetchWordPressRoles]);
 
   const handleGenerateKey = useCallback(async () => {
     setGeneratingKey(true);
@@ -295,7 +373,7 @@ const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
               disabled={saveDisabled}
               messages={{
                 confirmTitle: __('Save authentication settings', 'bromate-security-api-firewall'),
-                confirmContent: __('Apply these REST API authentication settings now?', 'bromate-security-api-firewall'),
+                confirmContent: saveConfirmContent,
                 confirmLabel: __('Save', 'bromate-security-api-firewall'),
                 successMessage: __('Settings saved successfully.', 'bromate-security-api-firewall'),
                 errorMessage: __('Failed to save settings.', 'bromate-security-api-firewall'),
@@ -332,6 +410,24 @@ const issuerDirty = settings.auth_jwt_issuer !== loadedSettings.auth_jwt_issuer;
               </Typography>
             </Stack>
           </Stack>
+
+          <RolesSelector
+            wordPressRoles={wpRoles}
+            value={settings.auth_authorized_roles ?? []}
+            onChange={(value) => update('auth_authorized_roles', value)}
+            disabled={!settings.auth_control_enabled}
+            loading={wpRolesLoading}
+          />
+
+          {rolesDirty && impactedUsers.length > 0 && (
+            <Alert severity="warning">
+              {sprintf(
+                __('Saving will disable %d authorized user(s) whose role is no longer authorized: %s', 'bromate-security-api-firewall'),
+                impactedUsers.length,
+                impactedUsers.map((u) => u.display_name).join(', ')
+              )}
+            </Alert>
+          )}
 
           {needsAuthorizedUsers && (
             <Alert severity="info">

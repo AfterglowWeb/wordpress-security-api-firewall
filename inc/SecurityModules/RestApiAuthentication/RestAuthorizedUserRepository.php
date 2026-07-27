@@ -14,7 +14,6 @@ class RestAuthorizedUserRepository {
 	public static function authorized_users_options(): array {
 		$users = get_users(
 			array(
-				'role__in' => array( 'administrator', 'editor' ),
 				'number'   => 500,
 				'orderby'  => 'display_name',
 				'order'    => 'ASC',
@@ -48,6 +47,20 @@ class RestAuthorizedUserRepository {
 				static fn ( $user ) => $user instanceof WP_User
 			)
 		);
+	}
+
+	public static function authorized_roles_options(): array {
+		
+		$role_names = self::get_roles_names();
+		if( empty( $role_names ) ) {
+			return [];
+		}
+
+		$roles_options = [];
+		foreach($role_names as $role_key => $role_label) {
+			$roles_options[] = array('name' => $role_key, 'label' => $role_label);
+		}
+		return $roles_options;
 	}
 
 	public static function sanitize_authorized_users( array $users ): array {
@@ -88,6 +101,37 @@ class RestAuthorizedUserRepository {
 		);
 	}
 
+	public static function get_roles_names(): array {
+		$wp_roles = (array) wp_roles();
+	
+
+		if ( empty( $wp_roles )) {
+			return array();
+		}
+
+		return isset($wp_roles['role_names']) ? $wp_roles['role_names'] : [];
+	}
+
+	public static function sanitize_authorized_roles( array $roles ): array {
+
+
+		if(empty($roles)) {
+			return [];
+		}
+
+		$role_names = array_map( function( $role_option ) {
+			return $role_option['name'];
+		} , self::authorized_roles_options() );
+
+		$mapped = array_map( function ( $role ) use ( $role_names ) {
+			return in_array( $role,  $role_names) ? sanitize_text_field( $role ) : null;
+		}, $roles );
+
+		return array_values(
+			array_filter( $mapped, static fn( $u ) => null !== $u )
+		);
+	}
+
 	public static function update_authorized_users( array $users ): array {
 
 		$existing_users = SettingsRepository::read_option( 'auth_users' );
@@ -119,6 +163,10 @@ class RestAuthorizedUserRepository {
 
 	public static function get_authorized_users(): array {
 		return SettingsRepository::read_option( 'auth_users' );
+	}
+
+	public static function get_authorized_roles(): array {
+		return SettingsRepository::read_option( 'auth_authorized_roles' );
 	}
 
 	public static function delete_authorized_users( array $users ): int {

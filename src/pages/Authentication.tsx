@@ -10,14 +10,15 @@ import AuthorizedUsersGrid, { AuthorizedUsersInfo } from '@features/authenticati
 const DEFAULT_SETTINGS: AuthSettings = {
   auth_control_enabled: true,
   auth_methods: 'jwt',
+  auth_authorized_roles: [],
   auth_jwt_algorithm: 'RS256',
   auth_jwt_public_key: '',
   auth_jwt_audience: '',
   auth_jwt_issuer: '',
-  auth_jwt_jwks_url: ''
+  auth_jwt_jwks_url: '',
 };
 
-const DEFAULT_AUTHORIZED_USERS_INFO: AuthorizedUsersInfo = { count: 0, loading: true };
+const DEFAULT_AUTHORIZED_USERS_INFO: AuthorizedUsersInfo = { count: 0, loading: true, users: [] };
 
 export default function Authentication(): JSX.Element {
   const [settings, setSettings] = useState<AuthSettings>(DEFAULT_SETTINGS);
@@ -55,12 +56,14 @@ export default function Authentication(): JSX.Element {
         onSaved={setSettings}
         authorizedUsersCount={authorizedUsersInfo.count}
         authorizedUsersLoading={authorizedUsersInfo.loading}
+        authorizedUsers={authorizedUsersInfo.users}
       />)}
 
       <AuthorizedUsersGrid
         authMethod={settings.auth_methods}
         authEnabled={settings.auth_control_enabled}
         onUsersChange={setAuthorizedUsersInfo}
+        authorizedRoles={settings.auth_authorized_roles}
       />
 
       <Snackbar open={!!loadError} autoHideDuration={4000} onClose={() => setLoadError(null)}

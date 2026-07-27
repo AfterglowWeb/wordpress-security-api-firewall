@@ -26,11 +26,13 @@ interface AuthenticationToolbarProps {
 export interface AuthorizedUsersInfo {
   count: number;
   loading: boolean;
+  users: AuthorizedUser[];
 }
 
 interface AuthorizedUsersGridProps {
   authMethod: AuthSettings['auth_methods'];
   authEnabled: AuthSettings['auth_control_enabled'];
+  authorizedRoles: string[];
   onUsersChange?: (info: AuthorizedUsersInfo) => void;
 }
 
@@ -68,7 +70,7 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
   );
 }
 
-export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
+export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
   const [authUsersLoading, setAuthUsersLoading] = useState(true);
   const portalContainer = usePortalContainer();
@@ -105,11 +107,19 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
   const authorizedUserIds = useMemo(() => authUsers.map((u) => u.id), [authUsers]);
 
   useEffect(() => {
-    onUsersChange?.({ count: authUsers.length, loading: authUsersLoading });
-  }, [authUsers, authUsersLoading, onUsersChange]);
+    onUsersChange?.({ count: authUsers.length, loading: authUsersLoading, users: authorizedUsers });
+  }, [authUsers, authUsersLoading, authorizedUsers, onUsersChange]);
 
-  const resolveDisplayStatus = (user: AuthorizedUser): 'active' | 'expiring' | 'revoked' | 'disabled' => {
+  // A user whose WordPress role isn't in the authorized-roles list is disabled,
+  // regardless of their stored status, but stays visible in the grid.
+  const isRoleAuthorized = useCallback((user: AuthorizedUser): boolean => {
+    if (authorizedRoles.length === 0) return true;
+    return (user.roles ?? []).some((role) => authorizedRoles.includes(role));
+  }, [authorizedRoles]);
+
+  const resolveDisplayStatus = useCallback((user: AuthorizedUser): 'active' | 'expiring' | 'revoked' | 'disabled' => {
     if (user.status === 'revoked' || user.status === 'disabled') return 'revoked';
+    if (!isRoleAuthorized(user)) return 'disabled';
     if (user.expires_at) {
       const days = Math.ceil(
         (new Date(user.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
@@ -118,13 +128,13 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
       if (days <= 30) return 'expiring';
     }
     return 'active';
-  };
+  }, [isRoleAuthorized]);
 
   const statusLabels: Record<'active' | 'expiring' | 'revoked' | 'disabled', string> = {
     active: __('active', 'bromate-security-api-firewall'),
     expiring: __('expiring', 'bromate-security-api-firewall'),
     revoked: __('revoked', 'bromate-security-api-firewall'),
-    disabled: __('disabled', 'bromate-security-api-firewall'),
+    disabled: __('disabled (role not authorized)', 'bromate-security-api-firewall'),
   };
 
   const fetchWordPressUsers = useCallback(async () => {
@@ -321,12 +331,23 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
       field: 'status', headerName: __('Status', 'bromate-security-api-firewall'), width: 110,
       renderCell: ({ row }) => {
         const s = resolveDisplayStatus(row);
-        return (
+        const chip = (
           <Chip label={statusLabels[s]} size="small" sx={{
             backgroundColor: { active: '#4caf50', expiring: '#ff9800', revoked: '#f44336', disabled: '#5f5e5e' }[s],
             color: 'white',
           }} />
         );
+        if (s === 'disabled') {
+          return (
+            <Tooltip
+              slotProps={{ popper: { container: portalContainer } }}
+              title={__("This user's role is not in the list of authorized roles.", 'bromate-security-api-firewall')}
+            >
+              {chip}
+            </Tooltip>
+          );
+        }
+        return chip;
       },
     },
     {
@@ -386,6 +407,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
         authorizedUserIds={authorizedUserIds}
         authorizedUsers={authUsers}
         authMethod={authMethod}
+        authorizedRoles={authorizedRoles}
       />
 
       <Snackbar open={snackbar.open} autoHideDuration={4000}

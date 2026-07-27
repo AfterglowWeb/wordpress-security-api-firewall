@@ -9,6 +9,11 @@ export type AuthMethod = 'jwt' | 'wp_auth';
 
 export type UserStatus = 'active' | 'revoked' | 'disabled';
 
+export interface WordPressRole {
+  name: string;
+  label: string;
+}
+
 export interface AuthorizedUser {
   id: number;
   display_name: string;
@@ -34,6 +39,7 @@ export interface AuthSettings {
   auth_control_enabled: boolean;
   auth_methods: AuthMethod;
   auth_jwt_algorithm: JwtAlgorithm;
+  auth_authorized_roles: string[];
   auth_jwt_public_key: string;
   auth_jwt_audience: string;
   auth_jwt_issuer: string;
@@ -51,4 +57,5 @@ export interface AuthorizedUserDialogProps {
   authorizedUserIds: number[];
   authorizedUsers: AuthorizedUserMeta[];
   authMethod: AuthMethod;
+  authorizedRoles: string[];
 }
