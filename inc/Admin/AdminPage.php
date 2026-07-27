@@ -38,8 +38,8 @@ class AdminPage {
 
 	public function register_admin_page(): void {
 		add_menu_page(
-			__( 'WP Security & API Firewall', 'bromate-security-api-firewall' ),
-			__( 'WP Security & API Firewall', 'bromate-security-api-firewall' ),
+			__( 'Security & API Firewall', 'bromate-security-api-firewall' ),
+			__( 'Bro. Security', 'bromate-security-api-firewall' ),
 			self::EDIT_OPTIONS_CUSTOM_CAP,
 			'bromate-security-api-firewall',
 			array( $this, 'render_admin_page' ),

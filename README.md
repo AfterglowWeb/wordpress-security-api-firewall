@@ -1,19 +1,21 @@
-# WP Security & API Firewall
+# Bromate Security & API Firewall
 
 📖 **[Documentation](https://www.moriskelly.com/wordpress-security-api-firewall)**
 
-WP Security & API Firewall is a complete security suite for WordPress, hardening login, core endpoints, and server-level exposure — including rate limiting, IP/GeoIP blocking, 2FA, and Recaptcha. It secures REST API access with JWT and Application Password hardening, per-route authentication and restriction rules, and response filtering to reduce data exposure. Every blocked request and security event is logged for full visibility.
+Bromate Security & API Firewall is a complete security suite for WordPress, hardening login, core endpoints, and server-level exposure — including rate limiting, IP/GeoIP blocking, 2FA, and Recaptcha. It secures REST API access with JWT and Application Password hardening, per-route authentication and restriction rules to reduce data exposure.
 
 | Feature | Description |
 |---|---|
 | **Firewall** | Rate limiting, IPv4/IPv6 blacklisting, CIDR ranges, country blocking (GeoIP) |
 | **Login Hardening** | Login rate limiting, Recaptcha, 2FA, auth cookie protection, salt rotation schedule, sessions manager |
-| **WordPress Security** | Disable XML-RPC, comments, pingbacks, RSS/Atom, sitemap; security HTTP headers; secure file permissions |
+| **Global Security** | Disable XML-RPC, comments, pingbacks, RSS/Atom, sitemap; security HTTP headers; secure file permissions |
 | **Application Authentication** | JWT and Application Passwords hardening, whitelist IPs and origins |
 | **Application Only Mode** | Redirect or hide front |
-| **REST Routes** | Enforce authentication and disable routes on a per-route basis and per criteria |
-| **REST Response** | Resolve embedded data, flatten rendered fields, strip domain from URLs |
-| **Logs** | Security event logs |
+| **REST Routes** | Enforce authentication and disable routes on a per-route basis and criteria |
+| **Logs** | Security event logs | Stats | Email notifications
+
+| **REST Response (PRO)** | Cache Response, Remove empty props, Resolve embedded data, flatten rendered fields, strip domain from URLs | Build your own Data Schemas
+| **Webhooks (PRO)** | Fire secured webhooks on WordPress and plugins events, schedule recurring webhooks.
 
 ## Requirements
 

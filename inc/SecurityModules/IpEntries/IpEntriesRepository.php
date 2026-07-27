@@ -261,7 +261,7 @@ class IpEntriesRepository {
 
 		$sql = '
 			SELECT ip 
-			FROM ' . self::table() . ' 
+			FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries 
 			WHERE list_type = %s 
 			AND ip LIKE %s 
 			AND (
@@ -270,7 +270,19 @@ class IpEntriesRepository {
 			)
 			';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
-		$may_be_cidrs = $wpdb->get_col( $wpdb->prepare( $sql, $list_type, '%/%' ) );
+		$may_be_cidrs = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ip FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries 
+			WHERE list_type = %s 
+			AND ip LIKE %s 
+			AND (
+				expires_at IS NULL 
+				OR expires_at > NOW()
+			)",
+				$list_type,
+				'%/%'
+			)
+		);
 
 		foreach ( $may_be_cidrs as $cidr ) {
 			if ( IpUtils::ip_matches( $ip, $cidr ) ) {
@@ -289,8 +301,7 @@ class IpEntriesRepository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$exact = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM %i WHERE ip = %s',
-				$table,
+				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip = %s",
 				$ip
 			),
 			ARRAY_A
@@ -304,14 +315,11 @@ class IpEntriesRepository {
 			return null;
 		}
 
-		$like_pattern = '%' . $wpdb->esc_like( '/' ) . '%';
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$cidr_entries = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT * FROM %i WHERE ip LIKE %s',
-				$table,
-				$like_pattern
+				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip LIKE %s",
+				'%/%'
 			),
 			ARRAY_A
 		);
