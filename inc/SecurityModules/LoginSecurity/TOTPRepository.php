@@ -365,27 +365,22 @@ final class TOTPRepository {
 	private static function delete_login_session_transients(): void {
 		global $wpdb;
 
-		$prefixes = array(
-			'bromate_totp_pending_',
-			'bromate_totp_attempts_',
-			'bromate_totp_verified_',
-		);
-
-		$like_clauses = array();
-		$params       = array( $wpdb->options );
-
-		foreach ( $prefixes as $prefix ) {
-			$like_clauses[] = 'option_name LIKE %s';
-			$like_clauses[] = 'option_name LIKE %s';
-			$params[]       = $wpdb->esc_like( '_transient_' . $prefix ) . '%';
-			$params[]       = $wpdb->esc_like( '_transient_timeout_' . $prefix ) . '%';
-		}
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix.
 		$wpdb->query(
 			$wpdb->prepare(
-				'DELETE FROM %i WHERE ' . implode( ' OR ', $like_clauses ),
-				$params
+				"DELETE FROM {$wpdb->options}
+				WHERE option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s
+				OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_bromate_totp_pending' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_bromate_totp_pending_' ) . '%',
+				$wpdb->esc_like( '_transient_bromate_totp_attempts_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_bromate_totp_attempts_' ) . '%',
+				$wpdb->esc_like( '_transient_bromate_totp_verified_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_bromate_totp_verified_' ) . '%'
 			)
 		);
 	}

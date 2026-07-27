@@ -37,7 +37,7 @@ export default function AppIdentity() {
 				borderColor: theme.palette.divider,
 			} }
 		>
-			<AppLogo>RAF</AppLogo>
+			<AppLogo>BSAF</AppLogo>
 			<Box sx={{p:1}}>
 				<Typography 
 				textTransform="uppercase" 
@@ -45,7 +45,7 @@ export default function AppIdentity() {
 				lineHeight={1} 
 				color="textPrimary"
 				fontWeight={ 600 }>
-					WP Security & API Firewall
+					Bromate Security & API Firewall
 				</Typography>
 			</Box>
 		</Box>
