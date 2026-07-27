@@ -30,7 +30,7 @@ import AppIdentity from './AppIdentity';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 export const DRAWER_WIDTH = 220;
-export const APP_BAR_HEIGHT = 75;
+export const APP_BAR_HEIGHT = 65;
 export const APP_FOOTER_HEIGHT = 40;
 export const WP_ADMIN_BAR_HEIGHT_DESKTOP = 32;
 export const WP_ADMIN_BAR_HEIGHT_MOBILE = 46;
@@ -84,7 +84,10 @@ export default function Navigation({children}) {
             sx={ {
                 '&.MuiAppBar-root': {
                     position: 'relative',
-                    width: '100%'
+                    width: '100%',
+                    height: { xs: 'auto', xl: APP_BAR_HEIGHT },
+                    minHeight:{ xs: 'auto', xl: APP_BAR_HEIGHT },
+                    overflow: 'hidden',
                 },
             } }
             >
@@ -97,9 +100,6 @@ export default function Navigation({children}) {
                         borderColor: 'divider',
                         pr: 3,
 						pl:0,
-                        height: { xs: 'auto', xl: APP_BAR_HEIGHT },
-                        minHeight: APP_BAR_HEIGHT,
-                        overflow: 'hidden',
                         gap: 2,
                     } }
                 >

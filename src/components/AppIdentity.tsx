@@ -10,12 +10,12 @@ const AppLogo = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'open',
 })<AppLogoProps>(({ theme, open }) => ({
   height: '100%',
-  width: open ? 80 : 65,
+  width: 65,
   flexShrink: 0,
   padding: open ? '0 12px' : 0,
   background: 'linear-gradient(307deg, #ffb7c4 0%, #ff002e 100%)',
   borderRadius: 0,
-  fontSize: open ? '1.4rem' : '1rem',
+  fontSize: '1rem',
   fontWeight: 800,
   color: '#fff',
   letterSpacing: '-0.02em',
@@ -41,11 +41,11 @@ export default function AppIdentity({ open = true }: AppIdentityProps): JSX.Elem
     <Box
       sx={{
         p: 0,
-        height: 75,
+        height: 65,
         width: open ? 220 : 65,
         display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 1,
         overflow: 'hidden',
         flexShrink: 0,
         borderRight: '1px solid',
@@ -59,20 +59,31 @@ export default function AppIdentity({ open = true }: AppIdentityProps): JSX.Elem
       <AppLogo open={open}>b.SAF</AppLogo>
       {open && (
         <Box sx={{ 
-          p: 1, 
+          py: 1, 
+          px: 2, 
           overflow: 'hidden', 
-          width: open? 132: 0, 
+          width: open? 155: 0, 
           transtion:'all .3s' 
           }}>
           <Typography
+            variant="body2"
+            lineHeight={1.1}
+            color="textSecondary"
+            sx={{ width:138}}
+          >
+            Bromate
+          </Typography>
+          <Typography
+            component="p"
             textTransform="uppercase"
+            textAlign="justify"
             variant="subtitle2"
-            lineHeight={1}
+            lineHeight={1.1}
             color="textPrimary"
             fontWeight={600}
-            sx={{ width:132}}
+            sx={{ width:138}}
           >
-            Bromate Security & API Firewall
+            Security &<br/>API Firewall
           </Typography>
         </Box>
       )}
