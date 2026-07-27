@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { Paper, Typography, Button, Snackbar, Alert, Chip, Tooltip, Stack } from '@mui/material';
+import { Paper, Typography, Button, Snackbar, Alert, Chip, Tooltip, Stack, FormControl, FormControlLabel, Switch } from '@mui/material';
 import {
   DataGrid, GridColDef, GridActionsCellItem, GridRowId,
   GridRowSelectionModel, Toolbar, useGridApiContext,
@@ -10,7 +10,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
-import type { AuthorizedUser, AuthorizedUserMeta, AuthSettings } from '@app-types/auth';
+import type { AuthorizedUser, AuthorizedUserMeta, AuthSettings, WordPressRole } from '@app-types/auth';
 import { apiRequest } from '@services/api';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
@@ -21,6 +21,11 @@ interface AuthenticationToolbarProps {
   onAddUser?: () => void;
   onDeleteSelectedUser?: (rows: Map<GridRowId, AuthorizedUser>) => void;
   selectedCount: number;
+}
+
+interface RolesSelectorProps {
+  wordPressRoles: WordPressRole[];
+  authorizedRoles: WordPressRole[];
 }
 
 export interface AuthorizedUsersInfo {
@@ -68,15 +73,37 @@ function CustomToolbar({ onAddUser, onDeleteSelectedUser }: AuthenticationToolba
   );
 }
 
+function RolesSelector({wordPressRoles, authorizedRoles}:RolesSelectorProps): JSX.Element {
+  return(
+    <FormControl>
+      <Typography variant="h6">{__('REST API Authorized Roles', 'bromate-security-api-firewall')}</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        {wordPressRoles && wordPressRoles.map((wordPressRole) => (<FormControlLabel
+          label={wordPressRole.label}
+          control={
+            <Switch
+              checked={!!authorizedRoles.find((r) => r.name === wordPressRole.name)}
+            />
+          }
+        />
+        ))}
+      </Stack>
+    </FormControl>
+  )
+} 
+
 export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: AuthorizedUsersGridProps): JSX.Element {
   const [authUsers, setAuthUsers] = useState<AuthorizedUserMeta[]>([]);
+  const [authRoles, setAuthRoles] = useState<WordPressRole[]>([]);
   const [authUsersLoading, setAuthUsersLoading] = useState(true);
   const portalContainer = usePortalContainer();
   const { openDialog } = useDialog();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AuthorizedUser | null>(null);
   const [wpUsers, setWpUsers] = useState<AuthorizedUser[]>([]);
+  const [wpRoles, setWpRoles] = useState<WordPressRole[]>([]);
   const [wpUsersLoading, setWpUsersLoading] = useState(false);
+  const [wpRolesLoading, setWpRolesLoading] = useState(false);
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
     type: 'include',
     ids: new Set(),
@@ -100,6 +127,16 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
         }];
       }),
     [authUsers, wpUsers]
+  );
+
+  const authorizedRoles = useMemo<WordPressRole[]>(
+    () =>
+      authRoles.flatMap((meta) => {
+        const wpRole = wpRoles.find((u) => u.name === meta.name);
+        if (!wpRole) return [];
+        return [wpRole];
+      }),
+    [authRoles, wpRoles]
   );
 
   const authorizedUserIds = useMemo(() => authUsers.map((u) => u.id), [authUsers]);
@@ -143,9 +180,27 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
     }
   }, []);
 
+  const fetchWordPressRoles = useCallback(async () => {
+    setWpRolesLoading(true);
+    try {
+      const roles = await apiRequest<WordPressRole[]>('bromate_authorized_roles_options');
+      setWpRoles(roles);
+      console.log(roles);
+    } catch {
+      setSnackbar({
+        open: true,
+        message: __('Failed to load WordPress roles', 'bromate-security-api-firewall'),
+        severity: 'error',
+      });
+    } finally {
+      setWpRolesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchWordPressRoles();
     fetchWordPressUsers();
-  }, [fetchWordPressUsers]);
+  }, [fetchWordPressRoles, fetchWordPressUsers]);
 
   useEffect(() => {
     const fetchAuthorizedUsers = async () => {
@@ -178,6 +233,39 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
     };
 
     fetchAuthorizedUsers();
+  }, []);
+
+    useEffect(() => {
+    const fetchAuthorizedRoles = async () => {
+      try {
+        const roles = await apiRequest<WordPressRole[]>('bromate_get_authorized_roles');
+        const valid = Array.isArray(roles)
+          ? roles.filter(
+              (u): u is WordPressRole =>
+                u !== null && typeof u === 'object' && typeof u.name === 'string'
+            )
+          : [];
+        if(valid.length > 0) {
+          setAuthRoles(valid);
+        } else {
+          setSnackbar({
+            open: true,
+            message: __('No authorized roles set', 'bromate-security-api-firewall'),
+            severity: 'info',
+          });
+        }
+      } catch {
+        setSnackbar({
+          open: true,
+          message: __('Failed to load authorized roles', 'bromate-security-api-firewall'),
+          severity: 'error',
+        });
+      } finally {
+        setAuthUsersLoading(false);
+      }
+    };
+
+    fetchAuthorizedRoles();
   }, []);
 
   const applySavedUser = useCallback((user: AuthorizedUser) => {
@@ -353,6 +441,7 @@ export default function AuthorizedUsersGrid({ authMethod, onUsersChange }: Autho
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
+      <RolesSelector wordPressRoles={wpRoles} authorizedRoles={authorizedRoles} /> 
       <Typography variant="h6" mb={2}>{__('REST API Authorized Users', 'bromate-security-api-firewall')}</Typography>
       <DataGrid
         rows={authorizedUsers}

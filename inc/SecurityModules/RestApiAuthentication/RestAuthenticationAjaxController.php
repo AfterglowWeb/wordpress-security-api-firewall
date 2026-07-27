@@ -12,15 +12,19 @@ class RestAuthenticationAjaxController {
 		$self = new self();
 
 		add_action( 'wp_ajax_bromate_authorized_users_options', array( $self, 'ajax_authorized_users_options' ) );
+		add_action( 'wp_ajax_bromate_authorized_roles_options', array( $self, 'ajax_authorized_roles_options' ) );
+		add_action( 'wp_ajax_bromate_get_authorized_users', array( $self, 'ajax_get_authorized_users' ) );
+		add_action( 'wp_ajax_bromate_get_authorized_roles', array( $self, 'ajax_get_authorized_roles' ) );
+		add_action( 'wp_ajax_bromate_update_authorized_users', array( $self, 'ajax_update_authorized_users' ) );
+		add_action( 'wp_ajax_bromate_delete_authorized_users', array( $self, 'ajax_delete_authorized_users' ) );
+
 		add_action( 'wp_ajax_bromate_get_jwks_endpoint', array( $self, 'ajax_get_jwks_endpoint' ) );
 		add_action( 'wp_ajax_bromate_generate_jwt_key_pair', array( $self, 'ajax_generate_jwt_key_pair' ) );
 		add_action( 'wp_ajax_bromate_check_jwt_key', array( $self, 'ajax_check_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_delete_jwt_key', array( $self, 'ajax_delete_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_generate_jwt_subclaim', array( $self, 'ajax_generate_jwt_subclaim' ) );
 		add_action( 'wp_ajax_bromate_refresh_jwt_subclaim', array( $self, 'ajax_refresh_jwt_subclaim' ) );
-		add_action( 'wp_ajax_bromate_get_authorized_users', array( $self, 'ajax_get_authorized_users' ) );
-		add_action( 'wp_ajax_bromate_update_authorized_users', array( $self, 'ajax_update_authorized_users' ) );
-		add_action( 'wp_ajax_bromate_delete_authorized_users', array( $self, 'ajax_delete_authorized_users' ) );
+
 	}
 
 	public function ajax_authorized_users_options(): void {
@@ -29,6 +33,14 @@ class RestAuthenticationAjaxController {
 		}
 		$wordpress_users = RestAuthorizedUserRepository::authorized_users_options();
 		wp_send_json_success( $wordpress_users );
+	}
+
+	public function ajax_authorized_roles_options(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+		$wordpress_roles = RestAuthorizedUserRepository::authorized_roles_options();
+		wp_send_json_success( $wordpress_roles );
 	}
 
 	public function ajax_get_authorized_users(): void {
@@ -43,6 +55,20 @@ class RestAuthenticationAjaxController {
 		}
 
 		wp_send_json_success( $authorized_users );
+	}
+
+	public function ajax_get_authorized_roles(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+
+		$authorized_roles = RestAuthorizedUserRepository::get_authorized_roles();
+
+		if ( empty( $authorized_users ) ) {
+			wp_send_json_success( array() );
+		}
+
+		wp_send_json_success( $authorized_roles );
 	}
 
 	public function ajax_update_authorized_users(): void {

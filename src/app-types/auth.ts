@@ -9,6 +9,11 @@ export type AuthMethod = 'jwt' | 'wp_auth';
 
 export type UserStatus = 'active' | 'revoked' | 'disabled';
 
+export interface WordPressRole {
+  name: string;
+  label: string;
+}
+
 export interface AuthorizedUser {
   id: number;
   display_name: string;
