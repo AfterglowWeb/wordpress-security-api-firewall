@@ -14,7 +14,6 @@ class RestAuthorizedUserRepository {
 	public static function authorized_users_options(): array {
 		$users = get_users(
 			array(
-				'role__in' => array( 'administrator', 'editor' ),
 				'number'   => 500,
 				'orderby'  => 'display_name',
 				'order'    => 'ASC',
@@ -52,16 +51,13 @@ class RestAuthorizedUserRepository {
 
 	public static function authorized_roles_options(): array {
 		
-		$wp_roles = (array) wp_roles();
-	
-
-		if ( empty( $wp_roles )) {
-			return array();
+		$role_names = self::get_roles_names();
+		if( empty( $role_names ) ) {
+			return [];
 		}
 
-
 		$roles_options = [];
-		foreach($wp_roles['role_names'] as $role_key => $role_label) {
+		foreach($role_names as $role_key => $role_label) {
 			$roles_options[] = array('name' => $role_key, 'label' => $role_label);
 		}
 		return $roles_options;
@@ -103,6 +99,17 @@ class RestAuthorizedUserRepository {
 			'status'       => $user_status,
 			'expires_at'   => isset( $user['expires_at'] ) ? sanitize_text_field( $user['expires_at'] ) : '',
 		);
+	}
+
+	public static function get_roles_names(): array {
+		$wp_roles = (array) wp_roles();
+	
+
+		if ( empty( $wp_roles )) {
+			return array();
+		}
+
+		return isset($wp_roles['role_names']) ? $wp_roles['role_names'] : [];
 	}
 
 	public static function sanitize_authorized_roles( array $roles ): array {
@@ -159,7 +166,7 @@ class RestAuthorizedUserRepository {
 	}
 
 	public static function get_authorized_roles(): array {
-		return SettingsRepository::read_option( 'auth_roles' );
+		return SettingsRepository::read_option( 'auth_authorized_roles' );
 	}
 
 	public static function delete_authorized_users( array $users ): int {

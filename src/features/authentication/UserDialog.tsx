@@ -22,8 +22,10 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import CopyButton from '@components/CopyButton';
 import AddIpEntriesRepeater, { type IpOriginRow } from '@components/AddIpEntriesRepeater';
@@ -52,7 +54,7 @@ function serializeIpRows(rows: IpOriginRow[]): string {
 
 export default function UserDialog({
   open, user, onSave, onDelete, onClose,
-  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers,
+  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers, authorizedRoles,
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
 
@@ -72,6 +74,13 @@ export default function UserDialog({
 
   const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
   const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
+
+  // A user's role must intersect the authorized-roles list (empty list = any role allowed).
+  const isRoleAuthorized = (candidate: Pick<AuthorizedUser, 'roles'>): boolean =>
+    authorizedRoles.length === 0 || (candidate.roles ?? []).some((r) => authorizedRoles.includes(r));
+
+  const currentRoles = selectedWpUser?.roles ?? form.roles;
+  const roleNotAuthorized = !noUser && authorizedRoles.length > 0 && !isRoleAuthorized({ roles: currentRoles });
 
   const [ipEntries, setIpEntries]     = useState<IpEntry[]>([]);
   const [ipError, setIpError]         = useState<string | null>(null);
@@ -333,25 +342,49 @@ export default function UserDialog({
                 isOptionEqualToValue={(o, v) => o.id === v.id}
                 value={selectedWpUser}
                 onChange={handleWpUserSelect}
-                getOptionDisabled={(o) => authorizedUserIds.includes(o.id)}
+                getOptionDisabled={(o) => authorizedUserIds.includes(o.id) || !isRoleAuthorized(o)}
                 disablePortal
-                renderOption={(props, option) => (
-                  <li {...props} key={option.id}>
-                    <Stack>
-                      <Stack direction="row" alignItems="center" gap={1}>
-                        <Typography variant="body2" fontWeight={500}>
-                          {option.display_name}
+                renderOption={(props, option) => {
+                  const alreadyAuthorized = authorizedUserIds.includes(option.id);
+                  const roleBlocked = !alreadyAuthorized && !isRoleAuthorized(option);
+                  const disabledReason = alreadyAuthorized
+                    ? __('Already authorized', 'bromate-security-api-firewall')
+                    : roleBlocked
+                      ? __("This user's role is not authorized for the REST API.", 'bromate-security-api-firewall')
+                      : '';
+
+                  const optionContent = (
+                    <li {...props} key={option.id}>
+                      <Stack sx={{ width: '100%' }}>
+                        <Stack direction="row" alignItems="center" gap={1}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {option.display_name}
+                          </Typography>
+                          {option.current_user && (
+                            <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
+                          )}
+                          {roleBlocked && (
+                            <WarningAmberIcon color="disabled" fontSize="inherit" sx={{ ml: 'auto' }} />
+                          )}
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.email} · ID #{option.id} · {option.roles.join(', ')}
                         </Typography>
-                        {option.current_user && (
-                          <Chip label={__('Me', 'bromate-security-api-firewall')} size="small" color="primary" sx={{ height: 18, fontSize: 11 }} />
-                        )}
                       </Stack>
-                      <Typography variant="caption" color="text.secondary">
-                        {option.email} · ID #{option.id} · {option.roles.join(', ')}
-                      </Typography>
-                    </Stack>
-                  </li>
-                )}
+                    </li>
+                  );
+
+                  return disabledReason ? (
+                    <Tooltip
+                      key={option.id}
+                      disableInteractive
+                      slotProps={{ popper: { container: portalContainer } }}
+                      title={disabledReason}
+                    >
+                      {optionContent}
+                    </Tooltip>
+                  ) : optionContent;
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -413,6 +446,15 @@ export default function UserDialog({
 
           </Stack>
 
+          {roleNotAuthorized && (
+            <Alert severity="warning">
+              {__(
+                "This user's role is not in the list of authorized roles, so REST API access is currently disabled for them regardless of the switch above. Update the authorized roles or the user's WordPress role to restore access.",
+                'bromate-security-api-firewall'
+              )}
+            </Alert>
+          )}
+
           {showAppPasswordWarning && (
             <Alert severity="info">
               {__(
@@ -432,7 +474,18 @@ export default function UserDialog({
                 )}
             </Stack>
             <ReadonlyField label={__('Email', 'bromate-security-api-firewall')} value={selectedWpUser?.email ?? form.email} />
-            <ReadonlyField label={__('Roles', 'bromate-security-api-firewall')} value={(selectedWpUser?.roles ?? form.roles).join(', ')} />
+            <Stack direction="row" alignItems="flex-end" gap={1}>
+              <ReadonlyField label={__('Roles', 'bromate-security-api-firewall')} value={(selectedWpUser?.roles ?? form.roles).join(', ')} />
+              {roleNotAuthorized && (
+                <Tooltip
+                  disableInteractive
+                  slotProps={{ popper: { container: portalContainer } }}
+                  title={__('No role held by this user is currently authorized.', 'bromate-security-api-firewall')}
+                >
+                  <WarningAmberIcon color="warning" fontSize="small" sx={{ mb: 0.5 }} />
+                </Tooltip>
+              )}
+            </Stack>
             <Button
               size="small"
               variant="outlined"
