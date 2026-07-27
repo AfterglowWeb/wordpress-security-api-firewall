@@ -13,30 +13,60 @@ import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
 import MenuIcon from '@mui/icons-material/Menu';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import PendingOutlinedIcon from '@mui/icons-material/PendingOutlined';
-
 import AppIdentity from './AppIdentity';
+import { usePortalContainer } from '@contexts/PortalContainerContext';
 
 export const DRAWER_WIDTH = 220;
-export const APP_BAR_HEIGHT = 75;
+export const APP_BAR_HEIGHT = 65;
 export const APP_FOOTER_HEIGHT = 40;
 export const WP_ADMIN_BAR_HEIGHT_DESKTOP = 32;
 export const WP_ADMIN_BAR_HEIGHT_MOBILE = 46;
 export const WP_MENU_WIDTH_MD = 36;
 export const WP_MENU_WIDTH_LG = 160;
 
+const openedMixin = (theme) => ({
+    width: DRAWER_WIDTH,
+    transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.enteringScreen,
+    }),
+    overflowX: 'hidden',
+});
+
+const closedMixin = (theme) => ({
+    transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.leavingScreen,
+    }),
+    overflowX: 'hidden',
+    width: `calc(${theme.spacing(7)} + 1px)`,
+    [theme.breakpoints.up('sm')]: {
+        width: `calc(${theme.spacing(8)} + 1px)`,
+    },
+});
+
 export default function Navigation({children}) {
     const theme = useTheme();
     const isMobile = useMediaQuery( theme.breakpoints.down( 'md' ) );
     const [ mobileOpen, setMobileOpen ] = useState( false );
+    const [ open, setOpen ] = useState( true );
+    const isOpen = isMobile ? true : open;
+    const portalContainer = usePortalContainer();
+
+    const toggleOpen = useCallback( () => setOpen( ( prev ) => ! prev ), [] );
 
     const { panel, menuItems, navigateGuarded } = useNavigation();
 
@@ -54,7 +84,10 @@ export default function Navigation({children}) {
             sx={ {
                 '&.MuiAppBar-root': {
                     position: 'relative',
-                    width: '100%'
+                    width: '100%',
+                    height: { xs: 'auto', xl: APP_BAR_HEIGHT },
+                    minHeight:{ xs: 'auto', xl: APP_BAR_HEIGHT },
+                    overflow: 'hidden',
                 },
             } }
             >
@@ -67,13 +100,10 @@ export default function Navigation({children}) {
                         borderColor: 'divider',
                         pr: 3,
 						pl:0,
-                        height: { xs: 'auto', xl: APP_BAR_HEIGHT },
-                        minHeight: APP_BAR_HEIGHT,
-                        overflow: 'hidden',
                         gap: 2,
                     } }
                 >
-					<AppIdentity />
+					<AppIdentity open={ isOpen } />
    
                     { isMobile && (
                         <IconButton
@@ -111,7 +141,9 @@ export default function Navigation({children}) {
                     onClose={ () => setMobileOpen( false ) }
                     sx={ {
                         '.MuiPaper-root': {
-                            width: DRAWER_WIDTH,
+                            ...( isMobile
+                                ? { width: DRAWER_WIDTH }
+                                : ( open ? openedMixin( theme ) : closedMixin( theme ) ) ),
                             top: {xs:WP_ADMIN_BAR_HEIGHT_MOBILE,lg:WP_ADMIN_BAR_HEIGHT_DESKTOP},
                             position: 'sticky',
                             height: {
@@ -119,10 +151,25 @@ export default function Navigation({children}) {
                                 lg:`calc(100vh - ${ WP_ADMIN_BAR_HEIGHT_DESKTOP }px)`
                             },
                             overflowY: 'auto',
+                            overflowX: 'hidden',
                         },
                     } }
                 >
-
+                    { ! isMobile && (
+                        <>
+                        <Stack
+                            direction="row"
+                            justifyContent={ isOpen ? 'flex-end' : 'center' }
+                            alignItems="center"
+                            sx={ { px: 1, py: 0.5, minHeight: 40 } }
+                        >
+                            <IconButton onClick={ toggleOpen } size="small">
+                                { isOpen ? <ChevronLeftIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" /> }
+                            </IconButton>
+                        </Stack>
+                        <Divider />
+                        </>
+                    ) }
                     <List component="nav" disablePadding sx={ { pb: 4 } }>
                         { menuItems.map( ( item, index ) => {
                             if ( item.hidden ) return null;
@@ -134,7 +181,7 @@ export default function Navigation({children}) {
                                         key={ `section-${ index }` }
                                     >
                                         { index !== 0 && <Divider /> }
-                                        { item.label ? (
+                                        { isOpen && item.label ? (
                                             <Typography
                                                 variant="caption"
                                                 sx={ {
@@ -146,6 +193,7 @@ export default function Navigation({children}) {
                                                     letterSpacing: 0.5,
                                                     fontSize: '0.7rem',
                                                     color: 'text.secondary',
+                                                    whiteSpace: 'nowrap',
                                                 } }
                                             >
                                                 { item.label }
@@ -160,11 +208,10 @@ export default function Navigation({children}) {
                             const Icon = item.icon;
                             const isActive = panel === item.key;
 
-                            return (
+                            const button = (
                                 <ListItemButton
                                     key={ item.key }
                                     selected={ isActive }
-                                    sx={ { pl: item.pl ?? 3, pr: 3 } }
                                     disabled={ !! item.disabled }
                                     onClick={ () => {
                                         if ( item.action ) {
@@ -174,9 +221,20 @@ export default function Navigation({children}) {
                                         }
                                         setMobileOpen( false );
                                     } }
+                                    sx={ [
+                                        { height: isOpen ? '41.5px' : '56px', transition:'all .3s ease', px: 2.5 },
+                                        isOpen
+                                            ? { justifyContent: 'initial', pl: item.pl ?? 3, pr: 3 }
+                                            : { justifyContent: 'center' },
+                                    ] }
                                 >
                                     { Icon && (
-                                        <ListItemIcon sx={ { px: 1, minWidth: 32 } }>
+                                        <ListItemIcon
+                                            sx={ [
+                                                { minWidth: 0, justifyContent: 'center' },
+                                                isOpen ? { mr: 3 } : { mr: 'auto' },
+                                            ] }
+                                        >
                                             { item.pendingBadge ? (
                                                 <Badge
                                                     badgeContent={ <PendingOutlinedIcon sx={ { fontSize: 10 } } /> }
@@ -199,16 +257,19 @@ export default function Navigation({children}) {
                                         </ListItemIcon>
                                     ) }
                                     <ListItemText
-                                        sx={ {
-                                            '& .MuiListItemText-primary': {
-                                                lineHeight: 'normal',
-                                                color: isActive ? 'primary.main' : 'text.primary',
+                                        sx={ [
+                                            {
+                                                '& .MuiListItemText-primary': {
+                                                    lineHeight: 'normal',
+                                                    color: isActive ? 'primary.main' : 'text.primary',
+                                                },
                                             },
-                                        } }
-                                        primary={ item.label }
+                                            isOpen ? { opacity: 1 } : { opacity: 0, width: 0 },
+                                        ] }
+                                        primary={<Typography noWrap>{item.label}</Typography>}
                                         secondary={
-                                            item.secondary && (
-                                                <Typography variant="caption" color="text.secondary">
+                                            isOpen && item.secondary && (
+                                                <Typography noWrap variant="caption" color="text.secondary">
                                                     { item.secondary }
                                                 </Typography>
                                             )
@@ -216,8 +277,22 @@ export default function Navigation({children}) {
                                     />
                                 </ListItemButton>
                             );
+
+                            return (
+                                <ListItem key={ item.key } disablePadding sx={ { display: 'block' } }>
+                                    <Tooltip
+                                        title={ isOpen ? '' : item.label }
+                                        slotProps={{ popper: { container: portalContainer } }}
+                                        placement="right"
+                                        disableInteractive
+                                    >
+                                        { button }
+                                    </Tooltip>
+                                </ListItem>
+                            );
                         } ) }
                     </List>
+                       
                 </Drawer>
                 <Box component="main" sx={{ flex: 1, overflow: 'auto', p:3 }}>
                     {children}
