@@ -639,6 +639,18 @@ final class SettingsConfig {
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
+			'config_export_ip_entries_format'=> array(
+				'default_value'     => 'csv',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'group'             => 'config',
+			),
+			'config_export_log_entries_format'=> array(
+				'default_value'     => 'csv',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'group'             => 'config',
+			),
 		);
 
 		return apply_filters( 'bromate_security_api_firewall_core_options', $options );
