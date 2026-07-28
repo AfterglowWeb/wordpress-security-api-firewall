@@ -26,6 +26,14 @@ function isGloballyDisabled(
   return false;
 }
 
+function isGloballyProtected(
+  node: RouteNode,
+  globals: RoutesSettings,
+): boolean {
+  if (!globals.routes_policy_auth_enforce) return false;
+  return node.path === '/wp/v2' || node.path.startsWith('/wp/v2/');
+}
+
 function resolveNode(
   node: RouteNode,
   parentDisabled: InheritableSetting,
@@ -39,6 +47,7 @@ function resolveNode(
   const isOverriddenProtect  = (node.settings?.protect  as any)?.overridden === true;
 
   const globallyDisabled = isGloballyDisabled(node, globals, defaultHiddenNamespaces);
+  const globallyProtected = isGloballyProtected(node, globals);
 
   // Priority order matters here: an explicit override on THIS route must
   // win over a global rule or an inherited parent value — that's the whole
@@ -63,6 +72,8 @@ function resolveNode(
   let protect: InheritableSetting;
   if (isOverriddenProtect) {
     protect = { value: rawProtect, inherited: false, overridden: true };
+  } else if (globallyProtected) {
+    protect = { value: true, inherited: true };
   } else if (parentProtect.value) {
     protect = { value: true, inherited: true };
   } else if (rawProtect) {

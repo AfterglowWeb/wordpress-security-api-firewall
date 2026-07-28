@@ -13,7 +13,6 @@ import TextField from '@mui/material/TextField';
 import ObjectTypeSelect from '@components/ObjectTypeSelect';
 import type { RoutesSettings } from '@app-types/routes';
 
-
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const;
 
 const SECURITY_DEFAULTS = {
