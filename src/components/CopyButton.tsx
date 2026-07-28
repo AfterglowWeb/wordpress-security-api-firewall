@@ -57,7 +57,7 @@ export default function CopyButton({ toCopy, sx = {} }: CopyButtonProps) {
     <>
       <Tooltip disableInteractive slotProps={{ popper: { container: portalContainer } }} title={__('Copy', 'bromate-security-api-firewall')}>
         <IconButton size="small" onClick={handleCopy} sx={{ zIndex:10, p: 0.25, ...sx }}>
-          <ContentCopyIcon sx={{ fontSize: 'inherit' }} />
+          <ContentCopyIcon fontSize="inherit" />
         </IconButton>
       </Tooltip>
       <Snackbar
