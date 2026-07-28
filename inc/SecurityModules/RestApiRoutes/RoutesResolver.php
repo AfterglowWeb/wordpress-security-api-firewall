@@ -52,7 +52,7 @@ class RoutesResolver {
 		$effective = self::resolve_settings(
 			$node_settings,
 			$route_settings,
-			self::is_wordpress_core_route( $route )
+			self::is_wp_v2_namespace( $route )
 		);
 
 		if ( isset( $effective['disabled'] ) ) {
@@ -174,13 +174,23 @@ class RoutesResolver {
 			'protect'  => false,
 		);
 
+		// Tracks whether disabled/protect were EXPLICITLY overridden somewhere
+		// along the chain (parent node or the route itself), as opposed to
+		// merely inheriting a resolved value. An explicit override must win
+		// over a global rule cascading down — same priority order enforced
+		// on the frontend in routeInheritance.ts.
+		$overridden = array(
+			'disabled' => false,
+			'protect'  => false,
+		);
+
 		foreach ( $node_settings_chain as $settings ) {
-			$resolved = self::merge_settings( $resolved, $settings );
+			$resolved = self::merge_settings( $resolved, $settings, $overridden );
 		}
 
-		$final = self::merge_settings( $resolved, $route_settings );
+		$final = self::merge_settings( $resolved, $route_settings, $overridden );
 
-		if ( $global_enforce_auth && $is_core_route ) {
+		if ( $global_enforce_auth && $is_core_route && ! $overridden['protect'] ) {
 			$final['protect'] = true;
 		}
 
@@ -196,7 +206,16 @@ class RoutesResolver {
 		return in_array( $namespace, array( 'wp', 'oembed', 'batch', 'wp-site-health', 'wp-abilities', 'wp-block-editor' ), true );
 	}
 
-	private static function merge_settings( array $base, array $override ): array {
+	// Narrower than is_wordpress_core_route(): matches only the wp/v2
+	// namespace itself and routes beneath it, to line up with the UI label
+	// ("Enforce Authentication On `wp/v2/*` Routes") and the frontend's
+	// isGloballyProtected() check in routeInheritance.ts.
+	public static function is_wp_v2_namespace( string $route ): bool {
+		$segments = explode( '/', ltrim( $route, '/' ) );
+		return isset( $segments[0], $segments[1] ) && 'wp' === $segments[0] && 'v2' === $segments[1];
+	}
+
+	private static function merge_settings( array $base, array $override, array &$overridden ): array {
 
 		foreach ( $override as $key => $value ) {
 
@@ -204,8 +223,12 @@ class RoutesResolver {
 				continue;
 			}
 
-			if ( is_array( $value ) && isset( $value['value'] ) ) {
-				$base[ $key ] = $value['value'];
+			if ( is_array( $value ) && array_key_exists( 'value', $value ) ) {
+				$base[ $key ] = (bool) $value['value'];
+
+				if ( in_array( $key, array( 'disabled', 'protect' ), true ) && ! empty( $value['overridden'] ) ) {
+					$overridden[ $key ] = true;
+				}
 			} elseif ( is_array( $value ) && 'tags' === $key ) {
 				$base[ $key ] = array_values(
 					array_unique(
