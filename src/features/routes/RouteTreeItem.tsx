@@ -23,6 +23,8 @@ import {
 import { TreeItemIcon } from '@mui/x-tree-view/TreeItemIcon';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
+import CopyButton from '@components/CopyButton';
+
 function PermissionBadge({ type, isProtect }: { type?: string, isProtect: boolean }) {
   if (!type) return null;
     const portalContainer = usePortalContainer();
@@ -62,6 +64,7 @@ export default function RouteTreeItem(props: TreeItemProps) {
   const isInheritedDisabled = node.settings?.disabled?.inherited ?? false;
   const isInheritedProtect  = node.settings?.protect?.inherited  ?? false;
   const isCustom            = node.settings?.custom ?? false;
+  const fullPath            = node.path;
 
   const hasOwnOverride =
     !!node.settings?.disabled?.overridden ||
@@ -80,8 +83,15 @@ export default function RouteTreeItem(props: TreeItemProps) {
         <TreeItemIconContainer {...getIconContainerProps()}>
           <TreeItemIcon status={status} />
         </TreeItemIconContainer>
-
+        
         <TreeItemLabel {...getLabelProps()} sx={{ flexGrow: 1}} />
+
+        {fullPath && (
+            <CopyButton
+              toCopy={fullPath}
+              sx={{ ml: 0.5, color:'text.secondary', fontSize:'14px' }}
+            />
+        )}
 
         {isMethod && <PermissionBadge type={node.permission?.type} isProtect={isProtect} />}
 
