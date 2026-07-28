@@ -6,7 +6,8 @@ export type SecurityModuleKey =
 	| 'authentication'
 	| 'routes'
 	| 'models'
-	| 'logs';
+	| 'logs'
+	| 'config';
 
 export type SecurityModule = {
 	key: SecurityModuleKey;

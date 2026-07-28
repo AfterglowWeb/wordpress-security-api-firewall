@@ -6,7 +6,8 @@ export type PanelKey =
 	| 'authentication'
 	| 'routes'
 	| 'models'
-	| 'logs';
+	| 'logs'
+	| 'config';
 
 export interface PanelDefinition {
     key: PanelKey;

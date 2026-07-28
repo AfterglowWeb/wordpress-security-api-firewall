@@ -608,6 +608,13 @@ final class SettingsConfig {
 				'sanitize_callback' => 'absint',
 				'group'             => 'logs',
 			),
+
+			'config_delete_data_on_uninstall'           => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'config',
+			),
 		);
 
 		return apply_filters( 'bromate_security_api_firewall_core_options', $options );
@@ -628,12 +635,12 @@ final class SettingsConfig {
 
 			'login-hardening' => array(
 				'label' => esc_html__( 'Login Security', 'bromate-security-api-firewall' ),
-				'icon'  => 'shield',
+				'icon'  => 'shield_user',
 			),
 
 			'wordpress'       => array(
 				'label' => esc_html__( 'Global Security', 'bromate-security-api-firewall' ),
-				'icon'  => 'wordpress',
+				'icon'  => 'shield',
 			),
 
 			'authentication'  => array(
@@ -648,12 +655,17 @@ final class SettingsConfig {
 
 			'models'          => array(
 				'label' => esc_html__( 'REST API Models', 'bromate-security-api-firewall' ),
-				'icon'  => 'data_object',
+				'icon'  => 'models',
 			),
 
 			'logs'            => array(
 				'label' => esc_html__( 'Logs', 'bromate-security-api-firewall' ),
 				'icon'  => 'logs',
+			),
+
+			'config'            => array(
+				'label' => esc_html__( 'Configuration', 'bromate-security-api-firewall' ),
+				'icon'  => 'config',
 			),
 
 		);

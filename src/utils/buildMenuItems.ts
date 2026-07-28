@@ -13,6 +13,7 @@ import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettin
 import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import VpnLockIcon from '@mui/icons-material/VpnLock';
 import ManageHistoryOutlinedIcon from '@mui/icons-material/ManageHistoryOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 
 type IconComponent = ComponentType<SvgIconProps>;
 
@@ -22,10 +23,11 @@ const ICON_MAP: Record<string, IconComponent> = {
     speed:         SpeedOutlinedIcon,
     route:         AccountTreeOutlinedIcon,
     shield:        ShieldOutlinedIcon,
-    data_object:   DataObjectIcon,
-    wordpress:     AdminPanelSettingsOutlinedIcon,
+    models:        DataObjectIcon,
+    shield_user:   AdminPanelSettingsOutlinedIcon,
     world:         VpnLockIcon,
-    logs: ManageHistoryOutlinedIcon,
+    logs:          ManageHistoryOutlinedIcon,
+    config:        SettingsOutlinedIcon,
 };
 
 export interface MenuItemAction {
