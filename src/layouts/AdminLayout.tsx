@@ -10,6 +10,7 @@ import Models from '@pages/Models';
 import WordPress from '@pages/WordPress';
 import LoginHardening from '@pages/LoginHardening';
 import Logs from '@pages/Logs';
+import Config from '@pages/Config';
 
 export default function AdminLayout() {
 	const { panel } = useNavigation();
@@ -32,6 +33,8 @@ export default function AdminLayout() {
 				{panel === 'models' && <Models />}
 
 				{panel === 'logs' && <Logs />}
+
+				{panel === 'config' && <Config />}
 			</Stack>
 		</Navigation>
 	);
