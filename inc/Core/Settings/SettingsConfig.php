@@ -93,8 +93,8 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_authorized_roles'                                  => array(
-				'default_value'     => array('administrator'),
+			'auth_authorized_roles'                       => array(
+				'default_value'     => array( 'administrator' ),
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_roles' ),
 				'group'             => 'authentication',
@@ -609,7 +609,7 @@ final class SettingsConfig {
 				'group'             => 'logs',
 			),
 
-			'config_delete_data_on_uninstall'           => array(
+			'config_delete_data_on_uninstall'             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
@@ -663,7 +663,7 @@ final class SettingsConfig {
 				'icon'  => 'logs',
 			),
 
-			'config'            => array(
+			'config'          => array(
 				'label' => esc_html__( 'Configuration', 'bromate-security-api-firewall' ),
 				'icon'  => 'config',
 			),

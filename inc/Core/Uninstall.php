@@ -23,7 +23,7 @@ final class Uninstall {
 	private function __construct() {}
 
 	public static function delete_data(): void {
-		
+
 		CronIpEntries::unschedule();
 		SaltsRotation::unschedule();
 		SaltsRotation::delete_salts_rotation_options();

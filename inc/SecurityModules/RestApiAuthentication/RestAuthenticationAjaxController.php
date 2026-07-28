@@ -24,7 +24,6 @@ class RestAuthenticationAjaxController {
 		add_action( 'wp_ajax_bromate_delete_jwt_key', array( $self, 'ajax_delete_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_generate_jwt_subclaim', array( $self, 'ajax_generate_jwt_subclaim' ) );
 		add_action( 'wp_ajax_bromate_refresh_jwt_subclaim', array( $self, 'ajax_refresh_jwt_subclaim' ) );
-
 	}
 
 	public function ajax_authorized_users_options(): void {
