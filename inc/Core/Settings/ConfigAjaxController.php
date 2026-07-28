@@ -36,8 +36,6 @@ class ConfigAjaxController {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
-		error_log( print_r( $_POST, true ) );
-
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_validate_has_firewall_admin_caps()
 		if ( ! isset( $_POST['config_delete_data_on_uninstall'] ) ) {
 			wp_send_json_error(
@@ -84,6 +82,7 @@ class ConfigAjaxController {
 			array(
 				'exported_at' => gmdate( 'c' ),
 				'plugin'      => 'bromate-security-api-firewall',
+                'plugin_version' => BROMATE_SECURITY_API_FIREWALL_VERSION,
 				'settings'    => $options,
 			)
 		);
