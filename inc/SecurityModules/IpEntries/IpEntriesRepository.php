@@ -202,6 +202,18 @@ class IpEntriesRepository {
 		);
 	}
 
+	public static function get_all_entries(): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( 
+			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries ORDER BY created_at DESC" ), 
+			ARRAY_A 
+		);
+
+		return array_map( array( static::class, 'normalize' ), $rows );
+	}
+
 	public static function get_login_ip_entries( string $list_type = 'blacklist' ): array {
 		return self::get_entries(
 			array(

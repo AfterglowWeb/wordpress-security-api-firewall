@@ -25,7 +25,8 @@ const DEFAULT_CONFIG_SETTINGS:ConfigSettings = {
   config_export_include_ip_entries: false,
   config_export_include_log_entries: false,
   config_export_include_routes_tree: false,
-  config_export_db_tables_format: 'csv'
+  config_export_ip_entries_format: 'csv',
+  config_export_log_entries_format: 'csv',
 }
 
 export default function Config(): JSX.Element {
@@ -66,11 +67,26 @@ export default function Config(): JSX.Element {
   };
 
   const handleSave = useCallback(async () => {
-      const newSettings:ConfigSettings = await apiRequest<ConfigSettings>(
+    try {
+      await apiRequest<ConfigSettings>(
         'bromate_update_config_settings', 
-        {config_delete_data_on_uninstall: settings.config_delete_data_on_uninstall});
-      setLoadedSettings(newSettings);
-    }, [settings]);
+        settings
+      );
+      await loadConfigSettings();
+      setSnackbar({
+        open: true,
+        message: __('Config settings saved successfully.', 'bromate-security-api-firewall'),
+        severity: 'success',
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error instanceof Error ? error.message : __('Failed to save config settings.', 'bromate-security-api-firewall'),
+        severity: 'error',
+      });
+      throw error;
+    }
+  }, [settings, loadConfigSettings]);
 
   const handleDeleteAllData = useCallback(() => {
     openDialog({

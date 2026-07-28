@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from '@wordpress/element';
+import { useState, useCallback, useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
@@ -15,47 +15,37 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { apiRequest } from '@services/api';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
-import type { ConfigSettings } from '@app-types/config';
-
-type ExportFormat = 'csv' | 'json';
-
-interface ExportDataPart {
-  format: ExportFormat;
-  data: string;
-}
+import type { ConfigSettings, ExportFormat } from '@app-types/config';
 
 interface ExportResponse {
-  exported_at: string;
-  plugin: string;
-  settings: Record<string, unknown>;
-  ip_entries?: ExportDataPart;
-  log_entries?: ExportDataPart;
+  message: string;
+  download_url?: string;
+  filename?: string;
+  size?: number;
 }
 
 interface ExportImportSettingsProps {
-  settings: any;
+  settings: ConfigSettings;
   onChange: <K extends keyof ConfigSettings>(key: K, value: ConfigSettings[K]) => void
 }
 
-function downloadBlob(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
+function downloadFile(url: string, filename: string): void {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
-    reader.readAsText(file);
-  });
+// Clean up exported files after download
+async function cleanupExportFiles(filenames: string[]): Promise<void> {
+  try {
+    await apiRequest('bromate_cleanup_export_files', { filenames });
+  } catch (error) {
+    // Silent cleanup - don't show errors to user
+    console.warn('Failed to cleanup export files:', error);
+  }
 }
 
 export default function ExportImportSettings({ settings, onChange }: ExportImportSettingsProps): JSX.Element {
@@ -65,9 +55,7 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-
-  const [ipFormat, setIpFormat] = useState<ExportFormat>('csv');
-  const [logFormat, setLogFormat] = useState<ExportFormat>('csv');
+  const [exportedFiles, setExportedFiles] = useState<string[]>([]);
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -75,36 +63,48 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
+  // Auto-cleanup files when component unmounts
+  useEffect(() => {
+    return () => {
+      if (exportedFiles.length > 0) {
+        cleanupExportFiles(exportedFiles);
+      }
+    };
+  }, [exportedFiles]);
+
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
-      const exportResponse:ExportResponse = await apiRequest<ExportResponse>('bromate_export_settings', {settings});
-
-      const date = new Date().toISOString().slice(0, 10);
-      const exportData = '';
-      downloadBlob(
-        exportData,
-        `bromate-security-api-firewall-settings-${date}.json`,
-        'application/json'
+      const response: ExportResponse = await apiRequest<ExportResponse>(
+        'bromate_update_and_export_settings',
+        settings // Send all settings including format options
       );
 
-      if (settings.config_export_include_ip_entries && exportResponse?.ip_entries) {
-        const ext = settings.config_export_db_tables_format === 'json' ? 'json' : 'csv';
-        const mime = settings.config_export_db_tables_format === 'json' ? 'application/json' : 'text/csv';
-        downloadBlob(JSON.stringify(exportResponse?.ip_entries, null, 2), `bromate-ip-entries-${date}.${ext}`, mime);
-      }
+      if (response.download_url) {
+        // Download the file(s)
+        downloadFile(response.download_url, response.filename || 'export.zip');
+        
+        // Track the filename for cleanup (remove duplicates)
+        if (response.filename) {
+          setExportedFiles(prev => prev.filter(f => f !== response.filename));
+        }
 
-      if (settings.config_export_include_log_entries) {
-        const ext = settings.config_export_db_tables_format === 'json' ? 'json' : 'csv';
-        const mime = settings.config_export_db_tables_format === 'json' ? 'application/json' : 'text/csv';
-        downloadBlob(JSON.stringify(exportResponse?.log_entries, null, 2), `bromate-logs-${date}.${ext}`, mime);
-      }
+        setSnackbar({
+          open: true,
+          message: response.message || __('Export complete.', 'bromate-security-api-firewall'),
+          severity: 'success',
+        });
 
-      setSnackbar({
-        open: true,
-        message: __('Export complete.', 'bromate-security-api-firewall'),
-        severity: 'success',
-      });
+        // Schedule cleanup after download (give time for download to start)
+        setTimeout(() => {
+          if (response.filename) {
+            cleanupExportFiles([response.filename]);
+            setExportedFiles(prev => prev.filter(f => f !== response.filename));
+          }
+        }, 10000); // Clean up after 10 seconds
+      } else {
+        throw new Error(__('No download URL received.', 'bromate-security-api-firewall'));
+      }
     } catch (error) {
       setSnackbar({
         open: true,
@@ -114,7 +114,7 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     } finally {
       setExporting(false);
     }
-  }, [settings, ipFormat, logFormat]);
+  }, [settings]);
 
   const applyImport = useCallback((rawText: string) => {
     openDialog({
@@ -196,17 +196,27 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     setDragActive(false);
   }, []);
 
+  // Helper function to read file as text
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
       <Stack spacing={3} maxWidth={500}>
 
         <Stack>
-        <Typography variant="h6">
-          {__('Export / Import', 'bromate-security-api-firewall')}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {__('Back up or restore all plugin settings and database tables.', 'bromate-security-api-firewall')}
-        </Typography>
+          <Typography variant="h6">
+            {__('Export / Import', 'bromate-security-api-firewall')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {__('Back up or restore all plugin settings and database tables.', 'bromate-security-api-firewall')}
+          </Typography>
         </Stack>
 
         <Stack spacing={1}>
@@ -219,10 +229,10 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
           <FormControlLabel
             label={<Stack spacing={0}>
               <Typography variant="body1">
-              {__('Include sensitive data', 'bromate-security-api-firewall')}
+                {__('Include sensitive data', 'bromate-security-api-firewall')}
               </Typography>
               <Typography variant="caption" color="textSecondary">
-              {__('JWT keys, JWT subclaims, reCAPTCHA keys', 'bromate-security-api-firewall')}
+                {__('JWT keys, JWT subclaims, reCAPTCHA keys', 'bromate-security-api-firewall')}
               </Typography>
             </Stack>}
             control={
@@ -259,8 +269,8 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
             <ToggleButtonGroup
               size="small"
               exclusive
-              value={ipFormat}
-              onChange={(_, value: ExportFormat | null) => value && setIpFormat(value)}
+              value={settings.config_export_ip_entries_format || 'csv'}
+              onChange={(_, val) => onChange('config_export_ip_entries_format', val)}
               disabled={!settings.config_export_include_ip_entries}
             >
               <ToggleButton value="csv">CSV</ToggleButton>
@@ -282,8 +292,8 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
             <ToggleButtonGroup
               size="small"
               exclusive
-              value={logFormat}
-              onChange={(_, value: ExportFormat | null) => value && setLogFormat(value)}
+              value={settings.config_export_log_entries_format || 'csv'}
+              onChange={(_, val) => onChange('config_export_log_entries_format', val)}
               disabled={!settings.config_export_include_log_entries}
             >
               <ToggleButton value="csv">CSV</ToggleButton>
@@ -292,9 +302,9 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
           </Stack>
 
           <Stack 
-          flexDirection="row"
-          gap={2}
-          alignItems="center"
+            flexDirection="row"
+            gap={2}
+            alignItems="center"
           >
             <Stack sx={{display:'block'}}>
               <Button
@@ -330,31 +340,30 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
           }}
         >
           <Stack gap={1}>
-          <Typography variant="body1" fontWeight={500}>
-            {__('Import', 'bromate-security-api-firewall')}
-          </Typography>
-          <Typography variant="caption" component={"p"} color="text.secondary">
-            {__('Drag and drop a file export here', 'bromate-security-api-firewall')}<br/>
-            {__('or click on Choose file', 'bromate-security-api-firewall')}
-          </Typography>
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<UploadFileIcon />}
-            disabled={importing}
-            sx={{minWidth:150}}
-          >
-            {importing ? __('Importing…', 'bromate-security-api-firewall') : __('Choose file', 'bromate-security-api-firewall')}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json,.json"
-              hidden
-              onChange={handleFileInputChange}
-            />
-          </Button>
+            <Typography variant="body1" fontWeight={500}>
+              {__('Import', 'bromate-security-api-firewall')}
+            </Typography>
+            <Typography variant="caption" component={"p"} color="text.secondary">
+              {__('Drag and drop a file export here', 'bromate-security-api-firewall')}<br/>
+              {__('or click on Choose file', 'bromate-security-api-firewall')}
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<UploadFileIcon />}
+              disabled={importing}
+              sx={{minWidth:150}}
+            >
+              {importing ? __('Importing…', 'bromate-security-api-firewall') : __('Choose file', 'bromate-security-api-firewall')}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={handleFileInputChange}
+              />
+            </Button>
           </Stack>
-
         </Stack>
 
       </Stack>
