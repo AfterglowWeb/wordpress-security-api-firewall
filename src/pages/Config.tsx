@@ -63,8 +63,10 @@ export default function Config(): JSX.Element {
   };
 
   const handleSave = useCallback(async () => {
-      const settings:ConfigSettings = await apiRequest('bromate_update_config_settings');
-      setLoadedSettings(settings);
+      const newSettings:ConfigSettings = await apiRequest<ConfigSettings>(
+        'bromate_update_config_settings', 
+        {config_delete_data_on_uninstall: settings.config_delete_data_on_uninstall});
+      setLoadedSettings(newSettings);
     }, [settings]);
 
   const handleDeleteAllData = useCallback(() => {
@@ -131,39 +133,37 @@ export default function Config(): JSX.Element {
       </Stack>
 
       <Paper sx={{ p: 2 }} elevation={0}>
-        <Stack flexDirection="column" gap={2}>
-           <Stack flexDirection="row" gap={1} alignItems="center">
-            <FormControlLabel
-              label={__('Delete settings and tables on uninstall', 'bromate-security-api-firewall')}
-              control={
-                <Switch
+        
+        <Stack flexDirection="row" gap={1} alignItems="center" maxWidth={500}>
+          <FormControlLabel
+            label={__('Enable', 'bromate-security-api-firewall')}
+            control={
+              <Switch
                 checked={settings.config_delete_data_on_uninstall}
-                  onChange={(e) =>
-                  onChange('config_delete_data_on_uninstall', e.target.checked)
-                  }
-                />
-              }
-              sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
-            />
-          </Stack>
+                onChange={(e) => onChange('config_delete_data_on_uninstall', e.target.checked)}
+              />
+            }
+            sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
+          />
+          <Divider orientation="vertical" variant="middle" flexItem />
+          <Typography variant="h6">{__('Delete plugin settings and data on uninstall', 'bromate-security-api-firewall')}</Typography>
         </Stack>
+
+
       </Paper>
 
       <ExportImportSettings />
 
       <Paper sx={{ p: 2 }} elevation={0} variant="outlined" style={{ borderColor: 'var(--mui-palette-error-main, #d32f2f)' }}>
-        <Stack spacing={2}>
+        <Stack spacing={2} maxWidth={500}>
           <Typography variant="h6" color="error">
-            {__('Danger Zone', 'bromate-security-api-firewall')}
+            {__('Delete plugin settings and data now', 'bromate-security-api-firewall')}
           </Typography>
           <Divider />
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
             <Stack>
               <Typography variant="body2" fontWeight={500}>
-                {__('Delete all plugin data now', 'bromate-security-api-firewall')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {__('Immediately removes every setting and database table. This does not wait for plugin uninstall.', 'bromate-security-api-firewall')}
+                {__('Delete all plugin settings and database tables now. This action is definitive.', 'bromate-security-api-firewall')}
               </Typography>
             </Stack>
             <Button
@@ -173,7 +173,7 @@ export default function Config(): JSX.Element {
               onClick={handleDeleteAllData}
               disabled={deleting}
             >
-              {deleting ? __('Deleting…', 'bromate-security-api-firewall') : __('Delete all data', 'bromate-security-api-firewall')}
+              {deleting ? __('Deleting…', 'bromate-security-api-firewall') : __('Delete Now', 'bromate-security-api-firewall')}
             </Button>
           </Stack>
         </Stack>

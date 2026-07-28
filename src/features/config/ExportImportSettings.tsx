@@ -157,35 +157,43 @@ export default function ExportImportSettings(): JSX.Element {
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Stack spacing={2}>
+      <Stack spacing={3} maxWidth={500}>
+        
+        <Stack>
         <Typography variant="h6">
-          {__('Export / Import Settings', 'bromate-security-api-firewall')}
+          {__('Export / Import plugin settings', 'bromate-security-api-firewall')}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {__('Back up your current configuration, or restore it from a previously exported file.', 'bromate-security-api-firewall')}
+          {__('Back up all plugin settings or restore them from a previously exported file.', 'bromate-security-api-firewall')}
         </Typography>
-        <Divider />
+        </Stack>
 
-        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
+
+        <Stack 
+        flexDirection="row"
+        gap={2}
+        alignItems="center"
+        >
           <Stack>
             <Typography variant="body2" fontWeight={500}>
               {__('Export settings', 'bromate-security-api-firewall')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {__('Download a JSON copy of all plugin settings.', 'bromate-security-api-firewall')}
+              {__('Downloads a .json file.', 'bromate-security-api-firewall')}
             </Typography>
           </Stack>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={handleExport}
-            disabled={exporting}
-          >
-            {exporting ? __('Exporting…', 'bromate-security-api-firewall') : __('Download', 'bromate-security-api-firewall')}
-          </Button>
+          <Stack sx={{display:'block'}}>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleExport}
+              disabled={exporting}
+              sx={{minWidth:150}}
+            >
+              {exporting ? __('Exporting…', 'bromate-security-api-firewall') : __('Export', 'bromate-security-api-firewall')}
+            </Button>
+          </Stack>
         </Stack>
-
-        <Divider />
 
         <Stack
           onDrop={handleDrop}
@@ -193,7 +201,7 @@ export default function ExportImportSettings(): JSX.Element {
           onDragLeave={handleDragLeave}
           sx={{
             p: 3,
-            borderRadius: 1,
+            borderRadius: '8px',
             border: '2px dashed',
             borderColor: dragActive ? 'primary.main' : 'divider',
             bgcolor: dragActive ? 'action.hover' : 'transparent',
@@ -201,19 +209,23 @@ export default function ExportImportSettings(): JSX.Element {
             textAlign: 'center',
             gap: 1,
             alignItems: 'center',
+            justifyContent: 'center',
+            minHeight:250,
           }}
         >
+          <Stack gap={1}>
           <Typography variant="body2" fontWeight={500}>
             {__('Import settings', 'bromate-security-api-firewall')}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {__('Drag and drop a .json file here, or', 'bromate-security-api-firewall')}
+            {__('Drag and drop a .json file here or', 'bromate-security-api-firewall')}
           </Typography>
           <Button
             variant="outlined"
             component="label"
             startIcon={<UploadFileIcon />}
             disabled={importing}
+            sx={{minWidth:150}}
           >
             {importing ? __('Importing…', 'bromate-security-api-firewall') : __('Choose file', 'bromate-security-api-firewall')}
             <input
@@ -224,7 +236,10 @@ export default function ExportImportSettings(): JSX.Element {
               onChange={handleFileInputChange}
             />
           </Button>
+          </Stack>
+
         </Stack>
+
       </Stack>
 
       <Snackbar

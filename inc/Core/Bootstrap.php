@@ -18,7 +18,7 @@ use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeReposito
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
-
+use Bromate\SecurityApiFirewall\Core\Settings\ConfigAjaxController;
 use Bromate\SecurityApiFirewall\Logs\LogsAjaxController;
 
 use Bromate\SecurityApiFirewall\Cron\Cron;
@@ -52,6 +52,8 @@ final class Bootstrap {
 			IpEntriesAjaxController::register();
 			LogsAjaxController::register();
 			Documentation::register();
+
+			ConfigAjaxController::register();
 
 		}
 	}

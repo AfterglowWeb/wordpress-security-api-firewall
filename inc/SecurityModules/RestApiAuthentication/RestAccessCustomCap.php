@@ -31,9 +31,9 @@ final class RestAccessCustomCap {
 	public static function add_api_access_cap_on_authorized_users(): void {
 
 		$auth_roles = SettingsRepository::read_option( 'auth_authorized_roles' );
-		$users = get_users(
+		$users      = get_users(
 			array(
-				'role__in' =>  empty( $auth_roles ) ? RestAuthorizedUserRepository::get_roles_names() : $auth_roles,
+				'role__in' => empty( $auth_roles ) ? RestAuthorizedUserRepository::get_roles_names() : $auth_roles,
 				'number'   => 500,
 				'orderby'  => 'display_name',
 				'order'    => 'ASC',
