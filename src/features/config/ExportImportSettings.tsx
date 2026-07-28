@@ -4,7 +4,10 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -12,15 +15,30 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { apiRequest } from '@services/api';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
+import type { ConfigSettings } from '@app-types/config';
 
-interface ExportPayload {
+type ExportFormat = 'csv' | 'json';
+
+interface ExportDataPart {
+  format: ExportFormat;
+  data: string;
+}
+
+interface ExportResponse {
   exported_at: string;
   plugin: string;
   settings: Record<string, unknown>;
+  ip_entries?: ExportDataPart;
+  log_entries?: ExportDataPart;
 }
 
-function downloadJson(data: unknown, filename: string): void {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+interface ExportImportSettingsProps {
+  settings: any;
+  onChange: <K extends keyof ConfigSettings>(key: K, value: ConfigSettings[K]) => void
+}
+
+function downloadBlob(content: string, filename: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -40,13 +58,17 @@ function readFileAsText(file: File): Promise<string> {
   });
 }
 
-export default function ExportImportSettings(): JSX.Element {
+export default function ExportImportSettings({ settings, onChange }: ExportImportSettingsProps): JSX.Element {
   const { openDialog } = useDialog();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+
+  const [ipFormat, setIpFormat] = useState<ExportFormat>('csv');
+  const [logFormat, setLogFormat] = useState<ExportFormat>('csv');
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -56,12 +78,31 @@ export default function ExportImportSettings(): JSX.Element {
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
-      const payload = await apiRequest<ExportPayload>('bromate_export_settings');
+      const exportResponse:ExportResponse = await apiRequest<ExportResponse>('bromate_export_settings', {settings});
+
       const date = new Date().toISOString().slice(0, 10);
-      downloadJson(payload, `bromate-security-api-firewall-settings-${date}.json`);
+      const exportData = '';
+      downloadBlob(
+        exportData,
+        `bromate-security-api-firewall-settings-${date}.json`,
+        'application/json'
+      );
+
+      if (settings.config_export_include_ip_entries && exportResponse?.ip_entries) {
+        const ext = settings.config_export_db_tables_format === 'json' ? 'json' : 'csv';
+        const mime = settings.config_export_db_tables_format === 'json' ? 'application/json' : 'text/csv';
+        downloadBlob(JSON.stringify(exportResponse?.ip_entries, null, 2), `bromate-ip-entries-${date}.${ext}`, mime);
+      }
+
+      if (settings.config_export_include_log_entries) {
+        const ext = settings.config_export_db_tables_format === 'json' ? 'json' : 'csv';
+        const mime = settings.config_export_db_tables_format === 'json' ? 'application/json' : 'text/csv';
+        downloadBlob(JSON.stringify(exportResponse?.log_entries, null, 2), `bromate-logs-${date}.${ext}`, mime);
+      }
+
       setSnackbar({
         open: true,
-        message: __('Settings exported.', 'bromate-security-api-firewall'),
+        message: __('Export complete.', 'bromate-security-api-firewall'),
         severity: 'success',
       });
     } catch (error) {
@@ -73,7 +114,7 @@ export default function ExportImportSettings(): JSX.Element {
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [settings, ipFormat, logFormat]);
 
   const applyImport = useCallback((rawText: string) => {
     openDialog({
@@ -133,7 +174,7 @@ export default function ExportImportSettings(): JSX.Element {
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     void handleFile(e.target.files?.[0]);
-    e.target.value = ''; // Allow re-selecting the same file later.
+    e.target.value = '';
   }, [handleFile]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -158,41 +199,116 @@ export default function ExportImportSettings(): JSX.Element {
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
       <Stack spacing={3} maxWidth={500}>
-        
+
         <Stack>
         <Typography variant="h6">
-          {__('Export / Import plugin settings', 'bromate-security-api-firewall')}
+          {__('Export / Import', 'bromate-security-api-firewall')}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {__('Back up all plugin settings or restore them from a previously exported file.', 'bromate-security-api-firewall')}
+          {__('Back up or restore all plugin settings and database tables.', 'bromate-security-api-firewall')}
         </Typography>
         </Stack>
 
-
-        <Stack 
-        flexDirection="row"
-        gap={2}
-        alignItems="center"
-        >
+        <Stack spacing={1}>
           <Stack>
-            <Typography variant="body2" fontWeight={500}>
-              {__('Export settings', 'bromate-security-api-firewall')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {__('Downloads a .json file.', 'bromate-security-api-firewall')}
+            <Typography variant="body1" fontWeight={500}>
+              {__('Export', 'bromate-security-api-firewall')}
             </Typography>
           </Stack>
-          <Stack sx={{display:'block'}}>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={handleExport}
-              disabled={exporting}
-              sx={{minWidth:150}}
+        
+          <FormControlLabel
+            label={<Stack spacing={0}>
+              <Typography variant="body1">
+              {__('Include sensitive data', 'bromate-security-api-firewall')}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+              {__('JWT keys, JWT subclaims, reCAPTCHA keys', 'bromate-security-api-firewall')}
+              </Typography>
+            </Stack>}
+            control={
+              <Checkbox
+                size="small"
+                checked={settings.config_export_include_sensitive_data}
+                onChange={(e) => onChange('config_export_include_sensitive_data', e.target.checked)}
+              />
+            }
+          />
+
+          <FormControlLabel
+            label={__('Include REST API routes tree', 'bromate-security-api-firewall')}
+            control={
+              <Checkbox
+                size="small"
+                checked={settings.config_export_include_routes_tree}
+                onChange={(e) => onChange('config_export_include_routes_tree', e.target.checked)}
+              />
+            }
+          />
+
+          <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+            <FormControlLabel
+              label={__('Include IP entries table', 'bromate-security-api-firewall')}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={settings.config_export_include_ip_entries}
+                  onChange={(e) => onChange('config_export_include_ip_entries', e.target.checked)}
+                />
+              }
+            />
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={ipFormat}
+              onChange={(_, value: ExportFormat | null) => value && setIpFormat(value)}
+              disabled={!settings.config_export_include_ip_entries}
             >
-              {exporting ? __('Exporting…', 'bromate-security-api-firewall') : __('Export', 'bromate-security-api-firewall')}
-            </Button>
+              <ToggleButton value="csv">CSV</ToggleButton>
+              <ToggleButton value="json">JSON</ToggleButton>
+            </ToggleButtonGroup>
           </Stack>
+
+          <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+            <FormControlLabel
+              label={__('Include Logs table', 'bromate-security-api-firewall')}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={settings.config_export_include_log_entries}
+                  onChange={(e) => onChange('config_export_include_log_entries', e.target.checked)}
+                />
+              }
+            />
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={logFormat}
+              onChange={(_, value: ExportFormat | null) => value && setLogFormat(value)}
+              disabled={!settings.config_export_include_log_entries}
+            >
+              <ToggleButton value="csv">CSV</ToggleButton>
+              <ToggleButton value="json">JSON</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+
+          <Stack 
+          flexDirection="row"
+          gap={2}
+          alignItems="center"
+          >
+            <Stack sx={{display:'block'}}>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={handleExport}
+                disabled={exporting}
+                sx={{minWidth:150}}
+              >
+                {exporting ? __('Exporting…', 'bromate-security-api-firewall') : __('Export', 'bromate-security-api-firewall')}
+              </Button>
+            </Stack>
+          </Stack>
+
         </Stack>
 
         <Stack
@@ -214,11 +330,12 @@ export default function ExportImportSettings(): JSX.Element {
           }}
         >
           <Stack gap={1}>
-          <Typography variant="body2" fontWeight={500}>
-            {__('Import settings', 'bromate-security-api-firewall')}
+          <Typography variant="body1" fontWeight={500}>
+            {__('Import', 'bromate-security-api-firewall')}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {__('Drag and drop a .json file here or', 'bromate-security-api-firewall')}
+          <Typography variant="caption" component={"p"} color="text.secondary">
+            {__('Drag and drop a file export here', 'bromate-security-api-firewall')}<br/>
+            {__('or click on Choose file', 'bromate-security-api-firewall')}
           </Typography>
           <Button
             variant="outlined"

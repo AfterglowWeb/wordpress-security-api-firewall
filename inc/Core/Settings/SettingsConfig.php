@@ -615,6 +615,30 @@ final class SettingsConfig {
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
+			'config_export_include_sensitive_data'             => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'config',
+			),
+			'config_export_include_ip_entries'             => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'config',
+			),
+			'config_export_include_routes_tree'             => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'config',
+			),
+			'config_export_include_log_entries'             => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'config',
+			),
 		);
 
 		return apply_filters( 'bromate_security_api_firewall_core_options', $options );

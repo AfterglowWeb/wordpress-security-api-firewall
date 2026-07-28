@@ -17,12 +17,15 @@ import { apiRequest } from '@services/api';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import ExportImportSettings from '@features/config/ExportImportSettings';
 
-interface ConfigSettings {
-  config_delete_data_on_uninstall: boolean,
-}
+import type { ConfigSettings } from '@app-types/config';
 
 const DEFAULT_CONFIG_SETTINGS:ConfigSettings = {
   config_delete_data_on_uninstall: false,
+  config_export_include_sensitive_data: false,
+  config_export_include_ip_entries: false,
+  config_export_include_log_entries: false,
+  config_export_include_routes_tree: false,
+  config_export_db_tables_format: 'csv'
 }
 
 export default function Config(): JSX.Element {
@@ -146,18 +149,18 @@ export default function Config(): JSX.Element {
             sx={{mr:0, '& .MuiTypography-root': {lineHeight:'2em'}}}
           />
           <Divider orientation="vertical" variant="middle" flexItem />
-          <Typography variant="h6">{__('Delete plugin settings and data on uninstall', 'bromate-security-api-firewall')}</Typography>
+          <Typography variant="h6">{__('Delete plugin settings and tables on uninstall', 'bromate-security-api-firewall')}</Typography>
         </Stack>
 
 
       </Paper>
 
-      <ExportImportSettings />
+      <ExportImportSettings settings={settings} onChange={onChange} />
 
       <Paper sx={{ p: 2 }} elevation={0} variant="outlined" style={{ borderColor: 'var(--mui-palette-error-main, #d32f2f)' }}>
         <Stack spacing={2} maxWidth={500}>
           <Typography variant="h6" color="error">
-            {__('Delete plugin settings and data now', 'bromate-security-api-firewall')}
+            {__('Delete plugin settings and tables now', 'bromate-security-api-firewall')}
           </Typography>
           <Divider />
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} flexWrap="wrap">
