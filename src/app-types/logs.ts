@@ -18,7 +18,9 @@ export type LogEvent =
 	'admin_login_banned' |
 	'emergency_token_used' |
 	'plugin_settings_changed' |
-  'log_entries_delete_expired';
+  'log_entries_delete_expired' |
+  'import_fail' |
+  'export_fail';
 
 export interface LogEntry {
   id: number;

@@ -47,6 +47,10 @@ const LOGS_EVENTS_OPTIONS: Array<{
   { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall') },
   { value: 'log_entries_delete_expired', label: __('Expired Log Entries Cleaned', 'bromate-security-api-firewall') },
 
+  // Migrate Settings
+  { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall'), groupLabel: __('WordPress Cron Events', 'bromate-security-api-firewall') },
+  { value: 'export_fail', label: __('Data Export Failed', 'bromate-security-api-firewall'), groupLabel: __('WordPress Cron Events', 'bromate-security-api-firewall') },
+
   // System Events
   { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall'), groupLabel: __('System', 'bromate-security-api-firewall') },
   { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall') },

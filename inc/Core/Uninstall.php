@@ -2,10 +2,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
-use Bromate\SecurityApiFirewall\Core\Settings\SettingsConfig;
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
-
 use Bromate\SecurityApiFirewall\Cron\CronIpEntries;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\AutoBlacklist;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
@@ -39,12 +38,13 @@ final class Uninstall {
 		RestAccessCustomCap::delete_authorized_users_api_access_cap();
 
 		JwtAuthentication::delete_jwt_settings();
-		SettingsConfig::delete_settings();
 
 		AdminPage::remove_edit_options_custom_cap();
 
 		SchemaManager::drop_tables();
 		SchemaManager::delete_schema_version();
+
+		SettingsRepository::delete_all_options();
 
 		flush_rewrite_rules();
 	}
