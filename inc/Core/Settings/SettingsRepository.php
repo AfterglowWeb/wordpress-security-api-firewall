@@ -10,6 +10,10 @@ class SettingsRepository {
 		return self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
 	}
 
+	public static function delete_all_options(): void {
+		delete_option( SettingsConfig::SETTINGS_OPTION_KEY );
+	}
+
 	public static function read_option( string $option_key ) {
 		$option_key = sanitize_key( $option_key );
 		$options    = self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );

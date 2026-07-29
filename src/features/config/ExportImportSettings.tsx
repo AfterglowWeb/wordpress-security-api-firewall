@@ -24,6 +24,15 @@ interface ExportResponse {
   size?: number;
 }
 
+interface ImportResponse {
+  message: string;
+}
+
+type ImportPayload =
+  | { type: 'json'; settings: string }
+  | { type: 'csv'; filename: string; csv: string }
+  | { type: 'zip'; filename: string; archive: string };
+
 interface ExportImportSettingsProps {
   settings: ConfigSettings;
   onChange: <K extends keyof ConfigSettings>(key: K, value: ConfigSettings[K]) => void
@@ -47,6 +56,8 @@ async function cleanupExportFiles(filenames: string[]): Promise<void> {
     console.warn('Failed to cleanup export files:', error);
   }
 }
+
+const ACCEPTED_EXTENSIONS = ['.json', '.csv', '.zip'];
 
 export default function ExportImportSettings({ settings, onChange }: ExportImportSettingsProps): JSX.Element {
   const { openDialog } = useDialog();
@@ -77,13 +88,12 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     try {
       const response: ExportResponse = await apiRequest<ExportResponse>(
         'bromate_update_and_export_settings',
-        settings // Send all settings including format options
+        settings
       );
 
       if (response.download_url) {
-        // Download the file(s)
         downloadFile(response.download_url, response.filename || 'export.zip');
-        
+
         // Track the filename for cleanup (remove duplicates)
         if (response.filename) {
           setExportedFiles(prev => prev.filter(f => f !== response.filename));
@@ -116,28 +126,38 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     }
   }, [settings]);
 
-  const applyImport = useCallback((rawText: string) => {
-    openDialog({
-      type: DIALOG_TYPES.CONFIRM,
-      title: __('Import settings?', 'bromate-security-api-firewall'),
-      content: __(
+  const importDialogContent = useCallback((payload: ImportPayload): string => {
+    if (payload.type === 'json') {
+      return __(
         'This will overwrite your current plugin settings with the content of this file. This cannot be undone. Continue?',
         'bromate-security-api-firewall'
-      ),
+      );
+    }
+    return __(
+      'This will import data from this file and may overwrite existing entries. This cannot be undone. Continue?',
+      'bromate-security-api-firewall'
+    );
+  }, []);
+
+  const applyImport = useCallback((payload: ImportPayload) => {
+    openDialog({
+      type: DIALOG_TYPES.CONFIRM,
+      title: __('Import data?', 'bromate-security-api-firewall'),
+      content: importDialogContent(payload),
       confirmLabel: __('Import', 'bromate-security-api-firewall'),
       onConfirm: async () => {
         setImporting(true);
         try {
-          await apiRequest('bromate_import_settings', { settings: rawText });
+          const response = await apiRequest<ImportResponse>('bromate_import_settings', payload);
           setSnackbar({
             open: true,
-            message: __('Settings imported successfully. Reload the page to see the changes.', 'bromate-security-api-firewall'),
+            message: response.message || __('Import completed.', 'bromate-security-api-firewall'),
             severity: 'success',
           });
         } catch (error) {
           setSnackbar({
             open: true,
-            message: error instanceof Error ? error.message : __('Failed to import settings.', 'bromate-security-api-firewall'),
+            message: error instanceof Error ? error.message : __('Failed to import.', 'bromate-security-api-firewall'),
             severity: 'error',
           });
         } finally {
@@ -145,31 +165,87 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
         }
       },
     });
-  }, [openDialog]);
+  }, [openDialog, importDialogContent]);
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result ?? '');
+        // Strip the "data:<mime>;base64," prefix added by readAsDataURL
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleFile = useCallback(async (file: File | undefined | null) => {
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith('.json')) {
-      setSnackbar({
-        open: true,
-        message: __('Please select a .json file.', 'bromate-security-api-firewall'),
-        severity: 'error',
-      });
+    const name = file.name.toLowerCase();
+
+    if (name.endsWith('.json')) {
+      try {
+        const text = await readFileAsText(file);
+        JSON.parse(text); // validate before sending
+        applyImport({ type: 'json', settings: text });
+      } catch {
+        setSnackbar({
+          open: true,
+          message: __('This file is not valid JSON.', 'bromate-security-api-firewall'),
+          severity: 'error',
+        });
+      }
       return;
     }
 
-    try {
-      const text = await readFileAsText(file);
-      JSON.parse(text); // Validate it's actually JSON before sending it onward.
-      applyImport(text);
-    } catch {
-      setSnackbar({
-        open: true,
-        message: __('This file is not valid JSON.', 'bromate-security-api-firewall'),
-        severity: 'error',
-      });
+    if (name.endsWith('.csv')) {
+      try {
+        const text = await readFileAsText(file);
+        if (!text.trim()) {
+          throw new Error('empty');
+        }
+        applyImport({ type: 'csv', filename: file.name, csv: text });
+      } catch {
+        setSnackbar({
+          open: true,
+          message: __('Unable to read this CSV file.', 'bromate-security-api-firewall'),
+          severity: 'error',
+        });
+      }
+      return;
     }
+
+    if (name.endsWith('.zip')) {
+      try {
+        const base64 = await readFileAsBase64(file);
+        applyImport({ type: 'zip', filename: file.name, archive: base64 });
+      } catch {
+        setSnackbar({
+          open: true,
+          message: __('Unable to read this archive.', 'bromate-security-api-firewall'),
+          severity: 'error',
+        });
+      }
+      return;
+    }
+
+    setSnackbar({
+      open: true,
+      message: __('Please select a .json, .csv or .zip file.', 'bromate-security-api-firewall'),
+      severity: 'error',
+    });
   }, [applyImport]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,16 +272,6 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     setDragActive(false);
   }, []);
 
-  // Helper function to read file as text
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ''));
-      reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
-  };
-
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
       <Stack spacing={3} maxWidth={500}>
@@ -215,7 +281,8 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
             {__('Export / Import', 'bromate-security-api-firewall')}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {__('Back up or restore all plugin settings and database tables.', 'bromate-security-api-firewall')}
+            {__('Back up or restore plugin settings and database tables.', 'bromate-security-api-firewall')}<br />
+            {__('(JWT, 2FA and reCAPTCHA keys are never included.', 'bromate-security-api-firewall')}
           </Typography>
         </Stack>
 
@@ -225,14 +292,14 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
               {__('Export', 'bromate-security-api-firewall')}
             </Typography>
           </Stack>
-        
+
           <FormControlLabel
             label={<Stack spacing={0}>
               <Typography variant="body1">
                 {__('Include sensitive data', 'bromate-security-api-firewall')}
               </Typography>
               <Typography variant="caption" color="textSecondary">
-                {__('JWT keys, JWT subclaims, reCAPTCHA keys', 'bromate-security-api-firewall')}
+                {__('JWT config, authorized users', 'bromate-security-api-firewall')}
               </Typography>
             </Stack>}
             control={
@@ -301,7 +368,7 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
             </ToggleButtonGroup>
           </Stack>
 
-          <Stack 
+          <Stack
             flexDirection="row"
             gap={2}
             alignItems="center"
@@ -344,7 +411,7 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
               {__('Import', 'bromate-security-api-firewall')}
             </Typography>
             <Typography variant="caption" component={"p"} color="text.secondary">
-              {__('Drag and drop a file export here', 'bromate-security-api-firewall')}<br/>
+              {__('Drag and drop a .json, .csv or .zip export here', 'bromate-security-api-firewall')}<br/>
               {__('or click on Choose file', 'bromate-security-api-firewall')}
             </Typography>
             <Button
@@ -358,7 +425,7 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="application/json,.json"
+                accept={ACCEPTED_EXTENSIONS.join(',')}
                 hidden
                 onChange={handleFileInputChange}
               />

@@ -65,6 +65,34 @@ final class LogsRepository {
 		return $result;
 	}
 
+	public static function insert_many( array $log_entries ) {
+
+		if ( empty( $log_entries ) ) {
+			return array(
+				'add_count'    => 0,
+				'update_count' => 0,
+			);
+		}
+
+		$inserted_count = 0;
+		$updated_count  = 0;
+
+		foreach ( $log_entries as $log_entry ) {
+			$result = self::insert( $log_entry );
+			if ( 'inserted' === $result ) {
+				++$inserted_count;
+			}
+			if ( 'updated' === $result ) {
+				++$updated_count;
+			}
+		}
+
+		return array(
+			'add_count'    => $inserted_count,
+			'update_count' => $updated_count,
+		);
+	}
+
 	public static function get_entries( array $args = array() ): array {
 		global $wpdb;
 
@@ -185,7 +213,6 @@ final class LogsRepository {
 		return array_map( array( static::class, 'normalize' ), $rows );
 	}
 
-
 	public static function delete( int $id ): bool {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -279,6 +306,8 @@ final class LogsRepository {
 			'emergency_token_used',
 			'plugin_settings_changed',
 			'log_entries_delete_expired',
+			'import_fail',
+			'export_fail',
 		);
 		return in_array( $value, $allowed, true ) ? $value : 'unknown';
 	}

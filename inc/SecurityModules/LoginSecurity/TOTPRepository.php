@@ -40,6 +40,7 @@ final class TOTPRepository {
 		}
 		return self::$instance;
 	}
+	
 	public function __construct() {
 		$this->google2fa = new Google2FA();
 	}
@@ -328,6 +329,9 @@ final class TOTPRepository {
 			throw new Exception( '2FA is not enabled for this user' );
 		}
 
+		delete_user_meta( $user_id, self::USER_SETTINGS_META_KEY );
+		delete_user_meta( $user_id, self::PENDING_META_KEY );
+		delete_user_meta( $user_id, self::PENDING_TIME_META_KEY );
 		delete_user_meta( $user_id, self::SECRET_META_KEY );
 		delete_user_meta( $user_id, self::USER_ENROLLED_META_KEY );
 		delete_user_meta( $user_id, self::ENABLED_TIME_META_KEY );
@@ -335,15 +339,18 @@ final class TOTPRepository {
 		delete_user_meta( $user_id, self::DIGITS_META_KEY );
 		delete_user_meta( $user_id, self::PERIOD_META_KEY );
 		delete_user_meta( $user_id, self::ALGORITHM_META_KEY );
-
-		$this->clear_pending_secret( $user_id );
+		delete_user_meta( $user_id, self::ENABLED_META_KEY );
+		delete_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY );
+		delete_user_meta( $user_id, self::REMINDER_DISMISSED_META_KEY );
+		delete_user_meta( $user_id, self::TRUSTED_TOKEN_META_KEY );
+		delete_user_meta( $user_id, self::FAILED_ATTEMPTS_META_KEY );
 
 		return true;
 	}
 
 	public static function revoke_all_users_totp_enrollment(): void {
-		delete_metadata( 'user', 0, self::USER_SETTINGS_META_KEY, '', true );
 
+		delete_metadata( 'user', 0, self::USER_SETTINGS_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::PENDING_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::PENDING_TIME_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::SECRET_META_KEY, '', true );

@@ -63,6 +63,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256' ), true ) ? $v : 'RS256',
 				'group'             => 'authentication',
+				'sensitivity'       => 'medium'
 			),
 
 			'auth_jwt_public_key'                         => array(
@@ -70,6 +71,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_textarea_field',
 				'group'             => 'authentication',
+				'sensitivity'       => 'high'
 			),
 
 			'auth_jwt_audience'                           => array(
@@ -77,6 +79,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'authentication',
+				'sensitivity'       => 'medium'
 			),
 
 			'auth_jwt_issuer'                             => array(
@@ -84,6 +87,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'authentication',
+				'sensitivity'       => 'medium'
 			),
 
 			'auth_users'                                  => array(
@@ -91,6 +95,7 @@ final class SettingsConfig {
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_users' ),
 				'group'             => 'authentication',
+				'sensitivity'       => 'medium'
 			),
 
 			'auth_authorized_roles'                       => array(
@@ -98,6 +103,7 @@ final class SettingsConfig {
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_roles' ),
 				'group'             => 'authentication',
+				'sensitivity'       => 'medium'
 			),
 
 			'rate_limit_enabled'                          => array(
@@ -253,6 +259,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'login-hardening',
+				'sensitivity'       => 'high'
 			),
 
 			'login_recaptcha_secret_key'                  => array(
@@ -260,6 +267,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'login-hardening',
+				'sensitivity'       => 'high'
 			),
 
 			'login_recaptcha_threshold'                   => array(
