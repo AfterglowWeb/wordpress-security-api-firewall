@@ -20,7 +20,6 @@ type NavigationProviderProps = {
     children?: JSX.Element;
 };
 
-// Get the current panel from URL search params
 function getPanelFromURL(defaultPanel: PanelKey): PanelKey {
     if (typeof window === 'undefined') {
         return defaultPanel;
@@ -29,7 +28,6 @@ function getPanelFromURL(defaultPanel: PanelKey): PanelKey {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
     
-    // If no tab parameter or empty, return default
     if (!tab) {
         return defaultPanel;
     }
@@ -37,7 +35,6 @@ function getPanelFromURL(defaultPanel: PanelKey): PanelKey {
     return tab as PanelKey;
 }
 
-// Get query parameters from URL
 function getQueryParams(): Record<string, string> {
     if (typeof window === 'undefined') {
         return {};
@@ -47,7 +44,7 @@ function getQueryParams(): Record<string, string> {
     const params: Record<string, string> = {};
     
     for (const [key, value] of urlParams.entries()) {
-        if (key !== 'tab') { // 'tab' is reserved for the panel key
+        if (key !== 'tab') {
             params[key] = value;
         }
     }
@@ -55,7 +52,6 @@ function getQueryParams(): Record<string, string> {
     return params;
 }
 
-// Update URL without reloading the page
 function updateURL(panelKey: PanelKey, params?: Record<string, string>): void {
     if (typeof window === 'undefined') {
         return;
@@ -63,10 +59,8 @@ function updateURL(panelKey: PanelKey, params?: Record<string, string>): void {
 
     const url = new URL(window.location.href);
     
-    // Set the tab parameter
     url.searchParams.set('tab', panelKey);
     
-    // Add additional parameters
     if (params) {
         for (const [key, value] of Object.entries(params)) {
             if (value !== undefined && value !== null) {
@@ -75,7 +69,6 @@ function updateURL(panelKey: PanelKey, params?: Record<string, string>): void {
         }
     }
     
-    // Use replaceState to avoid adding to browser history
     window.history.replaceState(null, '', url.toString());
 }
 
@@ -83,26 +76,21 @@ export function NavigationProvider({ children }: NavigationProviderProps): JSX.E
     const panels = parseLocalizedPanels();
     const firstKey = panels[0]?.key ?? 'auth';
 
-    // Initialize panel from URL
     const [panel, setPanel] = useState<PanelKey>(() => {
         const urlPanel = getPanelFromURL(firstKey);
-        // Validate that the panel exists
         return panels.some((p) => p.key === urlPanel) ? urlPanel : firstKey;
     });
 
     const [panelParams, setPanelParams] = useState<Record<string, string> | null>(() => {
-        // Initialize params from URL
         const params = getQueryParams();
         return Object.keys(params).length > 0 ? params : null;
     });
 
-    // Update URL when panel changes
     useEffect(() => {
         const params = panelParams || {};
         updateURL(panel, params);
     }, [panel, panelParams]);
 
-    // Listen for popstate (browser back/forward)
     useEffect(() => {
         const handlePopState = () => {
             const urlPanel = getPanelFromURL(firstKey);

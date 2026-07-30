@@ -273,7 +273,6 @@ class SettingsMigrateAjaxController {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in ajax_import_settings()
 		$raw_base64 = wp_unslash( $_POST['archive'] );
 
-		// Strip a data: URL prefix if present (data:application/zip;base64,....)
 		$b64_marker = strpos( $raw_base64, 'base64,' );
 		if ( false !== $b64_marker ) {
 			$raw_base64 = substr( $raw_base64, $b64_marker + 7 );
@@ -316,8 +315,7 @@ class SettingsMigrateAjaxController {
 			Logger::log( 'import_fail', 'warning', array( 
 				'reason' => esc_html__( 'Unable to store the uploaded archive.', 'bromate-security-api-firewall' ) 
 			) );
-					error_log('Unable to store the uploaded archive.');
-
+			
 			return false;
 		}
 
@@ -328,7 +326,6 @@ class SettingsMigrateAjaxController {
 			Logger::log( 'import_fail', 'warning', array( 
 				'reason' => esc_html__( 'The archive is invalid or corrupted.', 'bromate-security-api-firewall' ) 
 			) );
-					error_log('The archive is invalid or corrupted.');
 
 			return false;
 		}
@@ -417,9 +414,7 @@ class SettingsMigrateAjaxController {
 					),
 				)
 			);
-			error_log(sprintf(esc_html__( 'Import completed with errors on: %s', 'bromate-security-api-firewall' ), implode( ', ', $failed_files ) ) );
 
-			
 			return false;
 		}
 

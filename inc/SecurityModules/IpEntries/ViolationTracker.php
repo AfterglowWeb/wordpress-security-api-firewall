@@ -4,8 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 class ViolationTracker {
 
-	private const VIOLATIONS_KEY_PREFIX = 'rest_firewall_violations_';
-	private const VIOLATION_LOCK_PREFIX = 'rest_firewall_violation_lock_';
+	private const VIOLATIONS_KEY_PREFIX = 'bromate_security_api_firewall_violations_';
+	private const VIOLATION_LOCK_PREFIX = 'bromate_security_api_firewall_violation_lock_';
 
 	public static function record_violation( string $client_ip, int $memory_window, int $lock_window ): int {
 

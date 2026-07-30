@@ -217,13 +217,15 @@ class SettingsMigrate {
 				esc_html__( 'Some settings failed to import: %s', 'bromate-security-api-firewall' ),
 				implode( ', ', $failed )
 			)]);
-								error_log(sprintf(
-				/* translators: %s: comma-separated list of setting keys that failed to save */
-				esc_html__( 'Some settings failed to import: %s', 'bromate-security-api-firewall' ),
-				implode( ', ', $failed )));
 
 			return false;
 		}
+
+		Logger::log('import_success', 'warning', [
+			'reason' => sprintf(
+				esc_html__( 'Settings imported successfully.', 'bromate-security-api-firewall' )
+			)
+		]);
 
 		return true;
 	}
@@ -253,7 +255,6 @@ class SettingsMigrate {
 
 		return $this->import_table_rows( $table, $rows );
 	}
-
 
 	private function table_csv_export($data): string {
 		if (empty($data)) {
@@ -323,12 +324,21 @@ class SettingsMigrate {
 		if ( 0 === $result_counts['add_count'] && 0 === $result_counts['update_count'] ) {
 			Logger::log('import_fail', 'warning', [
 				'reason' => sprintf(
-					esc_html__( 'No data imported or updated for %s.', 'bromate-security-api-firewall' ),
+					esc_html__( 'No data imported or updated in %s.', 'bromate-security-api-firewall' ),
 					$table
 				)
 			]);
 			return false;
 		}
+
+		Logger::log('import_success', 'info', [
+			'reason' => sprintf(
+				esc_html__( '%d rows imported, %d rows updated in %s.', 'bromate-security-api-firewall' ),
+				$result_counts['add_count'],
+				$result_counts['update_count'],
+				$table
+			)
+		]);
 
 		return true;
 	}

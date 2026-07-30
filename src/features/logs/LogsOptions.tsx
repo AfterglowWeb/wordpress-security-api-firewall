@@ -39,7 +39,7 @@ const LOGS_EVENTS_OPTIONS: Array<{
   { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall'), groupLabel: __('WordPress Login', 'bromate-security-api-firewall') },
   { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall') },
   { value: 'admin_login_failed', label: __('Login Failed', 'bromate-security-api-firewall') },
-  { value: 'admin_login_rate_limited', label: __('Login Rate Limited', 'bromate-security-api-firewall') },
+  { value: 'admin_login_rate_limited', label: __('Max Login Attempts Reached', 'bromate-security-api-firewall') },
   { value: 'admin_login_banned', label: __('Login Banned', 'bromate-security-api-firewall') },
 
   // Cron Events
@@ -51,6 +51,8 @@ const LOGS_EVENTS_OPTIONS: Array<{
   { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall'), groupLabel: __('Migrate Data', 'bromate-security-api-firewall') },
   { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall') },
   { value: 'export_fail', label: __('Data Export Failed', 'bromate-security-api-firewall') },
+  { value: 'import_success', label: __('Data Import Failed', 'bromate-security-api-firewall') },
+  { value: 'export_success', label: __('Data Export Failed', 'bromate-security-api-firewall') },
 
   // System Events
   { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall'), groupLabel: __('System', 'bromate-security-api-firewall') },

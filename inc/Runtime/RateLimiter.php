@@ -15,7 +15,7 @@ class RateLimiter {
 
 	private const REQUEST_KEY_PREFIX = 'bromate_security_api_firewall_requests_';
 
-	public static function inspect() {
+	public static function inspect($origin = 'public_rate_limit') {
 
 		$options = SettingsRepository::read_options();
 
@@ -31,9 +31,10 @@ class RateLimiter {
 
 		$max_requests     = (int) $options['rate_limit_max'];
 		$time_window      = (int) $options['rate_limit_time'];
-		$max_violations   = (int) $options['rate_limit_blacklist_threshold'];
 		$violation_window = (int) $options['rate_limit_violation_window'];
-		$blacklist_time   = (int) $options['rate_limit_block_duration'];
+		$max_violations   = (int) $options['rate_limit_blacklist_threshold'];
+		$blacklist_time   = (int) $options['rate_limit_blacklist_duration'];
+		$blacklist_unlimited   = (bool) $options['rate_limit_blacklist_duration_unlimited'];
 
 		$count = self::increment_request_count(
 			$client_ip,
@@ -54,7 +55,9 @@ class RateLimiter {
 
 			AutoBlacklist::auto_blacklist_ip(
 				$client_ip,
-				$blacklist_time
+				$blacklist_time,
+				$blacklist_unlimited,
+				$origin
 			);
 
 			ViolationTracker::clear_violations(

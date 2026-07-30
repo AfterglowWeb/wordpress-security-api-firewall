@@ -127,7 +127,7 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_block_duration'                   => array(
+			'rate_limit_blacklist_duration'                   => array(
 				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',

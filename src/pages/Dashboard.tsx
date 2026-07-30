@@ -3,6 +3,10 @@ import { Box, Grid, Paper, Typography, Stack, Chip, Card, CardContent, useTheme,
 import type { SecurityModule } from '@app-types/modules';
 import { SettingsAPI } from '@services/settings';
 
+import { useNavigation } from '@contexts/NavigationContext';
+import type { PanelKey } from '@app-types/navigation';
+
+
 type StatCardProps = {
 	title: string;
 	value: string | number;
@@ -50,6 +54,7 @@ export default function Dashboard(): JSX.Element {
 	const theme = useTheme();
 	const [settings, setSettings] = useState<Record<string, any>>({});
 	const [loading, setLoading] = useState(true);
+    const { navigateGuarded } = useNavigation();
 
 	useEffect(() => {
 		const fetchSettings = async () => {
@@ -123,7 +128,7 @@ export default function Dashboard(): JSX.Element {
 				key: 'logs',
 				title: 'Logs',
 				description: 'Security events & violation tracking',
-				enabled: false,
+				enabled: !!settings.logs_enabled,
 			},
 		];
 	}, [settings]);
@@ -193,19 +198,27 @@ export default function Dashboard(): JSX.Element {
 								<Paper
 									elevation={0}
 									sx={{
-										p: 2,
-										borderRadius: 2,
-										border:`1px solid ${theme.palette.grey[300]}`,
-										opacity: securityModule.enabled ? 1 : 0.6,
-										transition: '0.2s',
-										backgroundColor: securityModule.enabled ? theme.palette.background.paper : theme.palette.grey[50],
-									}}
+                                        p: 2,
+                                        borderRadius: 2,
+                                        border: `1px solid ${theme.palette.grey[300]}`,
+                                        opacity: securityModule.enabled ? 1 : 0.6,
+                                        transition: '0.2s',
+                                        backgroundColor: securityModule.enabled ? theme.palette.background.paper : theme.palette.grey[50],
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            borderColor: theme.palette.primary.main,
+                                            opacity: 1,
+                                        },
+										height:'100%',
+                                    }}
+                                    onClick={() => navigateGuarded(securityModule.key as PanelKey)}
 								>
 									<Stack
 										direction="row"
 										alignItems="center"
 										justifyContent="space-between"
 										flexWrap="wrap"
+										gap={1}
 									>
 										<Typography fontWeight={600}>
 											{securityModule.title}
@@ -277,10 +290,7 @@ export default function Dashboard(): JSX.Element {
 							<Typography variant="h6" gutterBottom>
 								Activity Overview
 							</Typography>
-
-							<Typography variant="body2" color="text.secondary">
-								(Charts will be connected to rate limiting + authentication events)
-							</Typography>
+						
 						</Paper>
 					</Box>
 				</CardContent>
