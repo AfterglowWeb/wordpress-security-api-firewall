@@ -14,4 +14,5 @@ export type SecurityModule = {
 	title: string;
 	description: string;
 	enabled: boolean;
+	tab?:string;
 };

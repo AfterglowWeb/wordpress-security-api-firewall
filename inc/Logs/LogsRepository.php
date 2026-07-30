@@ -344,6 +344,8 @@ final class LogsRepository {
 			'log_entries_delete_expired',
 			'import_fail',
 			'export_fail',
+			'import_success',
+			'export_success',
 		);
 		return in_array( $value, $allowed, true ) ? $value : 'unknown';
 	}

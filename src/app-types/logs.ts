@@ -20,7 +20,9 @@ export type LogEvent =
 	'plugin_settings_changed' |
   'log_entries_delete_expired' |
   'import_fail' |
-  'export_fail';
+  'export_fail' |
+  'import_success' |
+	'export_success';
 
 export interface LogEntry {
   id: number;

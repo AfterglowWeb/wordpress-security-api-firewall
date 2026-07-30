@@ -29,7 +29,6 @@ final class Uninstall {
 		RestAccessCustomCap::remove_rest_api_access_custom_cap();
 
 		RoutesTreeRepository::delete_routes_list_transient();
-		AutoBlacklist::delete_all_auto_blacklist_ip_transients();
 		GeoIpApi::delete_all_geoip_transients();
 		ViolationTracker::delete_all_violation_transients();
 		LoginRateLimiter::delete_all_rate_limit_transients();
@@ -56,7 +55,6 @@ final class Uninstall {
 		RestAccessCustomCap::remove_rest_api_access_custom_cap();
 
 		RoutesTreeRepository::delete_routes_list_transient();
-		AutoBlacklist::delete_all_auto_blacklist_ip_transients();
 		GeoIpApi::delete_all_geoip_transients();
 		ViolationTracker::delete_all_violation_transients();
 		LoginRateLimiter::delete_all_rate_limit_transients();
