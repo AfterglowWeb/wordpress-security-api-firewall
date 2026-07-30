@@ -31,17 +31,19 @@ final class CronLogs {
 
 	public static function run_scheduled_logs_cleanup(): void {
 		$result_count = self::maybe_rotate_logs();
-		Logger::log(
-			'log_entries_delete_expired',
-			'info',
-			array(
-				'reason' => sprintf(
-					/* translators: $d is the number of expired log entries deleted */
-					esc_html__( '%d expired log entries deleted by wp_schedule_event runtime.', 'bromate-security-api-firewall' ),
-					$result_count
-				),
-			)
-		);
+		if(0 < $result_count) {
+			Logger::log(
+				'log_entries_delete_expired',
+				'info',
+				array(
+					'reason' => sprintf(
+						/* translators: $d is the number of expired log entries deleted */
+						esc_html__( '%d expired log entries deleted by wp_schedule_event runtime.', 'bromate-security-api-firewall' ),
+						$result_count
+					),
+				)
+			);
+		}
 	}
 
 	public static function maybe_rotate_logs(): int {

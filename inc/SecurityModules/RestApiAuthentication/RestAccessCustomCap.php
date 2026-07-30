@@ -13,7 +13,7 @@ final class RestAccessCustomCap {
 	private function __construct() {}
 
 	public static function register(): void {
-		add_action( 'plugins_loaded', array( RestAuthorizedUserRepository::class, 'add_api_access_cap_on_authorized_users' ) );
+		add_action( 'plugins_loaded', array( self::class, 'add_api_access_cap_on_authorized_users' ) );
 	}
 
 	public static function user_has_rest_api_access_cap( $user ): bool {
@@ -60,7 +60,7 @@ final class RestAccessCustomCap {
 		);
 
 		foreach ( $users as $user ) {
-			if ( in_array( $user['ID'], $auth_user_ids, true ) ) {
+			if ( in_array( $user->ID, $auth_user_ids, true ) ) {
 				self::add_cap_to_user( $user );
 			} else {
 				self::remove_cap_from_user( $user );
@@ -80,7 +80,7 @@ final class RestAccessCustomCap {
 		}
 	}
 
-	private static function remove_rest_api_access_custom_cap(): void {
+	public static function remove_rest_api_access_custom_cap(): void {
 		$wp_roles = wp_roles()->roles;
 
 		foreach ( array_keys( $wp_roles ) as $role_name ) {
@@ -91,7 +91,4 @@ final class RestAccessCustomCap {
 		}
 	}
 
-	public static function delete_authorized_users_api_access_cap(): void {
-		self::remove_rest_api_access_custom_cap();
-	}
 }

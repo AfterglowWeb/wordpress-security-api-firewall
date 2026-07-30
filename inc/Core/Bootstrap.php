@@ -14,7 +14,6 @@ use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwksEndpoi
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationAjaxController;
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\GlobalSecurityBootstrap;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesAjaxController;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeRepository;
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
@@ -25,6 +24,8 @@ use Bromate\SecurityApiFirewall\Logs\LogsAjaxController;
 use Bromate\SecurityApiFirewall\Cron\Cron;
 use Bromate\SecurityApiFirewall\Cron\CronIpEntries;
 use Bromate\SecurityApiFirewall\Cron\CronLogs;
+use Bromate\SecurityApiFirewall\Cron\CronTemporaryFiles;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAccessCustomCap;
 
 final class Bootstrap {
 
@@ -34,6 +35,7 @@ final class Bootstrap {
 		add_action( 'plugins_loaded', array( SchemaManager::class, 'install' ) );
 
 		RestRequestBootstrap::register();
+		RestAccessCustomCap::register();
 		LoginBootstrap::register();
 		PublicRequestBootstrap::register();
 		GlobalSecurityBootstrap::register();
@@ -43,10 +45,10 @@ final class Bootstrap {
 		Cron::register();
 		CronLogs::register();
 		CronIpEntries::register();
+		CronTemporaryFiles::register();
 
 		if ( is_admin() ) {
 			AdminPage::register();
-
 			SettingsAjaxController::register();
 			RestAuthenticationAjaxController::register();
 			IpEntriesAjaxController::register();
@@ -60,7 +62,6 @@ final class Bootstrap {
 	public static function activate(): void {
 
 		SchemaManager::install();
-		AdminPage::add_edit_options_custom_cap();
 
 		if ( false === get_option( SettingsConfig::SETTINGS_OPTION_KEY ) ) {
 			update_option(
@@ -74,12 +75,7 @@ final class Bootstrap {
 	}
 
 	public static function deactivate(): void {
-
-		delete_transient( RoutesTreeRepository::ROUTES_LIST_TRANSIENT_KEY );
-		wp_unschedule_hook( CronIpEntries::CRON_HOOK_KEY );
-
-		AdminPage::remove_edit_options_custom_cap();
-		flush_rewrite_rules();
+		Uninstall::deactivate();
 	}
 
 	public static function uninstall(): void {

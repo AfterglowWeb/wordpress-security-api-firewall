@@ -16,6 +16,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { apiRequest } from '@services/api';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import type { ConfigSettings, ExportFormat } from '@app-types/config';
+import { Divider } from '@mui/material';
 
 interface ExportResponse {
   message: string;
@@ -47,12 +48,10 @@ function downloadFile(url: string, filename: string): void {
   document.body.removeChild(link);
 }
 
-// Clean up exported files after download
 async function cleanupExportFiles(filenames: string[]): Promise<void> {
   try {
     await apiRequest('bromate_cleanup_export_files', { filenames });
   } catch (error) {
-    // Silent cleanup - don't show errors to user
     console.warn('Failed to cleanup export files:', error);
   }
 }
@@ -66,7 +65,6 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [exportedFiles, setExportedFiles] = useState<string[]>([]);
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -74,57 +72,45 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
-  // Auto-cleanup files when component unmounts
-  useEffect(() => {
-    return () => {
-      if (exportedFiles.length > 0) {
-        cleanupExportFiles(exportedFiles);
-      }
-    };
-  }, [exportedFiles]);
-
   const handleExport = useCallback(async () => {
-    setExporting(true);
-    try {
-      const response: ExportResponse = await apiRequest<ExportResponse>(
-        'bromate_update_and_export_settings',
-        settings
-      );
+  setExporting(true);
+  try {
+    const response: ExportResponse = await apiRequest<ExportResponse>(
+      'bromate_update_and_export_settings',
+      settings
+    );
 
-      if (response.download_url) {
-        downloadFile(response.download_url, response.filename || 'export.zip');
-
-        // Track the filename for cleanup (remove duplicates)
-        if (response.filename) {
-          setExportedFiles(prev => prev.filter(f => f !== response.filename));
-        }
-
-        setSnackbar({
-          open: true,
-          message: response.message || __('Export complete.', 'bromate-security-api-firewall'),
-          severity: 'success',
-        });
-
-        // Schedule cleanup after download (give time for download to start)
-        setTimeout(() => {
-          if (response.filename) {
-            cleanupExportFiles([response.filename]);
-            setExportedFiles(prev => prev.filter(f => f !== response.filename));
-          }
-        }, 10000); // Clean up after 10 seconds
-      } else {
-        throw new Error(__('No download URL received.', 'bromate-security-api-firewall'));
+    if (response.download_url && response.filename) {
+      const fileResponse = await fetch(response.download_url);
+      if (!fileResponse.ok) {
+        throw new Error(__('Download failed.', 'bromate-security-api-firewall'));
       }
-    } catch (error) {
+      const blob = await fileResponse.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      downloadFile(objectUrl, response.filename);
+      URL.revokeObjectURL(objectUrl);
+
+      await cleanupExportFiles([response.filename]);
+
       setSnackbar({
         open: true,
-        message: error instanceof Error ? error.message : __('Failed to export settings.', 'bromate-security-api-firewall'),
-        severity: 'error',
+        message: response.message || __('Export complete.', 'bromate-security-api-firewall'),
+        severity: 'success',
       });
-    } finally {
-      setExporting(false);
+    } else {
+      throw new Error(__('No download URL received.', 'bromate-security-api-firewall'));
     }
-  }, [settings]);
+  } catch (error) {
+    setSnackbar({
+      open: true,
+      message: error instanceof Error ? error.message : __('Failed to export settings.', 'bromate-security-api-firewall'),
+      severity: 'error',
+    });
+  } finally {
+    setExporting(false);
+  }
+}, [settings]);
 
   const importDialogContent = useCallback((payload: ImportPayload): string => {
     if (payload.type === 'json') {
@@ -181,7 +167,6 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
       const reader = new FileReader();
       reader.onload = () => {
         const result = String(reader.result ?? '');
-        // Strip the "data:<mime>;base64," prefix added by readAsDataURL
         const base64 = result.includes(',') ? result.split(',')[1] : result;
         resolve(base64);
       };
@@ -274,167 +259,218 @@ export default function ExportImportSettings({ settings, onChange }: ExportImpor
 
   return (
     <Paper sx={{ p: 2 }} elevation={0}>
-      <Stack spacing={3} maxWidth={500}>
+      <Stack spacing={3}>
 
-        <Stack>
+        <Stack maxWidth={500}>
           <Typography variant="h6">
             {__('Export / Import', 'bromate-security-api-firewall')}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {__('Back up or restore plugin settings and database tables.', 'bromate-security-api-firewall')}<br />
-            {__('(JWT, 2FA and reCAPTCHA keys are never included.', 'bromate-security-api-firewall')}
+            {__('JWT, 2FA and reCAPTCHA keys are not included.', 'bromate-security-api-firewall')}
           </Typography>
         </Stack>
 
-        <Stack spacing={1}>
-          <Stack>
-            <Typography variant="body1" fontWeight={500}>
-              {__('Export', 'bromate-security-api-firewall')}
-            </Typography>
-          </Stack>
-
-          <FormControlLabel
-            label={<Stack spacing={0}>
-              <Typography variant="body1">
-                {__('Include sensitive data', 'bromate-security-api-firewall')}
+        <Stack direction={"row"} gap={3}>
+                
+          <Stack spacing={1} flex={1}>
+            <Stack>
+              <Typography variant="body1" fontWeight={500}>
+                {__('Export', 'bromate-security-api-firewall')}
               </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {__('JWT config, authorized users', 'bromate-security-api-firewall')}
-              </Typography>
-            </Stack>}
-            control={
-              <Checkbox
-                size="small"
-                checked={settings.config_export_include_sensitive_data}
-                onChange={(e) => onChange('config_export_include_sensitive_data', e.target.checked)}
-              />
-            }
-          />
-
-          <FormControlLabel
-            label={__('Include REST API routes tree', 'bromate-security-api-firewall')}
-            control={
-              <Checkbox
-                size="small"
-                checked={settings.config_export_include_routes_tree}
-                onChange={(e) => onChange('config_export_include_routes_tree', e.target.checked)}
-              />
-            }
-          />
-
-          <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-            <FormControlLabel
-              label={__('Include IP entries table', 'bromate-security-api-firewall')}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={settings.config_export_include_ip_entries}
-                  onChange={(e) => onChange('config_export_include_ip_entries', e.target.checked)}
-                />
-              }
-            />
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={settings.config_export_ip_entries_format || 'csv'}
-              onChange={(_, val) => onChange('config_export_ip_entries_format', val)}
-              disabled={!settings.config_export_include_ip_entries}
-            >
-              <ToggleButton value="csv">CSV</ToggleButton>
-              <ToggleButton value="json">JSON</ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-
-          <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-            <FormControlLabel
-              label={__('Include Logs table', 'bromate-security-api-firewall')}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={settings.config_export_include_log_entries}
-                  onChange={(e) => onChange('config_export_include_log_entries', e.target.checked)}
-                />
-              }
-            />
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={settings.config_export_log_entries_format || 'csv'}
-              onChange={(_, val) => onChange('config_export_log_entries_format', val)}
-              disabled={!settings.config_export_include_log_entries}
-            >
-              <ToggleButton value="csv">CSV</ToggleButton>
-              <ToggleButton value="json">JSON</ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-
-          <Stack
-            flexDirection="row"
-            gap={2}
-            alignItems="center"
-          >
-            <Stack sx={{display:'block'}}>
-              <Button
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                onClick={handleExport}
-                disabled={exporting}
-                sx={{minWidth:150}}
-              >
-                {exporting ? __('Exporting…', 'bromate-security-api-firewall') : __('Export', 'bromate-security-api-firewall')}
-              </Button>
             </Stack>
+
+            <FormControlLabel
+              label={<Stack spacing={0}>
+                <Typography variant="body1">
+                  {__('Include sensitive data', 'bromate-security-api-firewall')}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {__('JWT config, authorized users', 'bromate-security-api-firewall')}
+                </Typography>
+              </Stack>}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={settings.config_export_include_sensitive_data}
+                  onChange={(e) => onChange('config_export_include_sensitive_data', e.target.checked)}
+                />
+              }
+            />
+
+            <FormControlLabel
+              label={__('Include REST API routes tree', 'bromate-security-api-firewall')}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={settings.config_export_include_routes_tree}
+                  onChange={(e) => onChange('config_export_include_routes_tree', e.target.checked)}
+                />
+              }
+            />
+
+            <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+              <FormControlLabel
+                label={__('Include IP entries table', 'bromate-security-api-firewall')}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={settings.config_export_include_ip_entries}
+                    onChange={(e) => onChange('config_export_include_ip_entries', e.target.checked)}
+                  />
+                }
+              />
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={settings.config_export_ip_entries_format || 'csv'}
+                onChange={(_, val) => onChange('config_export_ip_entries_format', val)}
+                disabled={!settings.config_export_include_ip_entries}
+              >
+                <ToggleButton value="csv">CSV</ToggleButton>
+                <ToggleButton value="json">JSON</ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+
+            <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+              <FormControlLabel
+                label={__('Include Logs table', 'bromate-security-api-firewall')}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={settings.config_export_include_log_entries}
+                    onChange={(e) => onChange('config_export_include_log_entries', e.target.checked)}
+                  />
+                }
+              />
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={settings.config_export_log_entries_format || 'csv'}
+                onChange={(_, val) => onChange('config_export_log_entries_format', val)}
+                disabled={!settings.config_export_include_log_entries}
+              >
+                <ToggleButton value="csv">CSV</ToggleButton>
+                <ToggleButton value="json">JSON</ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+
+            <Stack
+              flexDirection="row"
+              gap={2}
+              alignItems="center"
+            >
+              <Stack sx={{display:'block'}}>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleExport}
+                  disabled={exporting}
+                  sx={{minWidth:150}}
+                >
+                  {exporting ? __('Exporting…', 'bromate-security-api-firewall') : __('Export', 'bromate-security-api-firewall')}
+                </Button>
+              </Stack>
+            </Stack>
+
           </Stack>
 
-        </Stack>
+          <Divider orientation="vertical" flexItem />
 
-        <Stack
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          sx={{
-            p: 3,
-            borderRadius: '8px',
-            border: '2px dashed',
-            borderColor: dragActive ? 'primary.main' : 'divider',
-            bgcolor: dragActive ? 'action.hover' : 'transparent',
-            transition: 'all .15s ease',
-            textAlign: 'center',
-            gap: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight:250,
-          }}
-        >
-          <Stack gap={1}>
+          <Stack spacing={1} flex={1}>
             <Typography variant="body1" fontWeight={500}>
               {__('Import', 'bromate-security-api-firewall')}
             </Typography>
-            <Typography variant="caption" component={"p"} color="text.secondary">
-              {__('Drag and drop a .json, .csv or .zip export here', 'bromate-security-api-firewall')}<br/>
-              {__('or click on Choose file', 'bromate-security-api-firewall')}
-            </Typography>
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<UploadFileIcon />}
-              disabled={importing}
-              sx={{minWidth:150}}
+
+            <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+              <Typography variant="body1">
+                {__('IPs Table', 'bromate-security-api-firewall')}
+              </Typography>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={settings.config_import_ip_entries_merge || 'update' }
+                onChange={(_, val) => onChange('config_import_ip_entries_merge', val)}
+              >
+                <ToggleButton value="update">{__('Update', 'bromate-security-api-firewall')}</ToggleButton>
+                <ToggleButton value="replace">{__('Replace', 'bromate-security-api-firewall')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+            
+            <Stack pl={1.5} direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+              <Typography variant="body1">
+                  {__('Logs Table', 'bromate-security-api-firewall')}
+              </Typography>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={settings.config_import_log_entries_merge || 'update' }
+                onChange={(_, val) => onChange('config_import_log_entries_merge', val)}
+              >
+                <ToggleButton value="update">{__('Update', 'bromate-security-api-firewall')}</ToggleButton>
+                <ToggleButton value="replace">{__('Replace', 'bromate-security-api-firewall')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+
+            <Stack
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              sx={{
+                p: 3,
+                borderRadius: '8px',
+                border: '2px dashed',
+                borderColor: dragActive ? 'primary.main' : 'divider',
+                bgcolor: dragActive ? 'action.hover' : 'transparent',
+                transition: 'all .15s ease',
+                textAlign: 'center',
+                gap: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight:250,
+              }}
             >
-              {importing ? __('Importing…', 'bromate-security-api-firewall') : __('Choose file', 'bromate-security-api-firewall')}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={ACCEPTED_EXTENSIONS.join(',')}
-                hidden
-                onChange={handleFileInputChange}
-              />
-            </Button>
+              <Stack gap={1}>
+                <Typography variant="body1" fontWeight={500}>
+                  {__('Import', 'bromate-security-api-firewall')}
+                </Typography>
+                
+                <Typography variant="caption" component={"p"} color="text.secondary">
+                  {__('Drag and drop a .json, .csv or .zip file here', 'bromate-security-api-firewall')}<br/>
+                  {__('or click on Choose file', 'bromate-security-api-firewall')}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<UploadFileIcon />}
+                  disabled={importing}
+                  sx={{minWidth:150}}
+                >
+                  {importing ? __('Importing…', 'bromate-security-api-firewall') : __('Choose file', 'bromate-security-api-firewall')}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ACCEPTED_EXTENSIONS.join(',')}
+                    hidden
+                    onChange={handleFileInputChange}
+                  />
+                </Button>
+              </Stack>
+              <Alert
+                severity="info"
+                variant="outlined"
+                sx={{mt:3, color:'text.secondary', borderColor: 'divider', '& .MuiAlert-icon':{color:'inherit',opacity:0.7}}}
+                >
+                  {__('To import data from another application, click Export first to view the required schemas for each file. You can then upload multiple files as a single zip archive, or add them one by one.', 'bromate-security-api-firewall')}
+              </Alert>
+            </Stack>
+            
+            
           </Stack>
+
         </Stack>
 
       </Stack>
-
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

@@ -326,7 +326,7 @@ final class SettingsConfig {
 				),
 				'default_value'     => 'Lax',
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'Strict', 'Lax' ), true ) ? $v : 'Lax',
 				'group'             => 'login-hardening',
 			),
 
@@ -650,13 +650,25 @@ final class SettingsConfig {
 			'config_export_ip_entries_format'=> array(
 				'default_value'     => 'csv',
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
 				'group'             => 'config',
 			),
 			'config_export_log_entries_format'=> array(
 				'default_value'     => 'csv',
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
+				'group'             => 'config',
+			),
+			'config_import_ip_entries_merge'=> array(
+				'default_value'     => false,
+				'type'              => 'string',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'replace', 'update' ), true ) ? $v : 'update',
+				'group'             => 'config',
+			),
+			'config_import_log_entries_merge'=> array(
+				'default_value'     => false,
+				'type'              => 'string',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'replace', 'update' ), true ) ? $v : 'update',
 				'group'             => 'config',
 			),
 		);
