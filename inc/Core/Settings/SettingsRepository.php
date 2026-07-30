@@ -44,6 +44,10 @@ class SettingsRepository {
 
 		$sanitized_option       = self::sanitize_option( $option_key, $new_option );
 		$options                = self::read_options();
+		$current_value          = $options[ $option_key ];
+		if ( $sanitized_option === $current_value ) {
+			return true;
+		}
 		$options[ $option_key ] = $sanitized_option;
 
 		update_option( SettingsConfig::SETTINGS_OPTION_KEY, $options );

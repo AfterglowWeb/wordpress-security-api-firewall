@@ -63,6 +63,26 @@ class FileUtils {
 		return $wp_filesystem->is_dir( $path );
 	}
 
+	public static function is_file( string $file ): bool {
+		$wp_filesystem = self::wp_filesystem();
+
+		if ( ! $wp_filesystem ) {
+			return false;
+		}
+
+		return $wp_filesystem->is_file( $file );
+	}
+
+	public static function mtime( string $file ): bool {
+		$wp_filesystem = self::wp_filesystem();
+
+		if ( ! $wp_filesystem ) {
+			return false;
+		}
+
+		return $wp_filesystem->mtime( $file );
+	}
+
 	/**
 	 * Check if a path is writable.
 	 */

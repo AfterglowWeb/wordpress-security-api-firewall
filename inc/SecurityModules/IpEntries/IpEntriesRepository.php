@@ -470,6 +470,13 @@ class IpEntriesRepository {
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
+	public static function delete_all_entries(): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->query( 'TRUNCATE TABLE ' . self::table() );
+		return false !== $result;
+	}
+
 	public static function delete_expired(): int {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- static SQL, no user input

@@ -29,6 +29,8 @@ class SettingsMigrate {
 		'config_export_include_log_entries',
 		'config_export_ip_entries_format',
 		'config_export_log_entries_format',
+		'config_import_ip_entries_merge',
+		'config_import_log_entries_merge',
 	];
 
 	public function read_config_settings():array {
@@ -112,7 +114,7 @@ class SettingsMigrate {
 
 	public function create_zip_file(array $files): array {
 		if (empty($files)) {
-			return null;
+			return [];
 		}
 
 		if (!class_exists('ZipArchive')) {
@@ -189,7 +191,8 @@ class SettingsMigrate {
 			return false;
 		}
 
-		$settings = $decoded['settings'] ?? $decoded;
+		$settings = isset($decoded['settings']) ? $decoded['settings'] : [];
+
 
 		if ( ! is_array( $settings ) || empty( $settings ) ) {
 			Logger::log('import_fail', 'warning', [
@@ -201,6 +204,7 @@ class SettingsMigrate {
 
 		$failed = array();
 		foreach ( $settings as $key => $value ) {
+
 			if ( false === SettingsRepository::update_option( $key, $value ) ) {
 				$failed[] = $key;
 			}
@@ -213,10 +217,19 @@ class SettingsMigrate {
 				esc_html__( 'Some settings failed to import: %s', 'bromate-security-api-firewall' ),
 				implode( ', ', $failed )
 			)]);
+								error_log(sprintf(
+				/* translators: %s: comma-separated list of setting keys that failed to save */
+				esc_html__( 'Some settings failed to import: %s', 'bromate-security-api-firewall' ),
+				implode( ', ', $failed )));
+
 			return false;
 		}
 
 		return true;
+	}
+
+	private function table_json_export($data): string {
+		return wp_json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 	}
 
 	public function import_csv_file( string $filename, string $raw_csv ): bool {
@@ -241,9 +254,6 @@ class SettingsMigrate {
 		return $this->import_table_rows( $table, $rows );
 	}
 
-	private function table_json_export($data): string {
-		return wp_json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-	}
 
 	private function table_csv_export($data): string {
 		if (empty($data)) {
@@ -275,13 +285,33 @@ class SettingsMigrate {
 
 	public function import_table_rows( string $table, array $rows ): bool {
 
+		$merge_option = 'ip_entries' === $table
+			? 'config_import_ip_entries_merge'
+			: ( 'log_entries' === $table ? 'config_import_log_entries_merge' : null );
+
+		$merge = 'update';
+		if(null !== $merge_option) {
+			$merge = SettingsRepository::read_option( $merge_option );
+		}
+
+		if ( 'replace' === $merge ) {
+			switch ( $table ) {
+				case 'ip_entries':
+					IpEntriesRepository::delete_all_entries();
+					break;
+				case 'log_entries':
+					LogsRepository::delete_all_entries();
+					break;
+			}
+		}
+
 		$result_counts = ['add_count' => 0, 'update_count' => 0];
 		switch ( $table ) {
 			case 'ip_entries':
 				$result_counts = IpEntriesRepository::insert_many( $rows );
 				break;
 			case 'log_entries':
-				$result_counts = LogsRepository::insert_many( $rows );
+				$result_counts = LogsRepository::insert_many( $rows, $merge );
 				break;
 			default:
 				Logger::log('import_fail', 'warning', [
@@ -290,12 +320,11 @@ class SettingsMigrate {
 				return false;
 		}
 
-		if ( 0 === $result_counts['add_count'] &&  0 === $result_counts['update_count'] ) {
+		if ( 0 === $result_counts['add_count'] && 0 === $result_counts['update_count'] ) {
 			Logger::log('import_fail', 'warning', [
 				'reason' => sprintf(
-				/* translators: %s: table name */
-				esc_html__( 'No data imported or updated for %s.', 'bromate-security-api-firewall' ),
-				$table
+					esc_html__( 'No data imported or updated for %s.', 'bromate-security-api-firewall' ),
+					$table
 				)
 			]);
 			return false;

@@ -8,4 +8,6 @@ export interface ConfigSettings {
   config_export_include_log_entries: boolean,
   config_export_ip_entries_format: ExportFormat,
   config_export_log_entries_format: ExportFormat,
+  config_import_ip_entries_merge: boolean,
+  config_import_log_entries_merge: boolean,
 }

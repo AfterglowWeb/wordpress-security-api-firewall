@@ -14,71 +14,107 @@ final class LogsRepository {
 		return $wpdb->prefix . 'bromate_security_api_firewall_logs';
 	}
 
-	public static function insert( array $data ): bool {
+
+	private static function log_in_db( $id ): ?array {
+		global $wpdb;
+
+		if ( empty( $id ) ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::table() . ' WHERE id = %d',
+				(int) $id
+			),
+			ARRAY_A
+		);
+
+		return $existing ?: null;
+	}
+
+	public static function delete_all_entries(): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->query( 'TRUNCATE TABLE ' . self::table() );
+		return false !== $result;
+	}
+
+	public static function insert( array $data, bool $merge = false ): string {
 		global $wpdb;
 
 		if ( ! SettingsRepository::read_option( 'logs_enabled' ) ) {
-			return false;
+			return '';
 		}
 
 		$event    = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
 		$severity = isset( $data['severity'] ) ? self::sanitize_severity( $data['severity'] ) : 'info';
 
 		if ( empty( $event ) ) {
-			return false;
+			return '';
 		}
 
 		$keep_events = SettingsRepository::read_option( 'logs_keep_events' );
-		if ( ! empty( $keep_events ) && is_array( $keep_events ) ) {
-			if ( ! in_array( $event, $keep_events, true ) ) {
-				return false;
-			}
+		if ( ! empty( $keep_events ) && is_array( $keep_events ) && ! in_array( $event, $keep_events, true ) ) {
+			return '';
 		}
 
 		$keep_severities = SettingsRepository::read_option( 'logs_keep_severities' );
-		if ( ! empty( $keep_severities ) && is_array( $keep_severities ) ) {
-			if ( ! in_array( $severity, $keep_severities, true ) ) {
-				return false;
-			}
+		if ( ! empty( $keep_severities ) && is_array( $keep_severities ) && ! in_array( $severity, $keep_severities, true ) ) {
+			return '';
 		}
 
 		$row = array(
 			'event'      => $event,
 			'severity'   => $severity,
-			'details'    => isset( $data['details'] ) ? wp_json_encode( $data['details'] ) : null,
+			'details'    => isset( $data['details'] )
+				? ( is_string( $data['details'] ) ? $data['details'] : wp_json_encode( $data['details'] ) )
+				: null,
 			'ip'         => isset( $data['ip'] ) ? sanitize_text_field( $data['ip'] ) : IpUtils::get_client_ip(),
-			'user_agent' => self::current_user_agent(),
-			'referrer'   => self::current_referrer(),
-			'method'     => self::current_method(),
-			'uri'        => self::current_uri(),
-			'user_id'    => get_current_user_id() ? get_current_user_id() : null,
-			'created_at' => current_time( 'mysql' ),
+			'user_agent' => isset( $data['user_agent'] ) ? sanitize_text_field( $data['user_agent'] ) : self::current_user_agent(),
+			'referrer'   => isset( $data['referrer'] ) ? sanitize_text_field( $data['referrer'] ) : self::current_referrer(),
+			'method'     => isset( $data['method'] ) ? sanitize_text_field( $data['method'] ) : self::current_method(),
+			'uri'        => isset( $data['uri'] ) ? sanitize_text_field( $data['uri'] ) : self::current_uri(),
+			'user_id'    => ( isset( $data['user_id'] ) && '' !== $data['user_id'] )
+				? (int) $data['user_id']
+				: ( get_current_user_id() ? get_current_user_id() : null ),
+			'created_at' => ( isset( $data['created_at'] ) && '' !== $data['created_at'] )
+				? sanitize_text_field( $data['created_at'] )
+				: current_time( 'mysql' ),
 		);
 
+		if ( $merge && isset( $data['id'] ) && '' !== $data['id'] ) {
+			$existing = self::log_in_db( $data['id'] );
+			if ( $existing ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+				$result = $wpdb->update( self::table(), $row, array( 'id' => $existing['id'] ) );
+				return ( false !== $result ) ? 'updated' : '';
+			}
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$result = (bool) $wpdb->insert( self::table(), $row );
+		$result = $wpdb->insert( self::table(), $row );
 
 		if ( $result ) {
 			CronLogs::maybe_rotate_logs();
+			return 'inserted';
 		}
 
-		return $result;
+		return '';
 	}
 
-	public static function insert_many( array $log_entries ) {
+	public static function insert_many( array $log_entries, bool $merge = false ) {
 
 		if ( empty( $log_entries ) ) {
-			return array(
-				'add_count'    => 0,
-				'update_count' => 0,
-			);
+			return array( 'add_count' => 0, 'update_count' => 0 );
 		}
 
 		$inserted_count = 0;
 		$updated_count  = 0;
 
 		foreach ( $log_entries as $log_entry ) {
-			$result = self::insert( $log_entry );
+			$result = self::insert( $log_entry, $merge );
 			if ( 'inserted' === $result ) {
 				++$inserted_count;
 			}

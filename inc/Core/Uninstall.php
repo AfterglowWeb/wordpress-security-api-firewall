@@ -25,7 +25,8 @@ final class Uninstall {
 
 		CronIpEntries::unschedule();
 		SaltsRotation::unschedule();
-		SaltsRotation::delete_salts_rotation_options();
+		AdminPage::remove_edit_options_custom_cap();
+		RestAccessCustomCap::remove_rest_api_access_custom_cap();
 
 		RoutesTreeRepository::delete_routes_list_transient();
 		AutoBlacklist::delete_all_auto_blacklist_ip_transients();
@@ -35,16 +36,30 @@ final class Uninstall {
 
 		TOTPRepository::revoke_all_users_totp_enrollment();
 		RestAuthorizedUserRepository::delete_authorized_users_jwt_subclaim();
-		RestAccessCustomCap::delete_authorized_users_api_access_cap();
 
+		SaltsRotation::delete_salts_rotation_options();
 		JwtAuthentication::delete_jwt_settings();
-
-		AdminPage::remove_edit_options_custom_cap();
 
 		SchemaManager::drop_tables();
 		SchemaManager::delete_schema_version();
 
 		SettingsRepository::delete_all_options();
+
+		flush_rewrite_rules();
+	}
+
+	public static function deactivate(): void {
+
+		CronIpEntries::unschedule();
+		SaltsRotation::unschedule();
+		AdminPage::remove_edit_options_custom_cap();
+		RestAccessCustomCap::remove_rest_api_access_custom_cap();
+
+		RoutesTreeRepository::delete_routes_list_transient();
+		AutoBlacklist::delete_all_auto_blacklist_ip_transients();
+		GeoIpApi::delete_all_geoip_transients();
+		ViolationTracker::delete_all_violation_transients();
+		LoginRateLimiter::delete_all_rate_limit_transients();
 
 		flush_rewrite_rules();
 	}
