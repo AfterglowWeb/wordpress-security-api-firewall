@@ -96,10 +96,10 @@ final class LoginAttemptsLimiter {
 	private function get_options(): array {
 		$opts = SettingsRepository::read_options();
 		return array(
-			'attempts'       => max( 1, (int) ( $opts['login_attempts_limit'] ?? 5 ) ),
-			'window'         => max( 1, (int) ( $opts['login_attempts_limit_window'] ?? 300 ) ),
-			'blacklist_time' => max( 1, (int) ( $opts['login_attempts_violation_block_time'] ?? 3600 ) ),
-			'blacklist_after'  => max( 0, (int) ( $opts['login_attempts_blacklist_after_violations'] ?? 3 ) ),
+			'attempts'        => max( 1, (int) ( $opts['login_attempts_limit'] ?? 5 ) ),
+			'window'          => max( 1, (int) ( $opts['login_attempts_limit_window'] ?? 300 ) ),
+			'blacklist_time'  => max( 1, (int) ( $opts['login_attempts_violation_block_time'] ?? 3600 ) ),
+			'blacklist_after' => max( 0, (int) ( $opts['login_attempts_blacklist_after_violations'] ?? 3 ) ),
 		);
 	}
 

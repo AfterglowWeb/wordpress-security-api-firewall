@@ -21,7 +21,7 @@ class IpEntriesRepository {
 			'ip'           => array(
 				'type'              => 'string',
 				'required'          => true,
-				'sanitize_callback' => array( IpEntriesRepository::class, 'sanitize_ip_or_cidr' ),
+				'sanitize_callback' => array( self::class, 'sanitize_ip_or_cidr' ),
 				'sortable'          => true,
 			),
 			'list_type'    => array(
@@ -40,7 +40,6 @@ class IpEntriesRepository {
 			),
 			'entry_type'   => array(
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'ip', 'cidr' ), true ) ? $v : 'ip',
 				'default'           => 'manual',
 				'allowed_values'    => array( 'ip', 'cidr' ),
@@ -207,9 +206,9 @@ class IpEntriesRepository {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$rows = $wpdb->get_results( 
-			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries ORDER BY created_at DESC" ), 
-			ARRAY_A 
+		$rows = $wpdb->get_results(
+			"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries ORDER BY created_at DESC",
+			ARRAY_A
 		);
 
 		return array_map( array( static::class, 'normalize' ), $rows );
@@ -455,7 +454,7 @@ class IpEntriesRepository {
 
 		$ids          = array_map( 'absint', $ids );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		$sql          = 'DELETE FROM ' . self::table() . " WHERE id IN ({$placeholders})";
+		$sql          = "DELETE FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE id IN ({$placeholders})";
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders generated from validated integer IDs
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
@@ -464,7 +463,7 @@ class IpEntriesRepository {
 	public static function delete_all_entries(): bool {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->query( 'TRUNCATE TABLE ' . self::table() );
+		$result = $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
 		return false !== $result;
 	}
 

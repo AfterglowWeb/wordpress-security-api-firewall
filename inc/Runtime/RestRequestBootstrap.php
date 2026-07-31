@@ -84,7 +84,7 @@ final class RestRequestBootstrap {
 
 		if ( ! $auth_result ) {
 			RestAuthenticationAttemptsLimiter::record_failure();
-			
+
 			return new WP_Error(
 				'rest_authentication_failed',
 				esc_html__( 'Invalid or missing authentication credentials.', 'bromate-security-api-firewall' ),
@@ -152,7 +152,7 @@ final class RestRequestBootstrap {
 			return $blacklist_result;
 		}
 
-		$limit_result = RateLimiter::inspect('rest_api_rate_limit');
+		$limit_result = RateLimiter::inspect( 'rest_api_rate_limit' );
 
 		if ( is_wp_error( $limit_result ) ) {
 			return $limit_result;

@@ -42,9 +42,9 @@ class SettingsRepository {
 			return false;
 		}
 
-		$sanitized_option       = self::sanitize_option( $option_key, $new_option );
-		$options                = self::read_options();
-		$current_value          = $options[ $option_key ];
+		$sanitized_option = self::sanitize_option( $option_key, $new_option );
+		$options          = self::read_options();
+		$current_value    = $options[ $option_key ];
 		if ( $sanitized_option === $current_value ) {
 			return true;
 		}

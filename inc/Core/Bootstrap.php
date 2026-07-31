@@ -83,9 +83,8 @@ final class Bootstrap {
 			return;
 		}
 
-		if( SettingsRepository::read_option( 'config_delete_data_on_uninstall' ) ) {
+		if ( SettingsRepository::read_option( 'config_delete_data_on_uninstall' ) ) {
 			Uninstall::delete_data();
 		}
-
 	}
 }
