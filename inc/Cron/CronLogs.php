@@ -31,7 +31,7 @@ final class CronLogs {
 
 	public static function run_scheduled_logs_cleanup(): void {
 		$result_count = self::maybe_rotate_logs();
-		if(0 < $result_count) {
+		if ( 0 < $result_count ) {
 			Logger::log(
 				'log_entries_delete_expired',
 				'info',

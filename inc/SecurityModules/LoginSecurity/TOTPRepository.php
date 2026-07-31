@@ -40,7 +40,7 @@ final class TOTPRepository {
 		}
 		return self::$instance;
 	}
-	
+
 	public function __construct() {
 		$this->google2fa = new Google2FA();
 	}

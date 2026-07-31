@@ -25,19 +25,19 @@ final class LogsRepository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$existing = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . self::table() . ' WHERE id = %d',
+				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs WHERE id = %d",
 				(int) $id
 			),
 			ARRAY_A
 		);
 
-		return $existing ?: null;
+		return $existing ? $existing : null;
 	}
 
 	public static function delete_all_entries(): bool {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->query( 'TRUNCATE TABLE ' . self::table() );
+		$result = $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bromate_security_api_firewall_logs" );
 		return false !== $result;
 	}
 
@@ -107,7 +107,10 @@ final class LogsRepository {
 	public static function insert_many( array $log_entries, bool $merge = false ) {
 
 		if ( empty( $log_entries ) ) {
-			return array( 'add_count' => 0, 'update_count' => 0 );
+			return array(
+				'add_count'    => 0,
+				'update_count' => 0,
+			);
 		}
 
 		$inserted_count = 0;
@@ -241,12 +244,12 @@ final class LogsRepository {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$rows = $wpdb->get_results( 
-			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs ORDER BY created_at DESC" ), 
-			ARRAY_A 
+		$rows = $wpdb->get_results(
+			"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs ORDER BY created_at DESC",
+			ARRAY_A
 		);
 
-		return array_map( array( static::class, 'normalize' ), $rows );
+		return array_map( array( self::class, 'normalize' ), $rows );
 	}
 
 	public static function delete( int $id ): bool {

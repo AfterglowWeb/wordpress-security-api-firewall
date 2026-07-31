@@ -109,7 +109,7 @@ class JwtAuthentication {
 	}
 
 	private static function base64url_encode( string $data ): string {
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation.functions.base64_encode -- Required by RFC 7518 for JWK modulus/exponent encoding;
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions -- Required by RFC 7518 for JWK modulus/exponent encoding;
 		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
 	}
 

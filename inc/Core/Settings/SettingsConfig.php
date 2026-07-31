@@ -47,35 +47,35 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_limit_enabled'                => array(
+			'auth_attempts_limit_enabled'                 => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_limit'                        => array(
+			'auth_attempts_limit'                         => array(
 				'default_value'     => 5,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_limit_window'                 => array(
+			'auth_attempts_limit_window'                  => array(
 				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_violation_block_time'         => array(
+			'auth_attempts_violation_block_time'          => array(
 				'default_value'     => 3600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_blacklist_after_violations'   => array(
+			'auth_attempts_blacklist_after_violations'    => array(
 				'default_value'     => 3,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -98,7 +98,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256' ), true ) ? $v : 'RS256',
 				'group'             => 'authentication',
-				'sensitivity'       => 'medium'
+				'sensitivity'       => 'medium',
 			),
 
 			'auth_jwt_public_key'                         => array(
@@ -106,7 +106,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_textarea_field',
 				'group'             => 'authentication',
-				'sensitivity'       => 'high'
+				'sensitivity'       => 'high',
 			),
 
 			'auth_jwt_audience'                           => array(
@@ -114,7 +114,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'authentication',
-				'sensitivity'       => 'medium'
+				'sensitivity'       => 'medium',
 			),
 
 			'auth_jwt_issuer'                             => array(
@@ -122,7 +122,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'authentication',
-				'sensitivity'       => 'medium'
+				'sensitivity'       => 'medium',
 			),
 
 			'auth_users'                                  => array(
@@ -130,7 +130,7 @@ final class SettingsConfig {
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_users' ),
 				'group'             => 'authentication',
-				'sensitivity'       => 'medium'
+				'sensitivity'       => 'medium',
 			),
 
 			'auth_authorized_roles'                       => array(
@@ -138,7 +138,7 @@ final class SettingsConfig {
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_roles' ),
 				'group'             => 'authentication',
-				'sensitivity'       => 'medium'
+				'sensitivity'       => 'medium',
 			),
 
 			'rate_limit_enabled'                          => array(
@@ -162,14 +162,14 @@ final class SettingsConfig {
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_blacklist_duration'                   => array(
+			'rate_limit_blacklist_duration'               => array(
 				'default_value'     => 600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_blacklist_duration_unit'                   => array(
+			'rate_limit_blacklist_duration_unit'          => array(
 				'default_value'     => 600,
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'seconds', 'minutes', 'hours', 'days' ), true ) ? $v : 'minutes',
@@ -301,7 +301,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'login-hardening',
-				'sensitivity'       => 'high'
+				'sensitivity'       => 'high',
 			),
 
 			'login_recaptcha_secret_key'                  => array(
@@ -309,7 +309,7 @@ final class SettingsConfig {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'login-hardening',
-				'sensitivity'       => 'high'
+				'sensitivity'       => 'high',
 			),
 
 			'login_recaptcha_threshold'                   => array(
@@ -342,7 +342,7 @@ final class SettingsConfig {
 
 			'login_totp_policy'                           => array(
 				'default_value'     => 'grace',
-				'options'           => ['grace', 'free', 'mandatory'],
+				'options'           => array( 'grace', 'free', 'mandatory' ),
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'grace', 'free', 'mandatory' ), true ) ? $v : 'grace',
 				'group'             => 'login-hardening',
@@ -666,49 +666,49 @@ final class SettingsConfig {
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_sensitive_data'             => array(
+			'config_export_include_sensitive_data'        => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_ip_entries'             => array(
+			'config_export_include_ip_entries'            => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_routes_tree'             => array(
+			'config_export_include_routes_tree'           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_log_entries'             => array(
+			'config_export_include_log_entries'           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_ip_entries_format'=> array(
+			'config_export_ip_entries_format'             => array(
 				'default_value'     => 'csv',
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
 				'group'             => 'config',
 			),
-			'config_export_log_entries_format'=> array(
+			'config_export_log_entries_format'            => array(
 				'default_value'     => 'csv',
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
 				'group'             => 'config',
 			),
-			'config_import_ip_entries_merge'=> array(
+			'config_import_ip_entries_merge'              => array(
 				'default_value'     => false,
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'replace', 'update' ), true ) ? $v : 'update',
 				'group'             => 'config',
 			),
-			'config_import_log_entries_merge'=> array(
+			'config_import_log_entries_merge'             => array(
 				'default_value'     => false,
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'replace', 'update' ), true ) ? $v : 'update',

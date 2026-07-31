@@ -129,7 +129,7 @@ class RestAuthorizedUserRepository {
 
 		$mapped = array_map(
 			function ( $role ) use ( $role_names ) {
-				return in_array( $role, $role_names ) ? sanitize_text_field( $role ) : null;
+				return in_array( $role, $role_names, true ) ? sanitize_text_field( $role ) : null;
 			},
 			$roles
 		);
