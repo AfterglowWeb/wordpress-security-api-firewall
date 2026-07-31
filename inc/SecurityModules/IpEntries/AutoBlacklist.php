@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
 
 class AutoBlacklist {
 
-	private const AUTO_BLACKLIST_ORIGINS = ['auth_user_ip','public_rate_limit','login_rate_limit','country'];
+	private const AUTO_BLACKLIST_ORIGINS = ['auth_user_ip','public_rate_limit','login_attempts_limit','auth_attempts_limit','country'];
 
     public static function is_auto_blacklisted( string $ip ): bool {
         $entry = IpEntriesRepository::find_by_ip( $ip, 'blacklist' );

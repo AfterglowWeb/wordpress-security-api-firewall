@@ -21,28 +21,29 @@ class IpEntriesRepository {
 			'ip'           => array(
 				'type'              => 'string',
 				'required'          => true,
-				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => array( IpEntriesRepository::class, 'sanitize_ip_or_cidr' ),
 				'sortable'          => true,
 			),
 			'list_type'    => array(
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'whitelist', 'blacklist' ), true ) ? $v : 'blacklist',
 				'default'           => 'blacklist',
-				'allowed_values'    => array( 'whitelist', 'blacklist', 'global_blacklist' ),
+				'allowed_values'    => array( 'whitelist', 'blacklist' ),
 				'sortable'          => true,
 			),
 			'entry_origin' => array(
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ), true ) ? $v : 'manual',
 				'default'           => 'manual',
-				'allowed_values'    => array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_rate_limit', 'country' ),
+				'allowed_values'    => array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ),
 				'sortable'          => true,
 			),
 			'entry_type'   => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'ip', 'cidr' ), true ) ? $v : 'ip',
 				'default'           => 'manual',
-				'allowed_values'    => array( 'ip', 'cidr', 'country' ),
+				'allowed_values'    => array( 'ip', 'cidr' ),
 				'sortable'          => true,
 			),
 			'agent'        => array(
@@ -212,16 +213,6 @@ class IpEntriesRepository {
 		);
 
 		return array_map( array( static::class, 'normalize' ), $rows );
-	}
-
-	public static function get_login_ip_entries( string $list_type = 'blacklist' ): array {
-		return self::get_entries(
-			array(
-				'list_type'    => 'blacklist' === $list_type ? 'blacklist' : 'whitelist',
-				'entry_origin' => 'login_rate_limit',
-				'per_page'     => 100,
-			)
-		);
 	}
 
 	public static function find_by_id( int $id ): ?array {
@@ -499,7 +490,7 @@ class IpEntriesRepository {
 		return is_array( $results ) ? $results : array();
 	}
 
-	public static function country_in_list( string $country_code ): bool {
+	public static function is_country_blocked( string $country_code ): bool {
 		$blocked = SettingsRepository::read_option( 'rate_limit_countries' );
 		$blocked = is_array( $blocked ) ? $blocked : array();
 

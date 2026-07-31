@@ -1,4 +1,5 @@
 export type RedirectFrontOptions = '404' | 'front' | 'login' | 'custom';
+export type DurationUnit = 'seconds' | 'minutes' | 'hours' | 'days';
 
 export interface RedirectFrontSettings {
 	redirect_front_enabled: boolean;
@@ -11,6 +12,7 @@ export interface FirewallSettings extends RedirectFrontSettings {
 	rate_limit_max: number;
 	rate_limit_time: number;
 	rate_limit_blacklist_duration: number;
+	rate_limit_blacklist_duration_unit: DurationUnit;
 	rate_limit_blacklist_duration_unlimited: boolean;
 	rate_limit_blacklist_threshold: number;
 	rate_limit_violation_window: number;
@@ -26,11 +28,12 @@ export const DEFAULT_REDIRECT_FRONT_SETTINGS: RedirectFrontSettings = {
 export const DEFAULT_FIREWALL_SETTINGS: FirewallSettings = {
 	...DEFAULT_REDIRECT_FRONT_SETTINGS,
 	rate_limit_enabled: false,
-	rate_limit_max: 300,
+	rate_limit_max: 500,
 	rate_limit_time: 60,
 	rate_limit_blacklist_duration: 3600,
+	rate_limit_blacklist_duration_unit: 'minutes',
 	rate_limit_blacklist_duration_unlimited: false,
 	rate_limit_blacklist_threshold: 5,
-	rate_limit_violation_window:300,
+	rate_limit_violation_window:350,
 	rate_limit_countries: [],
 };

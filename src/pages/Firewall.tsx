@@ -1,16 +1,17 @@
 import { useState, useCallback, useEffect, useMemo } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 import {
   Box, Paper, Typography, Switch,
   Stack, TextField, Button, FormControlLabel,
-  Divider, Skeleton, Select, MenuItem, FormControl, InputLabel, Checkbox, Alert
+  Divider, Skeleton, Select, MenuItem, FormControl, InputLabel, Checkbox, Alert,
+  Tooltip
 } from '@mui/material';
 
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
-import type { FirewallSettings } from '@app-types/firewall';
+import type { FirewallSettings, DurationUnit } from '@app-types/firewall';
 import { DEFAULT_FIREWALL_SETTINGS } from '@app-types/firewall';
 import type { AuthorizedUser } from '@app-types/auth';
 
@@ -24,25 +25,19 @@ import RedirectFrontWrapper from '@features/firewall/RedirectFrontWrapper';
 import IpManagement from '@features/firewall/IpManagement';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
-type DurationUnit = 'seconds' | 'minutes' | 'hours' | 'days';
-
 export default function Firewall(): JSX.Element {
   const portalContainer = usePortalContainer();
   const [settings, setSettings] = useState<FirewallSettings>(DEFAULT_FIREWALL_SETTINGS);
   const [settingsLoading, setLoadingSettings] = useState(true);
   const [loadedSettings, setLoadedSettings] = useState<FirewallSettings>(DEFAULT_FIREWALL_SETTINGS);
   
-  // Track which fields the user has unfocused (blurred)
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   
-  const [durationUnit, setDurationUnit] = useState<DurationUnit>('hours');
-
   const isDirty = useMemo(
     () => JSON.stringify(settings) !== JSON.stringify(loadedSettings),
     [settings, loadedSettings]
   );
 
-  // Dynamically compute errors based on touched state and current settings
   const fieldErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     const isEnabled = settings.rate_limit_enabled;
@@ -50,11 +45,11 @@ export default function Firewall(): JSX.Element {
     const isViolationsZero = (settings.rate_limit_blacklist_threshold ?? 0) === 0;
 
     if (touched['rate_limit_max'] && isEnabled && (settings.rate_limit_max ?? 0) <= 0) {
-      errors['rate_limit_max'] = __('Max Requests must be greater than 0 when enabled.', 'bromate-security-api-firewall');
+      errors['rate_limit_max'] = __('Max Requests must be greater than 0.', 'bromate-security-api-firewall');
     }
 
     if (touched['rate_limit_time'] && isEnabled && (settings.rate_limit_time ?? 0) <= 0) {
-      errors['rate_limit_time'] = __('Time Window must be greater than 0 when enabled.', 'bromate-security-api-firewall');
+      errors['rate_limit_time'] = __('Time Window must be greater than 0.', 'bromate-security-api-firewall');
     }
 
     if (
@@ -67,16 +62,25 @@ export default function Firewall(): JSX.Element {
       errors['rate_limit_blacklist_duration'] = __('Blacklist duration must be greater than 0 or set to Unlimited.', 'bromate-security-api-firewall');
     }
 
+    if (
+      touched['rate_limit_violation_window'] && 
+      isEnabled && 
+      !isViolationsZero && 
+      (settings.rate_limit_violation_window ?? 0) <= 0
+    ) {
+      errors['rate_limit_violation_window'] = __('Violations Time Window must be greater than 0.', 'bromate-security-api-firewall');
+    }
+
     return errors;
   }, [settings, touched]);
 
-  const hasErrors = Object.keys(fieldErrors).length > 0;
+  const hasValidationErrors = Object.keys(fieldErrors).length > 0;
 
   const handleSave = useCallback(async () => {
-    // Prevent save if there are active validation errors
-    if (hasErrors) return;
+    if (hasValidationErrors) return;
 
     let durationInSeconds = settings.rate_limit_blacklist_duration || 0;
+    const durationUnit = settings.rate_limit_blacklist_duration_unit || 'minutes';
     const isUnlimited = (settings as any).rate_limit_blacklist_duration_unlimited ?? false;
 
     if (!isUnlimited) {
@@ -87,6 +91,7 @@ export default function Firewall(): JSX.Element {
       durationInSeconds = 0;
     }
 
+    // Payload strictly for the API (transforms unit value back to raw seconds)
     const payload = {
       ...settings,
       rate_limit_blacklist_duration: durationInSeconds,
@@ -94,21 +99,29 @@ export default function Firewall(): JSX.Element {
 
     await SettingsAPI.updateOptions(payload);
     
-    setLoadedSettings(payload as FirewallSettings);
-  }, [settings, durationUnit, hasErrors]);
+    // IMPORTANT: Update loaded state with the UI state (unit value), NOT the payload (seconds).
+    // Otherwise, isDirty will instantly become true again.
+    setLoadedSettings(settings);
+  }, [settings, hasValidationErrors]);
 
   useEffect(() => {
     SettingsAPI.readOptions()
       .then((opts) => {
         const merged = { ...DEFAULT_FIREWALL_SETTINGS, ...opts };
+        
+        // Convert raw seconds from DB back to the user's selected unit for the UI
+        const rawSeconds = opts.rate_limit_blacklist_duration || 0;
+        const unit = opts.rate_limit_blacklist_duration_unit || 'minutes';
+        
+        if (rawSeconds > 0) {
+          if (unit === 'minutes') merged.rate_limit_blacklist_duration = rawSeconds / 60;
+          else if (unit === 'hours') merged.rate_limit_blacklist_duration = rawSeconds / 3600;
+          else if (unit === 'days') merged.rate_limit_blacklist_duration = rawSeconds / 86400;
+          // else 'seconds', keep as is
+        }
+
         setSettings(merged);
         setLoadedSettings(merged);
-
-        const dur = opts.rate_limit_blacklist_duration || 0;
-        if (dur > 0 && dur % 86400 === 0) setDurationUnit('days');
-        else if (dur > 0 && dur % 3600 === 0) setDurationUnit('hours');
-        else if (dur > 0 && dur % 60 === 0) setDurationUnit('minutes');
-        else setDurationUnit('seconds');
       })
       .finally(() => setLoadingSettings(false));
   }, []);
@@ -155,21 +168,19 @@ export default function Firewall(): JSX.Element {
 
   const isUnlimited = (settings as any).rate_limit_blacklist_duration_unlimited ?? false;
   const isViolationsZero = (settings.rate_limit_blacklist_threshold ?? 0) === 0;
-  
   const isBlacklistSectionDisabled = !settings.rate_limit_enabled || isViolationsZero;
-  const isViolationsDisabled = !settings.rate_limit_enabled || isViolationsZero;
-  
+  const isViolationsWindowDisabled = !settings.rate_limit_enabled || isViolationsZero;
   const isDurationDisabled = isBlacklistSectionDisabled || isUnlimited;
 
   if (settingsLoading) {
         return (
             <Stack spacing={3}>
-        <Stack flexDirection={"row"} justifyContent={"flex-end"}>
+              <Stack flexDirection={"row"} justifyContent={"flex-end"}>
                   <Skeleton variant="rounded" width={65} height={35} />
-        </Stack>
-                <Skeleton variant="rectangular" width={'100%'} height={200} />
-        <Skeleton variant="rounded" width={'100%'} height={120} />
-                <Skeleton variant="rectangular" width={'100%'} height={600} />
+              </Stack>
+              <Skeleton variant="rectangular" width={'100%'} height={200} />
+              <Skeleton variant="rounded" width={'100%'} height={120} />
+              <Skeleton variant="rectangular" width={'100%'} height={600} />
             </Stack>
         );
     }
@@ -179,17 +190,35 @@ export default function Firewall(): JSX.Element {
       {!countriesView && (
         <>
           <Stack direction="row" justifyContent="flex-end" alignItems="center">
-            {hasErrors && (
-              <Alert severity="error" variant="outlined" sx={{ mr: 2 }}>
-                {Object.values(fieldErrors).join(' ')}
+            {isDirty && hasValidationErrors && (
+              <Alert severity="error" sx={{ mr: 2, py:0 }}>
+                <Typography variant="subtitle2" color="error">{Object.values(fieldErrors).join(' ')}</Typography>
               </Alert>
             )}
 
-            <SaveButton
-              onSave={handleSave}
-              disabled={!isDirty || hasErrors}
-              messages={saveMessages}
-            />
+            <Tooltip
+            disableInteractive 
+            slotProps={{ popper: { container: portalContainer } }} 
+            title={
+              Object.values(fieldErrors).length > 0
+                ? sprintf(
+                    __('Missing: %s', 'bromate-security-api-firewall'),
+                    Object.values(fieldErrors).join(', ')
+                  )
+                : ''
+            }
+            disableHoverListener={Object.values(fieldErrors).length === 0}
+            >
+            <span>
+              <SaveButton
+                onSave={handleSave}
+                disabled={!isDirty || hasValidationErrors}
+                messages={saveMessages}
+              />
+            </span>
+          </Tooltip>
+
+
           </Stack>
 
          
@@ -251,7 +280,7 @@ export default function Firewall(): JSX.Element {
                   <TextField
                     label={__('Max Violations', 'bromate-security-api-firewall')}
                     type="number"
-                    disabled={isViolationsDisabled}
+                    disabled={!settings.rate_limit_enabled}
                     value={settings.rate_limit_blacklist_threshold}
                     onChange={(e) => updateSetting('rate_limit_blacklist_threshold', Number(e.target.value))}
                     helperText={__('0 = never add to the blacklist.', 'bromate-security-api-firewall')}
@@ -259,10 +288,12 @@ export default function Firewall(): JSX.Element {
                   <TextField
                     label={__('Violations Time Window', 'bromate-security-api-firewall')}
                     type="number"
-                    disabled={!settings.rate_limit_enabled}
+                    disabled={isViolationsWindowDisabled}
                     value={settings.rate_limit_violation_window}
                     onChange={(e) => updateSetting('rate_limit_violation_window', Number(e.target.value))}
-                    helperText={__('Seconds', 'bromate-security-api-firewall')}
+                    onBlur={() => setTouched(prev => ({ ...prev, rate_limit_violation_window: true }))}
+                    helperText={fieldErrors.rate_limit_violation_window || __('Seconds', 'bromate-security-api-firewall')}
+                    error={!!fieldErrors.rate_limit_violation_window}
                   />
 
                 </Stack>
@@ -285,9 +316,9 @@ export default function Firewall(): JSX.Element {
                     <FormControl disabled={isDurationDisabled} sx={{ minWidth: 110 }}>
                       <InputLabel>{__('Unit', 'bromate-security-api-firewall')}</InputLabel>
                       <Select
-                        value={durationUnit}
+                        value={settings.rate_limit_blacklist_duration_unit}
                         label={__('Unit', 'bromate-security-api-firewall')}
-                        onChange={(e) => setDurationUnit(e.target.value as DurationUnit)}
+                        onChange={(e) => updateSetting('rate_limit_blacklist_duration_unit', e.target.value as DurationUnit)}
                         MenuProps={{ container: portalContainer }}
                       >
                         <MenuItem value="seconds">{__('Seconds', 'bromate-security-api-firewall')}</MenuItem>

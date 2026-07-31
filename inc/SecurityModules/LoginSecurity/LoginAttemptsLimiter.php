@@ -5,12 +5,13 @@ defined( 'ABSPATH' ) || exit;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
+use WP_Error;
 
-final class LoginRateLimiter {
+final class LoginAttemptsLimiter {
 
-	public const  BLOCK_PREFIX  = 'rest_firewall_login_blocked_';
-	public const  STRIKE_PREFIX = 'rest_firewall_login_strikes_';
-	private const COUNT_PREFIX  = 'rest_firewall_login_';
+	public const  BLOCK_PREFIX  = 'bromate_security_api_firewall_login_blocked_';
+	public const  STRIKE_PREFIX = 'bromate_security_api_firewall_login_strikes_';
+	private const COUNT_PREFIX  = 'bromate_security_api_firewall_login_';
 
 	protected static ?self $instance = null;
 
@@ -38,7 +39,7 @@ final class LoginRateLimiter {
 		}
 
 		if ( get_transient( self::BLOCK_PREFIX . self::ip_hash( $ip ) ) ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'too_many_login_attempts',
 				esc_html__( 'Too many failed login attempts. Please try again later.', 'bromate-security-api-firewall' )
 			);
@@ -72,15 +73,15 @@ final class LoginRateLimiter {
 			set_transient( self::BLOCK_PREFIX . $hash, $ip, $opts['blacklist_time'] );
 			delete_transient( $count_key );
 
-			if ( $opts['promote_after'] > 0 ) {
+			if ( $opts['blacklist_after'] > 0 ) {
 				$strike_key = self::STRIKE_PREFIX . $hash;
 				$strikes    = (int) get_transient( $strike_key ) + 1;
 
-				if ( $strikes >= $opts['promote_after'] ) {
-					$this->promote_to_global_blacklist( $ip, $opts['blacklist_time'] );
+				if ( $strikes >= $opts['blacklist_after'] ) {
+					$this->auto_blacklist_ip( $ip, $opts['blacklist_time'] );
 					delete_transient( $strike_key );
 				} else {
-					set_transient( $strike_key, $strikes, $opts['blacklist_time'] * ( $opts['promote_after'] + 1 ) );
+					set_transient( $strike_key, $strikes, $opts['blacklist_time'] * ( $opts['blacklist_after'] + 1 ) );
 				}
 			}
 		} else {
@@ -98,7 +99,7 @@ final class LoginRateLimiter {
 			'attempts'       => max( 1, (int) ( $opts['login_attempts_limit'] ?? 5 ) ),
 			'window'         => max( 1, (int) ( $opts['login_attempts_limit_window'] ?? 300 ) ),
 			'blacklist_time' => max( 1, (int) ( $opts['login_attempts_violation_block_time'] ?? 3600 ) ),
-			'promote_after'  => max( 0, (int) ( $opts['login_attempts_blacklist_after_violations'] ?? 3 ) ),
+			'blacklist_after'  => max( 0, (int) ( $opts['login_attempts_blacklist_after_violations'] ?? 3 ) ),
 		);
 	}
 
@@ -106,20 +107,20 @@ final class LoginRateLimiter {
 		return substr( hash( 'sha256', $ip ), 0, 16 );
 	}
 
-	private function promote_to_global_blacklist( string $ip, int $duration ): void {
+	private function auto_blacklist_ip( string $ip, int $duration ): void {
 		if ( ! class_exists( IpEntriesRepository::class ) ) {
 			return;
 		}
 
-		if ( IpEntriesRepository::ip_in_list( $ip, 'global_blacklist' ) ) {
+		if ( IpEntriesRepository::ip_in_list( $ip, 'blacklist' ) ) {
 			return;
 		}
 
 		IpEntriesRepository::insert(
 			array(
 				'ip'           => $ip,
-				'list_type'    => 'global_blacklist',
-				'entry_origin' => 'rate_limit',
+				'list_type'    => 'blacklist',
+				'entry_origin' => 'login_attempts_limit',
 				'expires_at'   => gmdate( 'Y-m-d H:i:s', time() + $duration ),
 			)
 		);
@@ -138,7 +139,7 @@ final class LoginRateLimiter {
 		return false;
 	}
 
-	public static function delete_all_rate_limit_transients(): void {
+	public static function delete_all_login_attempts_transients(): void {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API exists to bulk-delete transients by prefix.

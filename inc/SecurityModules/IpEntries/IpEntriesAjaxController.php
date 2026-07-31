@@ -25,7 +25,6 @@ class IpEntriesAjaxController {
 		add_action( 'wp_ajax_bromate_get_country_stats', array( $self, 'ajax_get_country_stats' ) );
 		add_action( 'wp_ajax_bromate_toggle_country_block', array( $self, 'ajax_toggle_country_block' ) );
 		add_action( 'wp_ajax_bromate_get_user_ip_entries', array( $self, 'ajax_get_user_ip_entries' ) );
-		add_action( 'wp_ajax_bromate_get_login_ip_entries', array( $self, 'ajax_get_login_ip_entries' ) );
 		add_action( 'wp_ajax_bromate_get_current_user_ip', array( $self, 'ajax_get_current_user_ip' ) );
 	}
 
@@ -39,20 +38,6 @@ class IpEntriesAjaxController {
 		$list_type = isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist';
 
 		$result = IpEntriesRepository::get_entries( array( 'list_type' => $list_type ) );
-
-		wp_send_json_success( array( 'entries' => isset( $result['entries'] ) ? $result['entries'] : array() ), 200 );
-	}
-
-	public function ajax_get_login_ip_entries(): void {
-
-		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$list_type = isset( $_POST['list_type'] ) ? sanitize_text_field( wp_unslash( $_POST['list_type'] ) ) : 'blacklist';
-
-		$result = IpEntriesRepository::get_login_ip_entries( $list_type );
 
 		wp_send_json_success( array( 'entries' => isset( $result['entries'] ) ? $result['entries'] : array() ), 200 );
 	}

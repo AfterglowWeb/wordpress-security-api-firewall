@@ -2,7 +2,7 @@ import { apiRequest } from '@services/api';
 
 export type ListType = 'blacklist' | 'whitelist';
 export type EntryType = 'ip' | 'cidr';
-export type EntryOrigin = 'manual' | 'auth_user_ip' | 'public_rate_limit' | 'login_rate_limit' | 'country';
+export type EntryOrigin = 'manual' | 'auth_user_ip' | 'public_rate_limit' | 'login_attempts_limit' | 'country';
 
 export interface LineResult {
   value: string;
@@ -62,6 +62,4 @@ export const IpAPI = {
       stats: any;
     }>('bromate_get_country_stats', { list_type }),
 
-  getLoginIpEntries: (list_type: ListType) =>
-    apiRequest<{ entries: IpEntry[] }>('bromate_get_login_ip_entries', { list_type }),
 };

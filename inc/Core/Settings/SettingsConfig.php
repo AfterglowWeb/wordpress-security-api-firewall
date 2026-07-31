@@ -47,6 +47,41 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
+			'auth_attempts_limit_enabled'                => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'authentication',
+			),
+
+			'auth_attempts_limit'                        => array(
+				'default_value'     => 5,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'authentication',
+			),
+
+			'auth_attempts_limit_window'                 => array(
+				'default_value'     => 300,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'authentication',
+			),
+
+			'auth_attempts_violation_block_time'         => array(
+				'default_value'     => 3600,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'authentication',
+			),
+
+			'auth_attempts_blacklist_after_violations'   => array(
+				'default_value'     => 3,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+				'group'             => 'authentication',
+			),
+
 			'auth_methods'                                => array(
 				'default_value'     => 'jwt',
 				'ui'                => 'select',
@@ -114,7 +149,7 @@ final class SettingsConfig {
 			),
 
 			'rate_limit_max'                              => array(
-				'default_value'     => 300,
+				'default_value'     => 500,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
@@ -128,9 +163,16 @@ final class SettingsConfig {
 			),
 
 			'rate_limit_blacklist_duration'                   => array(
-				'default_value'     => 300,
+				'default_value'     => 600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
+				'group'             => 'firewall',
+			),
+
+			'rate_limit_blacklist_duration_unit'                   => array(
+				'default_value'     => 600,
+				'type'              => 'string',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'seconds', 'minutes', 'hours', 'days' ), true ) ? $v : 'minutes',
 				'group'             => 'firewall',
 			),
 
@@ -201,7 +243,7 @@ final class SettingsConfig {
 				'default_value'     => '404',
 				'options'           => array( '404', '403', '401', 'front', 'login', 'custom' ),
 				'type'              => 'string',
-				'sanitize_callback' => array( RoutesPolicyRepository::class, 'sanitize_hidden_routes_redirect_option' ),
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( '404', '403', '401', 'front', 'login', 'custom' ), true ) ? $v : '404',
 				'group'             => 'routes',
 			),
 
@@ -300,8 +342,9 @@ final class SettingsConfig {
 
 			'login_totp_policy'                           => array(
 				'default_value'     => 'grace',
+				'options'           => ['grace', 'free', 'mandatory'],
 				'type'              => 'string',
-				'sanitize_callback' => array( TOTPRepository::class, 'sanitize_totp_policy' ),
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'grace', 'free', 'mandatory' ), true ) ? $v : 'grace',
 				'group'             => 'login-hardening',
 			),
 
@@ -345,10 +388,10 @@ final class SettingsConfig {
 			),
 
 			'salts_rotation_recurrence'                   => array(
-				'default_value'     => 'week',
+				'default_value'     => 'weekly',
 				'type'              => 'string',
 				'options'           => array( 'daily', 'weekly', 'monthly' ),
-				'sanitize_callback' => array( SaltsRotation::class, 'sanitize_recurrence' ),
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'daily', 'weekly', 'monthly' ), true ) ? $v : 'weekly',
 				'group'             => 'login-hardening',
 			),
 
@@ -370,7 +413,7 @@ final class SettingsConfig {
 				'default_value'     => '',
 				'options'           => array( '404', '403', '401', 'front', 'login', 'custom' ),
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_key',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( '404', '403', '401', 'front', 'login', 'custom' ), true ) ? $v : '404',
 				'group'             => 'wordpress',
 			),
 

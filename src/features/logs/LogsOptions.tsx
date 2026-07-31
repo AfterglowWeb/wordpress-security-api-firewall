@@ -31,15 +31,17 @@ const LOGS_EVENTS_OPTIONS: Array<{
   
   // Authentication Events
   { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall'), groupLabel: __('REST API Auth.', 'bromate-security-api-firewall') },
+  { value: 'auth_access_whitelist', label: __('Whitelisted IP Auth Access', 'bromate-security-api-firewall') },
   { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall') },
   { value: 'auth_failed', label: __('Auth Failed', 'bromate-security-api-firewall') },
   { value: 'auth_revoked', label: __('Auth Revoked', 'bromate-security-api-firewall') },
   
   // Admin Events
   { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall'), groupLabel: __('WordPress Login', 'bromate-security-api-firewall') },
+  { value: 'admin_login_access_whitelist', label: __('Whitelisted IP Login Access', 'bromate-security-api-firewall') },
   { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall') },
   { value: 'admin_login_failed', label: __('Login Failed', 'bromate-security-api-firewall') },
-  { value: 'admin_login_rate_limited', label: __('Max Login Attempts Reached', 'bromate-security-api-firewall') },
+  { value: 'admin_login_attempts_limit', label: __('Max Login Attempts Reached', 'bromate-security-api-firewall') },
   { value: 'admin_login_banned', label: __('Login Banned', 'bromate-security-api-firewall') },
 
   // Cron Events

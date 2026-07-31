@@ -22,6 +22,7 @@ import { apiRequest } from '@services/api';
 import SaveButton from '@components/SaveButton';
 import CopyButton from '@components/CopyButton';
 import MultipleSelect, { OptionType } from '@components/MultipleSelect';
+import AttemptsLimitingSection from '@components/AttemptsLimitingSection';
 
 interface AuthOptionsProps {
   settings: AuthSettings;
@@ -167,8 +168,6 @@ export default function AuthOptions({
   const needsAuthorizedUsers = settings.auth_control_enabled
     && (authorizedUsersLoading || authorizedUsersCount === 0);
 
-  // Authorized users whose WordPress role would no longer be in the authorized-roles
-  // list if the pending (unsaved) selection were applied.
   const impactedUsers = useMemo(() => {
     const roles = settings.auth_authorized_roles ?? [];
     if (roles.length === 0) return [];
@@ -235,7 +234,7 @@ export default function AuthOptions({
       const roles = await apiRequest<WordPressRole[]>('bromate_authorized_roles_options');
       setWpRoles(Array.isArray(roles) ? roles : []);
     } catch {
-      // Ignore, selector will just show no options.
+      // Ignore.
     } finally {
       setWpRolesLoading(false);
     }
@@ -734,6 +733,7 @@ export default function AuthOptions({
             </Stack>
           )}
         </Stack>
+
       </Paper>
 
       <Dialog
