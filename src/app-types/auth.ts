@@ -44,6 +44,11 @@ export interface AuthSettings {
   auth_jwt_audience: string;
   auth_jwt_issuer: string;
   auth_jwt_jwks_url: string;
+  auth_attempts_limit_enabled: false,
+  auth_attempts_limit: number,
+  auth_attempts_limit_window: number,
+  auth_attempts_violation_block_time: number,
+  auth_attempts_blacklist_after_violations: number,
 }
 
 export interface AuthorizedUserDialogProps {

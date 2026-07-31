@@ -6,6 +6,7 @@ import type { AuthSettings } from '@app-types/auth';
 import { SettingsAPI } from '@services/settings';
 import AuthOptions from '@features/authentication/AuthOptions';
 import AuthorizedUsersGrid, { AuthorizedUsersInfo } from '@features/authentication/AuthorizedUsersGrid';
+import AttemptsLimitingSection from '@components/AttemptsLimitingSection';
 
 const DEFAULT_SETTINGS: AuthSettings = {
   auth_control_enabled: true,
@@ -16,6 +17,11 @@ const DEFAULT_SETTINGS: AuthSettings = {
   auth_jwt_audience: '',
   auth_jwt_issuer: '',
   auth_jwt_jwks_url: '',
+  auth_attempts_limit_enabled: false,
+  auth_attempts_limit: 5,
+  auth_attempts_limit_window: 300,
+  auth_attempts_violation_block_time: 600,
+  auth_attempts_blacklist_after_violations: 3,
 };
 
 const DEFAULT_AUTHORIZED_USERS_INFO: AuthorizedUsersInfo = { count: 0, loading: true, users: [] };
@@ -26,6 +32,9 @@ export default function Authentication(): JSX.Element {
   const [loadingSettings, setLoadingSettings] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [authorizedUsersInfo, setAuthorizedUsersInfo] = useState<AuthorizedUsersInfo>(DEFAULT_AUTHORIZED_USERS_INFO);
+  
+  const update = <K extends keyof AuthSettings>(key: K, value: AuthSettings[K]) =>
+    setSettings({ ...settings, [key]: value });
 
   useEffect(() => {
     SettingsAPI.readOptions()
@@ -64,6 +73,16 @@ export default function Authentication(): JSX.Element {
         authEnabled={settings.auth_control_enabled}
         onUsersChange={setAuthorizedUsersInfo}
         authorizedRoles={settings.auth_authorized_roles}
+      />
+
+
+      <AttemptsLimitingSection
+        prefix="auth_attempts"
+        title={__('Auth Attempts Limiting', 'bromate-security-api-firewall')}
+        viewBlockedLabel={__('View blocked auth IPs', 'bromate-security-api-firewall')}
+        origin="auth_attempts_limit"
+        settings={settings}
+        onChange={(key, val) => update(key as keyof AuthSettings, val)}
       />
 
       <Snackbar open={!!loadError} autoHideDuration={4000} onClose={() => setLoadError(null)}

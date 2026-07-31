@@ -49,10 +49,7 @@ class GeoIpApi {
 			return false;
 		}
 
-		return IpEntriesRepository::country_in_list(
-			$country_code,
-			'global_blacklist'
-		);
+		return IpEntriesRepository::is_country_blocked($country_code);
 	}
 
 	public static function get_country_code( string $ip ): string {

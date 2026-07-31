@@ -9,12 +9,14 @@ export type LogEvent =
 	'ip_entry_created' |
 	'ip_entry_deleted' |
 	'ip_entries_delete_expired' |
+  'auth_access_whitelist' |
 	'auth_success' |
 	'auth_failed' |
 	'auth_revoked' |
+  'admin_login_access_whitelist' |
 	'admin_login_success' |
 	'admin_login_failed' |
-	'admin_login_rate_limited' |
+	'admin_login_attempts_limit' |
 	'admin_login_banned' |
 	'emergency_token_used' |
 	'plugin_settings_changed' |

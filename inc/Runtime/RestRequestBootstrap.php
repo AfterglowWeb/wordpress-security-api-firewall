@@ -10,6 +10,7 @@ use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthen
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesPolicyRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesResolver;
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeaders;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationAttemptsLimiter;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -74,9 +75,25 @@ final class RestRequestBootstrap {
 			return $result;
 		}
 
+		$block_check = RestAuthenticationAttemptsLimiter::check_if_blocked();
+		if ( is_wp_error( $block_check ) ) {
+			return $block_check;
+		}
+
 		$auth_result = RestAuthenticationRuntime::authenticate();
 
+		if ( ! $auth_result ) {
+			RestAuthenticationAttemptsLimiter::record_failure();
+			
+			return new WP_Error(
+				'rest_authentication_failed',
+				esc_html__( 'Invalid or missing authentication credentials.', 'bromate-security-api-firewall' ),
+				array( 'status' => 401 )
+			);
+		}
+
 		if ( is_wp_error( $auth_result ) ) {
+			RestAuthenticationAttemptsLimiter::record_failure();
 			return $auth_result;
 		}
 
@@ -135,7 +152,7 @@ final class RestRequestBootstrap {
 			return $blacklist_result;
 		}
 
-		$limit_result = RateLimiter::inspect();
+		$limit_result = RateLimiter::inspect('rest_api_rate_limit');
 
 		if ( is_wp_error( $limit_result ) ) {
 			return $limit_result;

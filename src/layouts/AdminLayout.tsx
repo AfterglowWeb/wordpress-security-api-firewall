@@ -7,8 +7,8 @@ import Authentication from '@pages/Authentication';
 import Firewall from '@pages/Firewall';
 import Routes from '@pages/Routes';
 import Models from '@pages/Models';
-import WordPress from '@pages/WordPress';
-import LoginHardening from '@pages/LoginHardening';
+import GlobalSecurity from '@pages/GlobalSecurity';
+import LoginSecurity from '@pages/LoginSecurity';
 import Logs from '@pages/Logs';
 import Config from '@pages/Config';
 
@@ -22,9 +22,9 @@ export default function AdminLayout() {
 
 				{panel === 'firewall' && <Firewall />}
 
-				{panel === 'login-hardening' && <LoginHardening />}
+				{panel === 'login-hardening' && <LoginSecurity />}
 
-				{panel === 'wordpress' && <WordPress />}
+				{panel === 'wordpress' && <GlobalSecurity />}
 
 				{panel === 'authentication' && <Authentication />}
 				

@@ -9,7 +9,7 @@ use Bromate\SecurityApiFirewall\Cron\CronIpEntries;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\AutoBlacklist;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\ViolationTracker;
-use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\LoginRateLimiter;
+use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\LoginAttemptsLimiter;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\SaltsRotation;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeRepository;
@@ -31,7 +31,7 @@ final class Uninstall {
 		RoutesTreeRepository::delete_routes_list_transient();
 		GeoIpApi::delete_all_geoip_transients();
 		ViolationTracker::delete_all_violation_transients();
-		LoginRateLimiter::delete_all_rate_limit_transients();
+		LoginAttemptsLimiter::delete_all_login_attempts_transients();
 
 		TOTPRepository::revoke_all_users_totp_enrollment();
 		RestAuthorizedUserRepository::delete_authorized_users_jwt_subclaim();
@@ -57,7 +57,7 @@ final class Uninstall {
 		RoutesTreeRepository::delete_routes_list_transient();
 		GeoIpApi::delete_all_geoip_transients();
 		ViolationTracker::delete_all_violation_transients();
-		LoginRateLimiter::delete_all_rate_limit_transients();
+		LoginAttemptsLimiter::delete_all_login_attempts_transients();
 
 		flush_rewrite_rules();
 	}

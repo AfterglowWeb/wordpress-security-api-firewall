@@ -304,7 +304,7 @@ final class TOTPRepository {
 		$value   = sanitize_text_field( $value );
 
 		if ( ! in_array( $value, $allowed, true ) ) {
-			return 'free';
+			return 'grace';
 		}
 
 		return $value;

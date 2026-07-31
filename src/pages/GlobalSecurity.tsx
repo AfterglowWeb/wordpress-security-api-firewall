@@ -14,7 +14,7 @@ import SaveButton from '@components/SaveButton';
 import FileHardening from '@features/wordpress/FileHardening';
 import HttpHeaders from '@features/wordpress/HttpHeaders';
 
-type SecuritySettings = {
+type GlobalSecuritySettings = {
 	disable_xmlrpc: boolean;
 	disable_comments: boolean;
 	disable_pingbacks: boolean;
@@ -40,18 +40,18 @@ const SECURITY_FIELDS = [
 
 type SecurityField = typeof SECURITY_FIELDS[number];
 
-function pickSecurityFields(source: Partial<Record<SecurityField, any>>): SecuritySettings {
+function pickSecurityFields(source: Partial<Record<SecurityField, any>>): GlobalSecuritySettings {
 	return Object.fromEntries(
 		SECURITY_FIELDS.map((key) => [
 			key,
 			source?.[key]
 		])
-	) as SecuritySettings;
+	) as GlobalSecuritySettings;
 }
 
-export default function WordPress() {
+export default function GlobalSecurity() {
 	const [loading, setLoading] = useState(true);
-	const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+	const [globalSecuritySettings, setGlobalSecuritySettings] = useState<GlobalSecuritySettings>({
 		disable_xmlrpc: false,
 		disable_comments: false,
 		disable_pingbacks: false,
@@ -62,8 +62,8 @@ export default function WordPress() {
 		http_headers_compression: false
 	});
 
-	const [form, setFormState] = useState<SecuritySettings>(() => securitySettings);
-	const [savedForm, setSavedForm] = useState<SecuritySettings>(() => securitySettings);
+	const [form, setFormState] = useState<GlobalSecuritySettings>(() => globalSecuritySettings);
+	const [savedForm, setSavedForm] = useState<GlobalSecuritySettings>(() => globalSecuritySettings);
 	
 	const [headerOptions, setHeaderOptions] = useState<{
 		http_headers_secure_options: Record<string, any>;
@@ -78,7 +78,6 @@ export default function WordPress() {
 			const data = await SettingsAPI.readOptions();
 			const securityData = pickSecurityFields(data);
 			
-			// Load headers options
 			if (data.http_headers_secure_options) {
 				setHeaderOptions(prev => ({
 					...prev,
@@ -92,7 +91,7 @@ export default function WordPress() {
 				}));
 			}
 			
-			setSecuritySettings(securityData);
+			setGlobalSecuritySettings(securityData);
 		} catch (error) {
 			console.error('Failed to load settings:', error);
 		} finally {
@@ -105,9 +104,9 @@ export default function WordPress() {
 	}, [loadSettings]);
 
 	useEffect(() => {
-		setFormState(securitySettings);
-		setSavedForm(securitySettings);
-	}, [securitySettings]);
+		setFormState(globalSecuritySettings);
+		setSavedForm(globalSecuritySettings);
+	}, [globalSecuritySettings]);
 
 	const setField = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, checked, value, type } = event.target;
@@ -252,7 +251,6 @@ export default function WordPress() {
 				</Stack>
 			</Paper>
 
-			{/* HTTP Headers Component */}
 			<HttpHeaders
 				secureEnabled={!!form.http_headers_secure}
 				cachingEnabled={!!form.http_headers_caching}
