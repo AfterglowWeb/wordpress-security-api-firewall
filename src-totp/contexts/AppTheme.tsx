@@ -94,70 +94,6 @@ const appTheme = createTheme({
         },
       },
     },
-    MuiIconButton: {
-      defaultProps: {
-        disableRipple: true,
-      },
-      styleOverrides: {
-        root: {
-          borderRadius: 0,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: 0,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-        },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: {
-          borderRadius: 0,
-          boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-        },
-      },
-    },
-    MuiDialogTitle: {
-      styleOverrides: {
-        root: {
-          padding: '20px 24px 12px 24px',
-          fontSize: '1.125rem',
-          fontWeight: 600,
-        },
-      },
-    },
-    MuiDialogContent: {
-      styleOverrides: {
-        root: {
-          padding: '8px 24px 16px 24px',
-        },
-      },
-    },
-    MuiDialogActions: {
-      styleOverrides: {
-        root: {
-          padding: '8px 24px 20px 24px',
-          gap: '8px',
-        },
-      },
-    },
-    MuiAlert: {
-      styleOverrides: {
-        root: {
-          borderRadius: 0,
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: 0,
-        },
-      },
-    },
     MuiTextField: {
       styleOverrides: {
         root: {
@@ -167,58 +103,6 @@ const appTheme = createTheme({
               borderRadius: 0,
             },
           },
-        },
-      },
-    },
-    MuiSelect: {
-      styleOverrides: {
-        root: {
-          borderRadius: 0,
-        },
-      },
-    },
-    MuiTable: {
-      styleOverrides: {
-        root: {
-          borderCollapse: 'collapse',
-        },
-      },
-    },
-    MuiTableCell: {
-      styleOverrides: {
-        root: {
-          borderBottom: '1px solid #e0e0e0',
-          padding: '12px 16px',
-        },
-        head: {
-          fontWeight: 600,
-          color: '#1d2327',
-        },
-      },
-    },
-    MuiStepper: {
-      styleOverrides: {
-        root: {
-          padding: 0,
-        },
-      },
-    },
-    MuiStepLabel: {
-      styleOverrides: {
-        label: {
-          fontWeight: 500,
-          '&.Mui-active': {
-            fontWeight: 600,
-          },
-        },
-      },
-    },
-    MuiStepContent: {
-      styleOverrides: {
-        root: {
-          borderLeft: '1px solid #e0e0e0',
-          paddingLeft: '24px',
-          marginLeft: '12px',
         },
       },
     },

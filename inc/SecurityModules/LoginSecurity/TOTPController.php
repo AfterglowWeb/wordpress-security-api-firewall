@@ -283,7 +283,6 @@ final class TOTPController {
 			array(
 				'nonce'           => wp_create_nonce( 'bromate_totp_enrollment' ),
 				'ajaxurl'         => admin_url( 'admin-ajax.php' ),
-				'sitename'        => sanitize_text_field( get_bloginfo( 'sitename' ) ),
 				'username'        => $current_user->user_login,
 				'enabled'         => $settings['enabled'],
 				'issuer'          => $settings['issuer'],

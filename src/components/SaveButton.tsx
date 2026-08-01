@@ -1,6 +1,6 @@
 // components/SaveButton.tsx
 import { useState, useCallback } from '@wordpress/element';
-import { Button, Snackbar, Alert } from '@mui/material';
+import { Button, Snackbar, Alert, Stack } from '@mui/material';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
 import ConfirmDialog from '@components/ConfirmDialog';
 
@@ -61,7 +61,6 @@ export default function SaveButton({ onSave, disabled, messages }: SaveButtonPro
       >
         {saving ? messages.savingLabel : messages.saveLabel}
       </Button>
-
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

@@ -27,6 +27,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Skeleton,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
@@ -44,7 +45,6 @@ interface TOTPEnrollmentProps {
   onClose?: () => void;
   username: string;
   issuer: string;
-  sitename: string;
   onSetupComplete?: () => void;
   initialStep?: number;
   policy: 'mandatory' | 'grace' | 'free';
@@ -273,7 +273,6 @@ export default function TOTPEnrollment({
   onClose,
   username,
   issuer,
-  sitename,
   onSetupComplete,
   policy = 'grace',
   gracePeriodDays = 7,
@@ -323,7 +322,7 @@ export default function TOTPEnrollment({
     let cancelled = false;
     (async () => {
       try {
-        const result = await apiRequest<TwoFAStatus>('bromate_get_totp_status');
+        const result = await apiRequest<TwoFAStatus>('bromate_get_totp_user_status');
         if (cancelled) return;
         dispatch({ type: 'STATUS_LOADED', status: result, isLoginVerify: mode === 'verify' });
       } catch (err) {
@@ -518,8 +517,9 @@ export default function TOTPEnrollment({
             </Typography>
 
             {state.generating ? (
-              <Box display="flex" justifyContent="center" py={4}>
-                <CircularProgress />
+              <Box display="flex" justifyContent="center" py={4} gap={2}>
+                <Skeleton variant="rounded" height={200} width={200} />
+                <Skeleton variant="rounded" height={40} width={120} />
               </Box>
             ) : state.totpData?.qr_code_svg ? (
               <Box display="flex" flexDirection="column" alignItems="center">
@@ -598,7 +598,7 @@ export default function TOTPEnrollment({
               disabled={state.verifying || verificationCode.length !== 6}
               fullWidth
             >
-              {state.verifying ? <CircularProgress size={24} /> : __('Verify', 'bromate-security-api-firewall')}
+              {__('Verify', 'bromate-security-api-firewall')}
             </Button>
 
             <Typography variant="caption" color="text.secondary" align="center">
@@ -616,7 +616,7 @@ export default function TOTPEnrollment({
 
     return (
       <>
-        <Stack spacing={3} py={4}>
+        <Stack spacing={3} py={4} maxWidth={600}>
           <Typography variant="subtitle1">
             {__('Two-Factor Authentication', 'bromate-security-api-firewall')}
           </Typography>
@@ -643,7 +643,7 @@ export default function TOTPEnrollment({
                   {isEnabled ? (
                     <Chip color="success" label={__('Enabled', 'bromate-security-api-firewall')} />
                   ) : isSettingUp ? (
-                    <Chip color="warning" label={__('Pending Setup', 'bromate-security-api-firewall')} />
+                    <Chip color="primary" label={__('Pending Setup', 'bromate-security-api-firewall')} />
                   ) : (
                     <Chip color="default" label={__('Disabled', 'bromate-security-api-firewall')} />
                   )}
@@ -681,7 +681,7 @@ export default function TOTPEnrollment({
           <Stack direction="row" spacing={2} flexWrap="wrap">
             {!isEnabled && !isSettingUp && (
               <Button variant="contained" onClick={generateTOTPSecret} disabled={state.generating} disableElevation>
-                {state.generating ? <CircularProgress size={24} /> : __('Setup', 'bromate-security-api-firewall')}
+                {state.generating ? <CircularProgress color="inherit" size={24} /> : __('Setup', 'bromate-security-api-firewall')}
               </Button>
             )}
 
