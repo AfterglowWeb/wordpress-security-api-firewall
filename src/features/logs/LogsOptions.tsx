@@ -1,4 +1,4 @@
-import { useMemo } from '@wordpress/element';
+import { useState, useEffect, useMemo, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
@@ -6,91 +6,137 @@ import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
-import { Paper } from '@mui/material';
+import { Paper, CircularProgress } from '@mui/material';
 
-import MultipleSelect from '@components/MultipleSelect';
-import type { LogsSettings, LogSeverity, LogEvent } from '@app-types/logs';
+import LogEventRow from '@features/logs/LogEventRow';
+import { LogAPI } from '@services/logs';
+import type {
+  LogsSettings,
+  LogSeverity,
+  LogEvent,
+  LogEventOption,
+  LogsConfig,
+  LogEventNotificationFlags,
+} from '@app-types/logs';
 
 const LOGS_SEVERITIES: LogSeverity[] = ['info', 'warning', 'error'];
 
-const LOGS_EVENTS_OPTIONS: Array<{
-  value: LogEvent;
-  label: string;
-  groupLabel?: string;
-  subGroupLabel?: string;
-  secondary?: string;
-}> = [
-  // IP Management Events
-  { value: 'ip_country_blocked', label: __('IP Country Blocked', 'bromate-security-api-firewall'), groupLabel: __('IP Management', 'bromate-security-api-firewall') },
-  { value: 'ip_rate_limited', label: __('IP Temporarly Blocked', 'bromate-security-api-firewall') },
-  { value: 'ip_blacklisted', label: __('IP Blacklisted', 'bromate-security-api-firewall') },
-  { value: 'ip_country_blocked', label: __('IP Country Blocked', 'bromate-security-api-firewall') },
-  { value: 'ip_whitelisted_bypass', label: __('IP Whitelisted Bypass', 'bromate-security-api-firewall') },
-  { value: 'ip_entry_created', label: __('IP Entry Manually Created', 'bromate-security-api-firewall') },
-  { value: 'ip_entry_deleted', label: __('IP Entry Manually Deleted', 'bromate-security-api-firewall') },
-  
-  // Authentication Events
-  { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall'), groupLabel: __('REST API Auth.', 'bromate-security-api-firewall') },
-  { value: 'auth_access_whitelist', label: __('Whitelisted IP Auth Access', 'bromate-security-api-firewall') },
-  { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall') },
-  { value: 'auth_failed', label: __('Auth Failed', 'bromate-security-api-firewall') },
-  { value: 'auth_revoked', label: __('Auth Revoked', 'bromate-security-api-firewall') },
-  
-  // Admin Events
-  { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall'), groupLabel: __('WordPress Login', 'bromate-security-api-firewall') },
-  { value: 'admin_login_access_whitelist', label: __('Whitelisted IP Login Access', 'bromate-security-api-firewall') },
-  { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall') },
-  { value: 'admin_login_failed', label: __('Login Failed', 'bromate-security-api-firewall') },
-  { value: 'admin_login_attempts_limit', label: __('Max Login Attempts Reached', 'bromate-security-api-firewall') },
-  { value: 'admin_login_banned', label: __('Login Banned', 'bromate-security-api-firewall') },
-
-  // Cron Events
-  { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall'), groupLabel: __('WordPress Cron Events', 'bromate-security-api-firewall') },
-  { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall') },
-  { value: 'log_entries_delete_expired', label: __('Expired Log Entries Cleaned', 'bromate-security-api-firewall') },
-
-  // Migrate Settings
-  { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall'), groupLabel: __('Migrate Data', 'bromate-security-api-firewall') },
-  { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall') },
-  { value: 'export_fail', label: __('Data Export Failed', 'bromate-security-api-firewall') },
-  { value: 'import_success', label: __('Data Import Failed', 'bromate-security-api-firewall') },
-  { value: 'export_success', label: __('Data Export Failed', 'bromate-security-api-firewall') },
-
-  // System Events
-  { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall'), groupLabel: __('System', 'bromate-security-api-firewall') },
-  { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall') },
-  { value: 'plugin_settings_changed', label: __('Plugin Settings Changed', 'bromate-security-api-firewall') },
-
-];
+const DEFAULT_NOTIFICATION_FLAGS: LogEventNotificationFlags = {
+  send: false,
+  instant: false,
+  scheduled: false,
+};
 
 type Props = {
   settings: LogsSettings;
   onChange: <K extends keyof LogsSettings>(key: K, value: LogsSettings[K]) => void;
 };
 
+type GroupedEvents = {
+  key: string;
+  label: string;
+  events: LogEventOption[];
+};
+
 export default function LogsOptions({ settings, onChange }: Props): JSX.Element {
+  const [logsConfig, setLogsConfig] = useState<LogsConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+
   const enabled = settings.logs_enabled ?? false;
+
+  const loadConfig = useCallback(async () => {
+    try {
+      const config = await LogAPI.getConfig();
+      setLogsConfig(config);
+    } catch (err) {
+      setLogsConfig(null);
+    } finally {
+      setConfigLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
+
+  const groupedEvents: GroupedEvents[] = useMemo(() => {
+    if (!logsConfig) return [];
+
+    const { groups, events } = logsConfig;
+
+    return groups.map((group) => ({
+      key: group.key,
+      label: group.label,
+      events: events
+        .filter((e) => e.group === group.key)
+        .map((event) => ({
+          value: event.key,
+          label: event.label,
+          severity: event.severity,
+          groupLabel: group.label,
+        })),
+    }));
+  }, [logsConfig]);
+
   const severitiesKept = useMemo(() => {
     const kept = settings?.logs_keep_severities;
     return Array.isArray(kept) ? kept : [];
   }, [settings?.logs_keep_severities]);
 
+  const eventsKept = useMemo(() => {
+    const kept = settings?.logs_keep_events;
+    return Array.isArray(kept) ? kept : [];
+  }, [settings?.logs_keep_events]);
+
   const isSeverityEnabled = (severity: LogSeverity): boolean => {
-    return Array.isArray(severitiesKept) && severitiesKept.includes(severity);
+    return severitiesKept.includes(severity);
+  };
+
+  const isEventEnabled = (eventKey: LogEvent): boolean => {
+    return eventsKept.includes(eventKey);
+  };
+
+  const getNotificationFlags = (eventKey: LogEvent): LogEventNotificationFlags => {
+    return settings.logs_event_notifications?.[eventKey] ?? DEFAULT_NOTIFICATION_FLAGS;
   };
 
   const toggleSeverities = (severity: LogSeverity) => {
-    const current = Array.isArray(settings.logs_keep_severities) ? settings.logs_keep_severities : [];
-    const isEnabled = current.includes(severity);
-    const newValue = isEnabled 
-      ? current.filter((m: LogSeverity) => m !== severity)
-      : [...current, severity];
-    
+    const isEnabled = severitiesKept.includes(severity);
+    const newValue = isEnabled
+      ? severitiesKept.filter((s) => s !== severity)
+      : [...severitiesKept, severity];
+
     onChange('logs_keep_severities', newValue as LogSeverity[]);
   };
 
-  const handleEventsChange = (events: LogEvent[]) => {
-    onChange('logs_keep_events', events);
+  const toggleEventEnabled = (eventKey: LogEvent) => {
+    const isEnabled = eventsKept.includes(eventKey);
+    const newValue = isEnabled
+      ? eventsKept.filter((e) => e !== eventKey)
+      : [...eventsKept, eventKey];
+
+    onChange('logs_keep_events', newValue as LogEvent[]);
+  };
+
+  const toggleEventNotification = (
+    eventKey: LogEvent,
+    field: keyof LogEventNotificationFlags
+  ) => {
+    const current = getNotificationFlags(eventKey);
+    const nextFlags: LogEventNotificationFlags = {
+      ...current,
+      [field]: !current[field],
+    };
+
+    if (field === 'send' && !nextFlags.send) {
+      nextFlags.instant = false;
+      nextFlags.scheduled = false;
+    }
+
+    onChange('logs_event_notifications', {
+      ...settings.logs_event_notifications,
+      [eventKey]: nextFlags,
+    });
   };
 
   return (
@@ -117,21 +163,20 @@ export default function LogsOptions({ settings, onChange }: Props): JSX.Element 
         </Stack>
 
         <Stack flexDirection="column" gap={2} sx={{ opacity: enabled ? 1 : 0.6 }}>
-          
+
           <Stack spacing={2}>
-           <Typography variant="body1">
+            <Typography variant="body1">
               {__('Logs retention time', 'bromate-security-api-firewall')}
             </Typography>
-          <TextField
-            label={__('Days', 'bromate-security-api-firewall')}
-            type="number"
-            disabled={!settings.logs_enabled}
-            value={settings.logs_rotation_time}
-            onChange={(e) => onChange('logs_rotation_time', Number(e.target.value))}
-            sx={{maxWidth:100}}
-          />
+            <TextField
+              label={__('Days', 'bromate-security-api-firewall')}
+              type="number"
+              disabled={!enabled}
+              value={settings.logs_rotation_time}
+              onChange={(e) => onChange('logs_rotation_time', Number(e.target.value))}
+              sx={{ maxWidth: 100 }}
+            />
           </Stack>
-          
 
           <Stack spacing={0}>
             <Typography variant="body1">{__('Logs Severity', 'bromate-security-api-firewall')}</Typography>
@@ -142,7 +187,7 @@ export default function LogsOptions({ settings, onChange }: Props): JSX.Element 
                   label={severity}
                   control={
                     <Switch
-                      checked={isSeverityEnabled(severity) ?? false}
+                      checked={isSeverityEnabled(severity)}
                       onChange={() => toggleSeverities(severity)}
                       disabled={!enabled}
                     />
@@ -154,16 +199,41 @@ export default function LogsOptions({ settings, onChange }: Props): JSX.Element 
 
           <Stack spacing={2}>
             <Typography variant="body1">{__('Logs Types', 'bromate-security-api-firewall')}</Typography>
-            <Stack direction="row" gap={1} flexWrap="wrap">
-              <MultipleSelect<LogEvent>
-                label={__('Select Logs Types', 'bromate-security-api-firewall')}
-                disabled={!enabled}
-                value={settings.logs_keep_events}
-                options={LOGS_EVENTS_OPTIONS}
-                onChange={handleEventsChange}
-                name="logs-keep-events"
-              />
-            </Stack>
+
+            {configLoading ? (
+              <Stack sx={{ py: 1 }} alignItems="center">
+                <CircularProgress size={24} />
+              </Stack>
+            ) : (
+              <Stack spacing={2}>
+                {groupedEvents.map((group) => (
+                  <Stack key={group.key} spacing={0.5}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      {group.label}
+                    </Typography>
+                    <Stack divider={<Divider flexItem />}>
+                      {group.events.map((event) => {
+                        const eventKey = event.value as LogEvent;
+                        const severity = event.severity as LogSeverity;
+                        const severityActive = isSeverityEnabled(severity);
+
+                        return (
+                          <LogEventRow
+                            key={eventKey}
+                            event={event}
+                            enabled={isEventEnabled(eventKey)}
+                            severityActive={severityActive}
+                            notifications={getNotificationFlags(eventKey)}
+                            onToggleEnabled={toggleEventEnabled}
+                            onToggleNotification={toggleEventNotification}
+                          />
+                        );
+                      })}
+                    </Stack>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
           </Stack>
 
         </Stack>

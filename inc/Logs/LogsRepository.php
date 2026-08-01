@@ -14,6 +14,215 @@ final class LogsRepository {
 		return $wpdb->prefix . 'bromate_security_api_firewall_logs';
 	}
 
+	public static function events_config(): array {
+		return array(
+			array(
+				'key'      => 'ip_whitelisted_bypass',
+				'severity' => 'info',
+				'label'    => esc_html__( 'IP Whitelisted Bypass', 'bromate-security-api-firewall' ),
+				'group'    => 'ip_management',
+			),
+			array(
+				'key'      => 'ip_entry_created',
+				'severity' => 'info',
+				'label'    => esc_html__( 'IP Entry Manually Created', 'bromate-security-api-firewall' ),
+				'group'    => 'ip_management',
+			),
+			array(
+				'key'      => 'ip_entry_deleted',
+				'severity' => 'info',
+				'label'    => esc_html__( 'IP Entry Manually Deleted', 'bromate-security-api-firewall' ),
+				'group'    => 'ip_management',
+			),
+			array(
+				'key'      => 'ip_country_blocked',
+				'severity' => 'warning',
+				'label'    => esc_html__( 'IP Country Blocked', 'bromate-security-api-firewall' ),
+				'group'    => 'ip_management',
+			),
+			array(
+				'key'      => 'ip_rate_limited',
+				'severity' => 'warning',
+				'label'    => esc_html__( 'IP Temporarily Blocked', 'bromate-security-api-firewall' ),
+				'group'    => 'ip_management',
+			),
+			array(
+				'key'      => 'ip_blacklisted',
+				'severity' => 'error',
+				'label'    => esc_html__( 'IP Blacklisted', 'bromate-security-api-firewall' ),
+				'group'    => 'ip_management',
+			),
+			array(
+				'key'      => 'auth_access_whitelist',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Whitelisted IP Auth Access', 'bromate-security-api-firewall' ),
+				'group'    => 'rest_api_auth',
+			),
+			array(
+				'key'      => 'auth_success',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Auth Success', 'bromate-security-api-firewall' ),
+				'group'    => 'rest_api_auth',
+			),
+			array(
+				'key'      => 'auth_user_added',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Authorized User Added', 'bromate-security-api-firewall' ),
+				'group'    => 'rest_api_auth',
+			),
+			array(
+				'key'      => 'auth_user_removed',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Authorized User Removed', 'bromate-security-api-firewall' ),
+				'group'    => 'rest_api_auth',
+			),
+			array(
+				'key'      => 'auth_failed',
+				'severity' => 'warning',
+				'label'    => esc_html__( 'Auth Failed', 'bromate-security-api-firewall' ),
+				'group'    => 'rest_api_auth',
+			),
+			array(
+				'key'      => 'auth_attempts_limit',
+				'severity' => 'error',
+				'label'    => esc_html__( 'Max Auth Attempts Reached', 'bromate-security-api-firewall' ),
+				'group'    => 'rest_api_auth',
+			),
+			array(
+				'key'      => 'admin_login_access_whitelist',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Whitelisted IP Login Access', 'bromate-security-api-firewall' ),
+				'group'    => 'wordpress_login',
+			),
+			array(
+				'key'      => 'admin_login_success',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Login Success', 'bromate-security-api-firewall' ),
+				'group'    => 'wordpress_login',
+			),
+			array(
+				'key'      => 'admin_login_failed',
+				'severity' => 'warning',
+				'label'    => esc_html__( 'Login Failed', 'bromate-security-api-firewall' ),
+				'group'    => 'wordpress_login',
+			),
+			array(
+				'key'      => 'admin_login_attempts_limit',
+				'severity' => 'error',
+				'label'    => esc_html__( 'Max Login Attempts Reached', 'bromate-security-api-firewall' ),
+				'group'    => 'wordpress_login',
+			),
+			array(
+				'key'      => 'ip_entries_delete_expired',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Expired IP Entries Cleaned', 'bromate-security-api-firewall' ),
+				'group'    => 'wordpress_cron',
+			),
+			array(
+				'key'      => 'log_entries_delete_expired',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Expired Log Entries Cleaned', 'bromate-security-api-firewall' ),
+				'group'    => 'wordpress_cron',
+			),
+			array(
+				'key'      => 'emergency_token_used',
+				'severity' => 'warning',
+				'label'    => esc_html__( 'Emergency Token Used', 'bromate-security-api-firewall' ),
+				'group'    => 'system',
+			),
+			array(
+				'key'      => 'plugin_settings_changed',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Plugin Settings Changed', 'bromate-security-api-firewall' ),
+				'group'    => 'system',
+			),
+			array(
+				'key'      => 'import_success',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Data Import Succeeded', 'bromate-security-api-firewall' ),
+				'group'    => 'system',
+			),
+			array(
+				'key'      => 'export_success',
+				'severity' => 'info',
+				'label'    => esc_html__( 'Data Export Succeeded', 'bromate-security-api-firewall' ),
+				'group'    => 'system',
+			),
+			array(
+				'key'      => 'import_fail',
+				'severity' => 'error',
+				'label'    => esc_html__( 'Data Import Failed', 'bromate-security-api-firewall' ),
+				'group'    => 'system',
+			),
+			array(
+				'key'      => 'export_fail',
+				'severity' => 'error',
+				'label'    => esc_html__( 'Data Export Failed', 'bromate-security-api-firewall' ),
+				'group'    => 'system',
+			),
+		);
+	}
+
+	public static function group_events_config(): array {
+		return array(
+			array(
+				'key'   => 'ip_management',
+				'label' => esc_html__( 'IP Management', 'bromate-security-api-firewall' ),
+			),
+			array(
+				'key'   => 'rest_api_auth',
+				'label' => esc_html__( 'REST API Auth.', 'bromate-security-api-firewall' ),
+			),
+			array(
+				'key'   => 'wordpress_login',
+				'label' => esc_html__( 'WordPress Login', 'bromate-security-api-firewall' ),
+			),
+			array(
+				'key'   => 'wordpress_cron',
+				'label' => esc_html__( 'WordPress Cron Events', 'bromate-security-api-firewall' ),
+			),
+			array(
+				'key'   => 'system',
+				'label' => esc_html__( 'System', 'bromate-security-api-firewall' ),
+			),
+		);
+	}
+
+	public static function sanitize_event( string $raw_value ): string {
+		static $allowed = null;
+
+		if ( null === $allowed ) {
+			$allowed = array_map(
+				function ( $event ) {
+					return $event['key'];
+				},
+				self::events_config()
+			);
+		}
+
+		$value = sanitize_key( $raw_value );
+		return in_array( $value, $allowed, true ) ? $value : 'unknown';
+	}
+
+	public static function sanitize_severity( string $raw_value ): string {
+		$value   = sanitize_key( $raw_value );
+		$allowed = array( 'info', 'warning', 'error' );
+		return in_array( $value, $allowed, true ) ? $value : 'info';
+	}
+
+	public static function get_event_severity( string $event_key ): string {
+		static $severity_map = null;
+
+		if ( null === $severity_map ) {
+			$severity_map = array();
+			foreach ( self::events_config() as $event ) {
+				$severity_map[ $event['key'] ] = $event['severity'];
+			}
+		}
+
+		return $severity_map[ $event_key ] ?? 'info';
+	}
+
 
 	private static function log_in_db( $id ): ?array {
 		global $wpdb;
@@ -22,7 +231,7 @@ final class LogsRepository {
 			return null;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$existing = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs WHERE id = %d",
@@ -36,7 +245,7 @@ final class LogsRepository {
 
 	public static function delete_all_entries(): bool {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bromate_security_api_firewall_logs" );
 		return false !== $result;
 	}
@@ -48,10 +257,15 @@ final class LogsRepository {
 			return '';
 		}
 
-		$event    = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
-		$severity = isset( $data['severity'] ) ? self::sanitize_severity( $data['severity'] ) : 'info';
+		$event = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
 
-		if ( empty( $event ) ) {
+		if ( isset( $data['severity'] ) && '' !== $data['severity'] ) {
+			$severity = self::sanitize_severity( $data['severity'] );
+		} else {
+			$severity = 'unknown' !== $event ? self::get_event_severity( $event ) : 'info';
+		}
+
+		if ( empty( $event ) || 'unknown' === $event ) {
 			return '';
 		}
 
@@ -87,13 +301,13 @@ final class LogsRepository {
 		if ( $merge && isset( $data['id'] ) && '' !== $data['id'] ) {
 			$existing = self::log_in_db( $data['id'] );
 			if ( $existing ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 				$result = $wpdb->update( self::table(), $row, array( 'id' => $existing['id'] ) );
 				return ( false !== $result ) ? 'updated' : '';
 			}
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert( self::table(), $row );
 
 		if ( $result ) {
@@ -218,17 +432,17 @@ final class LogsRepository {
 
 		$count_sql = "SELECT COUNT(*) FROM {$table} WHERE {$where_clause}";
 		if ( ! empty( $values ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$count_sql = $wpdb->prepare( $count_sql, $values );
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$total = (int) $wpdb->get_var( $count_sql );
 
 		$sql      = "SELECT * FROM {$table} WHERE {$where_clause} ORDER BY {$order_by} {$order} LIMIT %d OFFSET %d";
 		$values[] = $per_page;
 		$values[] = $offset;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $values ), ARRAY_A );
 
 		return array(
@@ -243,7 +457,7 @@ final class LogsRepository {
 	public static function get_all_entries(): array {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $wpdb->get_results(
 			"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs ORDER BY created_at DESC",
 			ARRAY_A
@@ -254,7 +468,7 @@ final class LogsRepository {
 
 	public static function delete( int $id ): bool {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (bool) $wpdb->delete( self::table(), array( 'id' => $id ) );
 	}
 
@@ -266,7 +480,7 @@ final class LogsRepository {
 		$ids          = array_map( 'absint', $ids );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$sql          = 'DELETE FROM ' . self::table() . " WHERE id IN ({$placeholders})";
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
@@ -278,7 +492,7 @@ final class LogsRepository {
 		}
 
 		$sql = 'DELETE FROM ' . self::table() . ' WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $days ) );
 	}
 
@@ -322,44 +536,6 @@ final class LogsRepository {
 		);
 
 		return array_unique( array_filter( $events ) );
-	}
-
-	public static function sanitize_event( string $raw_value ): string {
-
-		$value   = sanitize_key( $raw_value );
-		$allowed = array(
-			'ip_country_blocked',
-			'ip_rate_limited',
-			'ip_blacklisted',
-			'ip_whitelisted_bypass',
-			'ip_entry_created',
-			'ip_entry_deleted',
-			'ip_entries_delete_expired',
-			'auth_access_whitelist',
-			'auth_success',
-			'auth_failed',
-			'auth_revoked',
-			'auth_attempts_limit',
-			'admin_login_access_whitelist',
-			'admin_login_success',
-			'admin_login_failed',
-			'admin_login_attempts_limit',
-			'admin_login_banned',
-			'emergency_token_used',
-			'plugin_settings_changed',
-			'log_entries_delete_expired',
-			'import_fail',
-			'export_fail',
-			'import_success',
-			'export_success',
-		);
-		return in_array( $value, $allowed, true ) ? $value : 'unknown';
-	}
-
-	public static function sanitize_severity( string $raw_value ): string {
-		$value   = sanitize_key( $raw_value );
-		$allowed = array( 'info', 'warning', 'error' );
-		return in_array( $value, $allowed, true ) ? $value : 'info';
 	}
 
 	private static function normalize( array $row ): array {

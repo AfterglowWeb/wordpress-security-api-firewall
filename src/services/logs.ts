@@ -1,8 +1,12 @@
 import { apiRequest } from '@services/api';
-import { LogsQueryArgs, LogsPage, LogsSettings } from '@app-types/logs';
+import { LogsQueryArgs, LogsPage, LogsSettings, LogsConfig } from '@app-types/logs';
 
 
 export const LogAPI = {
+
+  getConfig: () =>
+    apiRequest<LogsConfig>('bromate_get_logs_config'),
+
   getSettings: () =>
     apiRequest<LogsSettings>('bromate_get_logs_settings'),
 

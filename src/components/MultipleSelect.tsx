@@ -137,10 +137,6 @@ export default function MultipleSelect<T extends string = string>({
               <ListItemText
                 primary={option.label}
                 secondary={option.secondary ?? null}
-                primaryTypographyProps={{ variant: 'body2' }}
-                secondaryTypographyProps={{
-                  variant: 'caption',
-                }}
               />
             </MenuItem>
           ) : null;
