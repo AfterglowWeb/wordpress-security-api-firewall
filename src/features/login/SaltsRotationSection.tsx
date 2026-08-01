@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from '@wordpress/element';
+import { useState, useEffect, useCallback, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { UserSessionsAPI, SaltsRotationStatus } from '@services/user-sessions';
 import { useDialog, DIALOG_TYPES } from '@contexts/DialogContext';
@@ -9,6 +9,8 @@ import {
   Typography,
   Switch,
   FormControlLabel,
+  FormControl,
+  InputLabel,
   TextField,
   Select,
   Button,
@@ -16,7 +18,8 @@ import {
   Divider,
   MenuItem,
   CircularProgress,
-  Snackbar
+  Snackbar,
+  useTheme
 } from '@mui/material';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 
@@ -41,6 +44,34 @@ function formatDateTime(value: string | null): string {
   return parsed.toLocaleString();
 }
 
+function calculateNextRunPreview(recurrence: 'daily' | 'weekly' | 'monthly', time: string): Date | null {
+  if (!time) return null;
+
+  const [hours, minutes] = time.split(':').map(Number);
+  const now = new Date();
+
+  switch (recurrence) {
+    case 'daily': {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hours, minutes, 0, 0);
+    }
+    case 'weekly': {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, hours, minutes, 0, 0);
+    }
+    case 'monthly': {
+      const currentDay = now.getDate();
+      const targetMonth = now.getMonth() + 1;
+      const targetYear = now.getFullYear();
+
+      const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const targetDay = Math.min(currentDay, lastDayOfTargetMonth);
+
+      return new Date(targetYear, targetMonth, targetDay, hours, minutes, 0, 0);
+    }
+    default:
+      return null;
+  }
+}
+
 export default function SaltsRotationSection({
   enabled,
   recurrence,
@@ -53,10 +84,25 @@ export default function SaltsRotationSection({
 
   const [rotationStatus, setRotationStatus] = useState<SaltsRotationStatus | null>(null);
   const [rotatingNow, setRotatingNow] = useState(false);
-const [success, setSuccess] = useState<string | null>(null);
-const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const portalContainer = usePortalContainer();
+  const theme = useTheme();
 
+  const previewNextRun = useMemo((): Date | null => {
+    if (!enabled || !time) return null;
+    return calculateNextRunPreview(recurrence, time);
+  }, [enabled, recurrence, time]);
+
+  const showPreview = useMemo(() => {
+    if (!previewNextRun) return false;
+    if (!rotationStatus?.next_rotation) return true;
+
+    const serverDate = new Date(rotationStatus.next_rotation.replace(' ', 'T'));
+    const diffHours = Math.abs(previewNextRun.getTime() - serverDate.getTime()) / (1000 * 60 * 60);
+
+    return diffHours > 12;
+  }, [previewNextRun, rotationStatus?.next_rotation]);
 
   const loadRotationStatus = useCallback(async () => {
     try {
@@ -81,16 +127,24 @@ const [error, setError] = useState<string | null>(null);
 
     try {
       await UserSessionsAPI.rotateSaltsNow();
+
+      loadRotationStatus().catch(() => {
+        // Silent catch.
+      });
+
       setSuccess(
-        __('Salt keys rotated. Every logged-in user, including you, has been signed out.', 'bromate-security-api-firewall')
+        __('Salt keys rotated. You have been signed out. Reloading...', 'bromate-security-api-firewall')
       );
-      await loadRotationStatus();
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2500);
+
     } catch (err) {
       setError(__('Failed to rotate salt keys.', 'bromate-security-api-firewall'));
-    } finally {
       setRotatingNow(false);
     }
-  }, [loadRotationStatus, setError, setSuccess]);
+  }, [loadRotationStatus]);
 
   const handleRotateSaltsConfirm = useCallback(() => {
     openDialog({
@@ -104,6 +158,14 @@ const [error, setError] = useState<string | null>(null);
       onConfirm: handleRotateSaltsNow,
     });
   }, [openDialog, handleRotateSaltsNow]);
+
+  const handleRecurrenceChange = useCallback((value: 'daily' | 'weekly' | 'monthly') => {
+    onChangeRecurrence(value);
+  }, [onChangeRecurrence]);
+
+  const handleTimeChange = useCallback((value: string) => {
+    onChangeTime(value);
+  }, [onChangeTime]);
 
   return (
     <>
@@ -131,26 +193,29 @@ const [error, setError] = useState<string | null>(null);
         <Stack flexDirection="column" gap={1} sx={{ pl: 4 }}>
 
           <Stack direction="row" flexWrap="wrap" gap={2} alignItems="flex-start">
-
-            <Select
-              MenuProps={{ container: portalContainer }}
-              label={__('Recurrence', 'bromate-security-api-firewall')}
-              size="small"
-              value={recurrence}
-              onChange={(e) => onChangeRecurrence(e.target.value as 'daily' | 'weekly' | 'monthly')}
-              sx={{ minWidth: 150 }}
-            >
-              <MenuItem value="daily">{__('Every day', 'bromate-security-api-firewall')}</MenuItem>
-              <MenuItem value="weekly">{__('Every week', 'bromate-security-api-firewall')}</MenuItem>
-              <MenuItem value="monthly">{__('Every month', 'bromate-security-api-firewall')}</MenuItem>
-            </Select>
+            <FormControl size="small" disabled={!enabled} sx={{ minWidth: 150 }}>
+              <InputLabel id="recurrence-label">{__('Recurrence', 'bromate-security-api-firewall')}</InputLabel>
+              <Select
+                labelId="recurrence-label"
+                id="recurrence-select"
+                MenuProps={{ container: portalContainer }}
+                label={__('Recurrence', 'bromate-security-api-firewall')}
+                value={recurrence || 'weekly'}
+                onChange={(e) => handleRecurrenceChange(e.target.value as 'daily' | 'weekly' | 'monthly')}
+              >
+                <MenuItem value="daily">{__('Every day', 'bromate-security-api-firewall')}</MenuItem>
+                <MenuItem value="weekly">{__('Every week', 'bromate-security-api-firewall')}</MenuItem>
+                <MenuItem value="monthly">{__('Every month', 'bromate-security-api-firewall')}</MenuItem>
+              </Select>
+            </FormControl>
 
             <TextField
               label={__('Rotation Time', 'bromate-security-api-firewall')}
               type="time"
               size="small"
               value={time}
-              onChange={(e) => onChangeTime(e.target.value)}
+              disabled={!enabled}
+              onChange={(e) => handleTimeChange(e.target.value)}
               sx={{ minWidth: 150 }}
             />
           </Stack>
@@ -159,21 +224,31 @@ const [error, setError] = useState<string | null>(null);
             {__('Rotation signs out every logged-in user.', 'bromate-security-api-firewall')}
           </Alert>
 
-          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-            <Stack>
-              <Typography variant="caption" color="text.secondary">
-                {__('Last rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.last_rotation ?? null)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {__('Next rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus?.next_rotation ?? null)}
-              </Typography>
+          <Stack direction="row" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={1}>
+            
+            <Stack spacing={1}>
+              {rotationStatus?.last_rotation && (
+                <Typography variant="caption" color="text.secondary" sx={{px:1.5, py:0.5, fontWeight: 500, border:'1px solid', borderColor: theme.palette.divider, borderRadius:'2px' }}>
+                  {__('Last rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus.last_rotation)}
+                </Typography>
+              )}
+              {enabled && rotationStatus?.next_rotation && (
+                <Typography variant="caption" color="text.secondary" sx={{px:1.5, py:0.5, fontWeight: 500, border:'1px solid', borderColor: theme.palette.divider, borderRadius:'2px' }}>
+                  {__('Next rotation:', 'bromate-security-api-firewall')} {formatDateTime(rotationStatus.next_rotation)}
+                </Typography>
+              )}
+              {enabled && showPreview && previewNextRun && (
+                <Typography variant="caption" color="primary.main" sx={{px:1.5, py:0.5, fontWeight: 500, border:'1px solid', borderColor: 'primary.main', borderRadius:'2px' }}>
+                  {__('After saving:', 'bromate-security-api-firewall')} {formatDateTime(previewNextRun.toISOString())}
+                </Typography>
+              )}
             </Stack>
 
             <Button
               size="small"
               variant="outlined"
               color="primary"
-              disabled={rotatingNow}
+              disabled={rotatingNow || !enabled}
               startIcon={rotatingNow ? <CircularProgress size={16} /> : undefined}
               onClick={handleRotateSaltsConfirm}
             >
@@ -189,35 +264,35 @@ const [error, setError] = useState<string | null>(null);
     </Paper>
 
     {/* Notifications */}
-          <Snackbar
-            open={!!success}
-            autoHideDuration={4000}
-            onClose={() => setSuccess(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          >
-            <Alert
-              onClose={() => setSuccess(null)}
-              severity="success"
-              variant="filled"
-            >
-              {success}
-            </Alert>
-          </Snackbar>
-    
-          <Snackbar
-            open={!!error}
-            autoHideDuration={6000}
-            onClose={() => setError(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          >
-            <Alert
-              onClose={() => setError(null)}
-              severity="error"
-              variant="filled"
-            >
-              {error}
-            </Alert>
-          </Snackbar>
+    <Snackbar
+      open={!!success}
+      autoHideDuration={4000}
+      onClose={() => setSuccess(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+    >
+      <Alert
+        onClose={() => setSuccess(null)}
+        severity="success"
+        variant="filled"
+      >
+        {success}
+      </Alert>
+    </Snackbar>
+
+    <Snackbar
+      open={!!error}
+      autoHideDuration={6000}
+      onClose={() => setError(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+    >
+      <Alert
+        onClose={() => setError(null)}
+        severity="error"
+        variant="filled"
+      >
+        {error}
+      </Alert>
+    </Snackbar>
     </>
   );
 }

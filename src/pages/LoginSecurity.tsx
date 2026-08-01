@@ -321,6 +321,7 @@ export default function LoginSecurity(): JSX.Element {
               label={__('Limit Sessions Per User', 'bromate-security-api-firewall')}
               type="number"
               size="small"
+              disabled={!settings.cookie_hardening_samesite_enabled}
               value={settings.cookie_hardening_max_concurrent_sessions}
               onChange={(e) =>
                 updateSetting('cookie_hardening_max_concurrent_sessions', Number(e.target.value))

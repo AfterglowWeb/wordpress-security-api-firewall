@@ -19,7 +19,6 @@ export default function App() {
         mode="inline"
         username={adminData.username || ''}
         issuer={adminData.sitename || 'WP Security & API Firewall'}
-        sitename={adminData.sitename || 'WP Security & API Firewall'}
         onSetupComplete={handleSetupComplete}
         onClose={handleClose}
         policy={adminData.policy}
@@ -39,7 +38,6 @@ export default function App() {
       open={adminData.show_dialog}
       username={adminData.username || ''}
       issuer={adminData.sitename || 'WP Security & API Firewall'}
-      sitename={adminData.sitename || 'WP Security & API Firewall'}
       onSetupComplete={handleSetupComplete}
       onClose={handleClose}
       policy={adminData.policy}
