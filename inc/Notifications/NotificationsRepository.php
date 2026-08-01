@@ -15,7 +15,7 @@ final class NotificationsRepository {
 		add_action( 'wp_ajax_bromate_update_notifications_settings', array( $self, 'ajax_update_notifications_settings' ) );
 	}
 
-	private const NOTIFICATIONS_OPTION_KEYS = [
+	private const NOTIFICATIONS_OPTION_KEYS = array(
 		'notifications_digest_enabled',
 		'notifications_digest_recurrence',
 		'notifications_digest_time',
@@ -25,31 +25,37 @@ final class NotificationsRepository {
 		'notifications_digest_subject',
 		'notifications_digest_body',
 		'notifications_digest_format',
+		'notifications_digest_attachment_logs',
+		'notifications_digest_attachment_logs_format',
+		'notifications_digest_inline_logs',
 		'notifications_instant_to',
 		'notifications_instant_cc',
 		'notifications_instant_cci',
 		'notifications_instant_subject',
 		'notifications_instant_body',
 		'notifications_instant_format',
-	];
+		'notifications_instant_attachment_logs',
+		'notifications_instant_attachment_logs_format',
+		'notifications_instant_inline_logs',
+	);
 
 	public function ajax_get_notifications_settings() {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
-		wp_send_json_success( self::read_config_settings() );
+		wp_send_json_success( self::read_settings() );
 	}
 
-	public function ajax_update_config_settings() {
+	public function ajax_update_notifications_settings() {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
 
-		$updated_config_settings = self::update_config_settings();
+		$updated_settings = self::update_settings();
 
-		if ( empty( $updated_config_settings ) ) {
+		if ( empty( $updated_settings ) ) {
 			wp_send_json_error(
 				array(
 					'message' => esc_html__( 'Nothing updated', 'bromate-security-api-firewall' ),
@@ -65,22 +71,21 @@ final class NotificationsRepository {
 		);
 	}
 
-	private function read_config_settings(): array {
-		$config_settings = array();
-		foreach ( self::NOTIFICATIONS_OPTION_KEYS as $config_key ) {
-			$config_settings[ $config_key ] = SettingsRepository::read_option( $config_key );
+	private function read_settings(): array {
+		$settings = array();
+		foreach ( self::NOTIFICATIONS_OPTION_KEYS as $notifications_key ) {
+			$settings[ $notifications_key ] = SettingsRepository::read_option( $notifications_key );
 		}
-		return $config_settings;
+		return $settings;
 	}
 
-	private function update_config_settings() {
+	private function update_settings() {
 		$updated_count = 0;
-		foreach ( self::NOTIFICATIONS_OPTION_KEYS as $config_key ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_update_config_settings()
-			if ( isset( $_POST[ $config_key ] ) ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_update_config_settings()
-				$value = sanitize_text_field( wp_unslash( $_POST[ $config_key ] ) );
-				if ( SettingsRepository::update_option( $config_key, $value ) ) {
+		foreach ( self::NOTIFICATIONS_OPTION_KEYS as $notifications_key ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_update_notifications_settings()
+			if ( isset( $_POST[ $notifications_key ] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_update_notifications_settings()
+				if ( SettingsRepository::update_option( $notifications_key, wp_unslash( $_POST[ $notifications_key ] ) ) ) {
 					++$updated_count;
 				}
 			}
@@ -89,7 +94,7 @@ final class NotificationsRepository {
 		return $updated_count;
 	}
 
-    public static function sanitize_time( $value ): string {
+	public static function sanitize_time( $value ): string {
 		if ( empty( $value ) ) {
 			return '';
 		}
@@ -100,9 +105,9 @@ final class NotificationsRepository {
 	}
 
 	public static function sanitize_emails( array $raw_emails ): array {
-		if( empty( $raw_emails ) ) {
-			return [];
+		if ( empty( $raw_emails ) ) {
+			return array();
 		}
-		return array_map('sanitize_email', $raw_emails );
+		return array_map( 'sanitize_email', $raw_emails );
 	}
 }
