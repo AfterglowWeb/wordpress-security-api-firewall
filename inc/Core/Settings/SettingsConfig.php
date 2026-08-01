@@ -41,49 +41,49 @@ final class SettingsConfig {
 
 		$options = array(
 
-			'auth_control_enabled'                        => array(
+			'auth_control_enabled'                         => array(
 				'default_value'     => 'wp_auth',
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_limit_enabled'                 => array(
+			'auth_attempts_limit_enabled'                  => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_limit'                         => array(
+			'auth_attempts_limit'                          => array(
 				'default_value'     => 5,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_limit_window'                  => array(
+			'auth_attempts_limit_window'                   => array(
 				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_violation_block_time'          => array(
+			'auth_attempts_violation_block_time'           => array(
 				'default_value'     => 3600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_attempts_blacklist_after_violations'    => array(
+			'auth_attempts_blacklist_after_violations'     => array(
 				'default_value'     => 3,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'authentication',
 			),
 
-			'auth_methods'                                => array(
+			'auth_methods'                                 => array(
 				'default_value'     => 'jwt',
 				'ui'                => 'select',
 				'choices'           => array( 'wp_auth', 'jwt' ),
@@ -92,7 +92,7 @@ final class SettingsConfig {
 				'group'             => 'authentication',
 			),
 
-			'auth_jwt_algorithm'                          => array(
+			'auth_jwt_algorithm'                           => array(
 				'default_value'     => 'RS256',
 				'ui'                => 'select',
 				'choices'           => array( 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256' ),
@@ -102,7 +102,7 @@ final class SettingsConfig {
 				'sensitivity'       => 'medium',
 			),
 
-			'auth_jwt_public_key'                         => array(
+			'auth_jwt_public_key'                          => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_textarea_field',
@@ -110,7 +110,7 @@ final class SettingsConfig {
 				'sensitivity'       => 'high',
 			),
 
-			'auth_jwt_audience'                           => array(
+			'auth_jwt_audience'                            => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
@@ -118,7 +118,7 @@ final class SettingsConfig {
 				'sensitivity'       => 'medium',
 			),
 
-			'auth_jwt_issuer'                             => array(
+			'auth_jwt_issuer'                              => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
@@ -126,7 +126,7 @@ final class SettingsConfig {
 				'sensitivity'       => 'medium',
 			),
 
-			'auth_users'                                  => array(
+			'auth_users'                                   => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_users' ),
@@ -134,7 +134,7 @@ final class SettingsConfig {
 				'sensitivity'       => 'medium',
 			),
 
-			'auth_authorized_roles'                       => array(
+			'auth_authorized_roles'                        => array(
 				'default_value'     => array( 'administrator' ),
 				'type'              => 'array',
 				'sanitize_callback' => array( RestAuthorizedUserRepository::class, 'sanitize_authorized_roles' ),
@@ -142,105 +142,105 @@ final class SettingsConfig {
 				'sensitivity'       => 'medium',
 			),
 
-			'rate_limit_enabled'                          => array(
+			'rate_limit_enabled'                           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_max'                              => array(
+			'rate_limit_max'                               => array(
 				'default_value'     => 500,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_time'                             => array(
+			'rate_limit_time'                              => array(
 				'default_value'     => 60,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_blacklist_duration'               => array(
+			'rate_limit_blacklist_duration'                => array(
 				'default_value'     => 600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_blacklist_duration_unit'          => array(
+			'rate_limit_blacklist_duration_unit'           => array(
 				'default_value'     => 600,
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'seconds', 'minutes', 'hours', 'days' ), true ) ? $v : 'minutes',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_blacklist_threshold'              => array(
+			'rate_limit_blacklist_threshold'               => array(
 				'default_value'     => 5,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_violation_window'                 => array(
+			'rate_limit_violation_window'                  => array(
 				'default_value'     => 600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'firewall',
 			),
 
-			'rate_limit_countries'                        => array(
+			'rate_limit_countries'                         => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( GeoIpApi::class, 'sanitize_country_codes' ),
 				'group'             => 'firewall',
 			),
 
-			'routes_policy_enabled'                       => array(
+			'routes_policy_enabled'                        => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'routes',
 			),
 
-			'routes_policy_auth_enforce'                  => array(
+			'routes_policy_auth_enforce'                   => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'authentication',
 			),
 
-			'routes_policy_tree'                          => array(
+			'routes_policy_tree'                           => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( RoutesTreeRepository::class, 'sanitize_routes_policy_tree' ),
 				'group'             => 'routes',
 			),
 
-			'routes_policy_default_hidden_routes'         => array(
+			'routes_policy_default_hidden_routes'          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'routes',
 			),
 
-			'routes_policy_hidden_methods'                => array(
+			'routes_policy_hidden_methods'                 => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( RoutesTreeRepository::class, 'sanitize_hidden_methods' ),
 				'group'             => 'routes',
 			),
 
-			'routes_policy_hidden_wp_objects'             => array(
+			'routes_policy_hidden_wp_objects'              => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( RoutesPolicyRepository::class, 'sanitize_hidden_wp_objects' ),
 				'group'             => 'routes',
 			),
 
-			'routes_policy_hidden_routes_redirect_option' => array(
+			'routes_policy_hidden_routes_redirect_option'  => array(
 				'default_value'     => '404',
 				'options'           => array( '404', '403', '401', 'front', 'login', 'custom' ),
 				'type'              => 'string',
@@ -255,49 +255,49 @@ final class SettingsConfig {
 				'group'             => 'routes',
 			),
 
-			'login_attempts_limit_enabled'                => array(
+			'login_attempts_limit_enabled'                 => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_attempts_limit'                        => array(
+			'login_attempts_limit'                         => array(
 				'default_value'     => 5,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_attempts_limit_window'                 => array(
+			'login_attempts_limit_window'                  => array(
 				'default_value'     => 300,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_attempts_violation_block_time'         => array(
+			'login_attempts_violation_block_time'          => array(
 				'default_value'     => 3600,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_attempts_blacklist_after_violations'   => array(
+			'login_attempts_blacklist_after_violations'    => array(
 				'default_value'     => 3,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_recaptcha_enabled'                     => array(
+			'login_recaptcha_enabled'                      => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_recaptcha_site_key'                    => array(
+			'login_recaptcha_site_key'                     => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
@@ -305,7 +305,7 @@ final class SettingsConfig {
 				'sensitivity'       => 'high',
 			),
 
-			'login_recaptcha_secret_key'                  => array(
+			'login_recaptcha_secret_key'                   => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
@@ -313,35 +313,35 @@ final class SettingsConfig {
 				'sensitivity'       => 'high',
 			),
 
-			'login_recaptcha_threshold'                   => array(
+			'login_recaptcha_threshold'                    => array(
 				'default_value'     => 0.5,
 				'type'              => 'float',
 				'sanitize_callback' => array( Recaptcha::class, 'sanitize_recaptcha_threshold' ),
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabled'                          => array(
+			'login_totp_enabled'                           => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_enabled_timestamp'                => array(
+			'login_totp_enabled_timestamp'                 => array(
 				'default_value'     => 0,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_issuer'                           => array(
+			'login_totp_issuer'                            => array(
 				'default_value'     => sanitize_text_field( get_bloginfo( 'sitename' ) ),
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_policy'                           => array(
+			'login_totp_policy'                            => array(
 				'default_value'     => 'grace',
 				'options'           => array( 'grace', 'free', 'mandatory' ),
 				'type'              => 'string',
@@ -349,21 +349,21 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'login_totp_grace_period'                     => array(
+			'login_totp_grace_period'                      => array(
 				'default_value'     => 7,
 				'type'              => 'integer',
 				'sanitize_callback' => array( TOTPRepository::class, 'sanitize_totp_grace_period' ),
 				'group'             => 'login-hardening',
 			),
 
-			'cookie_hardening_samesite_enabled'           => array(
+			'cookie_hardening_samesite_enabled'            => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'cookie_hardening_samesite_mode'              => array(
+			'cookie_hardening_samesite_mode'               => array(
 				'options'           => array(
 					'Lax',
 					'Strict',
@@ -374,21 +374,21 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'cookie_hardening_max_concurrent_sessions'    => array(
+			'cookie_hardening_max_concurrent_sessions'     => array(
 				'default_value'     => 0,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'login-hardening',
 			),
 
-			'salts_rotation_enabled'                      => array(
+			'salts_rotation_enabled'                       => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'login-hardening',
 			),
 
-			'salts_rotation_recurrence'                   => array(
+			'salts_rotation_recurrence'                    => array(
 				'default_value'     => 'weekly',
 				'type'              => 'string',
 				'options'           => array( 'daily', 'weekly', 'monthly' ),
@@ -396,21 +396,21 @@ final class SettingsConfig {
 				'group'             => 'login-hardening',
 			),
 
-			'salts_rotation_time'                         => array(
+			'salts_rotation_time'                          => array(
 				'default_value'     => '03:00',
 				'type'              => 'string',
 				'sanitize_callback' => array( SaltsRotation::class, 'sanitize_time' ),
 				'group'             => 'login-hardening',
 			),
 
-			'redirect_front_enabled'                      => array(
+			'redirect_front_enabled'                       => array(
 				'default_value'     => '',
 				'type'              => false,
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'redirect_front_options'                      => array(
+			'redirect_front_options'                       => array(
 				'default_value'     => '',
 				'options'           => array( '404', '403', '401', 'front', 'login', 'custom' ),
 				'type'              => 'string',
@@ -418,84 +418,84 @@ final class SettingsConfig {
 				'group'             => 'wordpress',
 			),
 
-			'redirect_front_user_url'                     => array(
+			'redirect_front_user_url'                      => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_url',
 				'group'             => 'wordpress',
 			),
 
-			'disable_xmlrpc'                              => array(
+			'disable_xmlrpc'                               => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'disable_comments'                            => array(
+			'disable_comments'                             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'disable_pingbacks'                           => array(
+			'disable_pingbacks'                            => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'disable_atom_rss'                            => array(
+			'disable_atom_rss'                             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'disable_sitemap'                             => array(
+			'disable_sitemap'                              => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'disable_emoji_scripts'                       => array(
+			'disable_emoji_scripts'                        => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'disable_theme_editor'                        => array(
+			'disable_theme_editor'                         => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'harden_wpconfig_file_permissions'            => array(
+			'harden_wpconfig_file_permissions'             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'harden_uploads_dir_permissions'              => array(
+			'harden_uploads_dir_permissions'               => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'http_headers_secure'                         => array(
+			'http_headers_secure'                          => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'http_headers_secure_options'                 => array(
+			'http_headers_secure_options'                  => array(
 				'default_value'     => false,
 				'type'              => 'array',
 				'sanitize_callback' => array( HttpHeaders::class, 'sanitize_secure_headers' ),
@@ -569,14 +569,14 @@ final class SettingsConfig {
 				'group'             => 'wordpress',
 			),
 
-			'http_headers_caching'                        => array(
+			'http_headers_caching'                         => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'http_headers_caching_options'                => array(
+			'http_headers_caching_options'                 => array(
 				'default_value'     => false,
 				'type'              => 'array',
 				'sanitize_callback' => array( HttpHeaders::class, 'sanitize_caching_headers' ),
@@ -629,179 +629,216 @@ final class SettingsConfig {
 				'group'             => 'wordpress',
 			),
 
-			'http_headers_compression'                    => array(
+			'http_headers_compression'                     => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'wordpress',
 			),
 
-			'logs_enabled'                                => array(
+			'logs_enabled'                                 => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'logs',
 			),
-			'logs_keep_severities'                        => array(
+			'logs_keep_severities'                         => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( LogsRepository::class, 'sanitize_severities' ),
 				'group'             => 'logs',
 			),
-			'logs_keep_events'                            => array(
+			'logs_keep_events'                             => array(
 				'default_value'     => array(),
 				'type'              => 'array',
 				'sanitize_callback' => array( LogsRepository::class, 'sanitize_events' ),
 				'group'             => 'logs',
 			),
-			'logs_rotation_time'                          => array(
+			'logs_rotation_time'                           => array(
 				'default_value'     => 90,
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'logs',
 			),
 
-			'notifications_digest_enabled'                        => array(
+			'notifications_digest_enabled'                 => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'notifications',
 			),
-			'notifications_digest_recurrence'                   => array(
+			'notifications_digest_recurrence'              => array(
 				'default_value'     => 'daily',
 				'type'              => 'string',
 				'options'           => array( 'daily', 'weekly', 'monthly' ),
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'daily', 'weekly', 'monthly' ), true ) ? $v : 'daily',
 				'group'             => 'notifications',
 			),
-			'notifications_digest_time'                         => array(
+			'notifications_digest_time'                    => array(
 				'default_value'     => '17:00',
 				'type'              => 'string',
 				'sanitize_callback' => array( NotificationsRepository::class, 'sanitize_time' ),
 				'group'             => 'notifications',
 			),
-			'notifications_digest_to'                         => array(
+			'notifications_digest_to'                      => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_email',
 				'group'             => 'notifications',
 			),
-			'notifications_digest_cc'                         => array(
-				'default_value'     => [],
+			'notifications_digest_cc'                      => array(
+				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
+				'sanitize_callback' => array( NotificationsRepository::class, 'sanitize_emails' ),
 				'group'             => 'notifications',
 			),
-			'notifications_digest_cci'                         => array(
-				'default_value'     => [],
+			'notifications_digest_cci'                     => array(
+				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
+				'sanitize_callback' => array( NotificationsRepository::class, 'sanitize_emails' ),
 				'group'             => 'notifications',
 			),
-			'notifications_digest_subject'                         => array(
+			'notifications_digest_subject'                 => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'group'             => 'notifications',
 			),
-			'notifications_digest_body'                         => array(
+			'notifications_digest_body'                    => array(
 				'default_value'     => '',
 				'type'              => 'string',
 				'sanitize_callback' => 'wp_kses_post',
 				'group'             => 'notifications',
 			),
-			'notifications_digest_format'                         => array(
+			'notifications_digest_format'                  => array(
 				'default_value'     => '',
 				'type'              => 'string',
-				'sanitize_callback' => 'wp_kses_post',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'html', 'text' ), true ) ? $v : 'text',
 				'group'             => 'notifications',
 			),
-			'notifications_instant_to'                         => array(
+			'notifications_digest_attachment_logs'         => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'notifications',
+			),
+			'notifications_digest_attachment_logs_format'  => array(
 				'default_value'     => '',
 				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_email',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
 				'group'             => 'notifications',
 			),
-			'notifications_instant_cc'                         => array(
-				'default_value'     => [],
-				'type'              => 'array',
-				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
-				'group'             => 'notifications',
-			),
-			'notifications_instant_cci'                         => array(
-				'default_value'     => [],
-				'type'              => 'array',
-				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
-				'group'             => 'notifications',
-			),
-			'notifications_instant_subject'                         => array(
-				'default_value'     => '',
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_text_field',
-				'group'             => 'notifications',
-			),
-			'notifications_instant_body'                         => array(
-				'default_value'     => '',
-				'type'              => 'string',
-				'sanitize_callback' => 'wp_kses_post',
-				'group'             => 'notifications',
-			),
-			'notifications_instant_format'                         => array(
-				'default_value'     => '',
-				'type'              => 'string',
-				'sanitize_callback' => 'wp_kses_post',
+			'notifications_digest_inline_logs'             => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'notifications',
 			),
 
-			'config_delete_data_on_uninstall'             => array(
+			'notifications_instant_to'                     => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_email',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_cc'                     => array(
+				'default_value'     => array(),
+				'type'              => 'array',
+				'sanitize_callback' => array( NotificationsRepository::class, 'sanitize_emails' ),
+				'group'             => 'notifications',
+			),
+			'notifications_instant_cci'                    => array(
+				'default_value'     => array(),
+				'type'              => 'array',
+				'sanitize_callback' => array( NotificationsRepository::class, 'sanitize_emails' ),
+				'group'             => 'notifications',
+			),
+			'notifications_instant_subject'                => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_body'                   => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'wp_kses_post',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_format'                 => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'html', 'text' ), true ) ? $v : 'text',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_attachment_logs'        => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_attachment_logs_format' => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_inline_logs'            => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'notifications',
+			),
+
+			'config_delete_data_on_uninstall'              => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_sensitive_data'        => array(
+			'config_export_include_sensitive_data'         => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_ip_entries'            => array(
+			'config_export_include_ip_entries'             => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_routes_tree'           => array(
+			'config_export_include_routes_tree'            => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_include_log_entries'           => array(
+			'config_export_include_log_entries'            => array(
 				'default_value'     => false,
 				'type'              => 'boolean',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'group'             => 'config',
 			),
-			'config_export_ip_entries_format'             => array(
+			'config_export_ip_entries_format'              => array(
 				'default_value'     => 'csv',
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
 				'group'             => 'config',
 			),
-			'config_export_log_entries_format'            => array(
+			'config_export_log_entries_format'             => array(
 				'default_value'     => 'csv',
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'json', 'csv' ), true ) ? $v : 'csv',
 				'group'             => 'config',
 			),
-			'config_import_ip_entries_merge'              => array(
+			'config_import_ip_entries_merge'               => array(
 				'default_value'     => false,
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'replace', 'update' ), true ) ? $v : 'update',
 				'group'             => 'config',
 			),
-			'config_import_log_entries_merge'             => array(
+			'config_import_log_entries_merge'              => array(
 				'default_value'     => false,
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'replace', 'update' ), true ) ? $v : 'update',
