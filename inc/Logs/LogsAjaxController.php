@@ -30,18 +30,18 @@ class LogsAjaxController {
 	}
 
 	public function ajax_get_logs_config(): void {
-        if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-            wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-        }
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		}
 
-        wp_send_json_success(
-            array(
-                'groups' => LogsRepository::group_events_config(),
-                'events' => LogsRepository::events_config(),
-            ),
-            200
-        );
-    }
+		wp_send_json_success(
+			array(
+				'groups' => LogsRepository::group_events_config(),
+				'events' => LogsRepository::events_config(),
+			),
+			200
+		);
+	}
 
 	public function ajax_get_logs_settings(): void {
 
