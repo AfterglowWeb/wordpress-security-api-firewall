@@ -14,6 +14,129 @@ final class LogsRepository {
 		return $wpdb->prefix . 'bromate_security_api_firewall_logs';
 	}
 
+	/*
+	{ value: 'ip_country_blocked', label: __('IP Country Blocked', 'bromate-security-api-firewall'), groupLabel: __('IP Management', 'bromate-security-api-firewall') },
+  { value: 'ip_rate_limited', label: __('IP Temporarly Blocked', 'bromate-security-api-firewall') },
+  { value: 'ip_blacklisted', label: __('IP Blacklisted', 'bromate-security-api-firewall') },
+  { value: 'ip_country_blocked', label: __('IP Country Blocked', 'bromate-security-api-firewall') },
+  { value: 'ip_whitelisted_bypass', label: __('IP Whitelisted Bypass', 'bromate-security-api-firewall') },
+  { value: 'ip_entry_created', label: __('IP Entry Manually Created', 'bromate-security-api-firewall') },
+  { value: 'ip_entry_deleted', label: __('IP Entry Manually Deleted', 'bromate-security-api-firewall') },
+  
+  // Authentication Events
+  { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall'), groupLabel: __('REST API Auth.', 'bromate-security-api-firewall') },
+  { value: 'auth_access_whitelist', label: __('Whitelisted IP Auth Access', 'bromate-security-api-firewall') },
+  { value: 'auth_success', label: __('Auth Success', 'bromate-security-api-firewall') },
+  { value: 'auth_failed', label: __('Auth Failed', 'bromate-security-api-firewall') },
+  { value: 'auth_revoked', label: __('Auth Revoked', 'bromate-security-api-firewall') },
+  
+  // Admin Events
+  { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall'), groupLabel: __('WordPress Login', 'bromate-security-api-firewall') },
+  { value: 'admin_login_access_whitelist', label: __('Whitelisted IP Login Access', 'bromate-security-api-firewall') },
+  { value: 'admin_login_success', label: __('Login Success', 'bromate-security-api-firewall') },
+  { value: 'admin_login_failed', label: __('Login Failed', 'bromate-security-api-firewall') },
+  { value: 'admin_login_attempts_limit', label: __('Max Login Attempts Reached', 'bromate-security-api-firewall') },
+  { value: 'admin_login_banned', label: __('Login Banned', 'bromate-security-api-firewall') },
+
+  // Cron Events
+  { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall'), groupLabel: __('WordPress Cron Events', 'bromate-security-api-firewall') },
+  { value: 'ip_entries_delete_expired', label: __('Expired IP Entries Cleaned', 'bromate-security-api-firewall') },
+  { value: 'log_entries_delete_expired', label: __('Expired Log Entries Cleaned', 'bromate-security-api-firewall') },
+
+  // Migrate Settings
+  { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall'), groupLabel: __('Migrate Data', 'bromate-security-api-firewall') },
+  { value: 'import_fail', label: __('Data Import Failed', 'bromate-security-api-firewall') },
+  { value: 'export_fail', label: __('Data Export Failed', 'bromate-security-api-firewall') },
+  { value: 'import_success', label: __('Data Import Failed', 'bromate-security-api-firewall') },
+  { value: 'export_success', label: __('Data Export Failed', 'bromate-security-api-firewall') },
+
+  // System Events
+  { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall'), groupLabel: __('System', 'bromate-security-api-firewall') },
+  { value: 'emergency_token_used', label: __('Emergency Token Used', 'bromate-security-api-firewall') },
+  { value: 'plugin_settings_changed', label: __('Plugin Settings Changed', 'bromate-security-api-firewall') },
+*/
+
+	public static function events_config(): array {
+		return array(
+			array(
+				'key' => 'ip_country_blocked',
+				'severity' => 'warning',
+				'label' => esc_html__('IP Country Blocked', 'bromate-security-api-firewall'),
+				'group' => 'ip_management',
+			),
+			'ip_rate_limited',
+			'ip_blacklisted',
+			'ip_whitelisted_bypass',
+			'ip_entry_created',
+			'ip_entry_deleted',
+			'ip_entries_delete_expired',
+			'auth_access_whitelist',
+			'auth_success',
+			'auth_failed',
+			'auth_revoked',
+			'auth_attempts_limit',
+			'admin_login_access_whitelist',
+			'admin_login_success',
+			'admin_login_failed',
+			'admin_login_attempts_limit',
+			'admin_login_banned',
+			'emergency_token_used',
+			'plugin_settings_changed',
+			'log_entries_delete_expired',
+			'import_fail',
+			'export_fail',
+			'import_success',
+			'export_success',
+		);
+	}
+
+	public static function group_events_config(): array {
+		return array(
+			array(
+				'key' => 'ip_management',
+				'label' => esc_html__('IP Management', 'bromate-security-api-firewall'),
+			),
+		);
+	}
+
+	public static function sanitize_event( string $raw_value ): string {
+
+		$value   = sanitize_key( $raw_value );
+		$allowed = array(
+			'ip_country_blocked',
+			'ip_rate_limited',
+			'ip_blacklisted',
+			'ip_whitelisted_bypass',
+			'ip_entry_created',
+			'ip_entry_deleted',
+			'ip_entries_delete_expired',
+			'auth_access_whitelist',
+			'auth_success',
+			'auth_failed',
+			'auth_revoked',
+			'auth_attempts_limit',
+			'admin_login_access_whitelist',
+			'admin_login_success',
+			'admin_login_failed',
+			'admin_login_attempts_limit',
+			'admin_login_banned',
+			'emergency_token_used',
+			'plugin_settings_changed',
+			'log_entries_delete_expired',
+			'import_fail',
+			'export_fail',
+			'import_success',
+			'export_success',
+		);
+		return in_array( $value, $allowed, true ) ? $value : 'unknown';
+	}
+
+	public static function sanitize_severity( string $raw_value ): string {
+		$value   = sanitize_key( $raw_value );
+		$allowed = array( 'info', 'warning', 'error' );
+		return in_array( $value, $allowed, true ) ? $value : 'info';
+	}
+
 
 	private static function log_in_db( $id ): ?array {
 		global $wpdb;
@@ -322,44 +445,6 @@ final class LogsRepository {
 		);
 
 		return array_unique( array_filter( $events ) );
-	}
-
-	public static function sanitize_event( string $raw_value ): string {
-
-		$value   = sanitize_key( $raw_value );
-		$allowed = array(
-			'ip_country_blocked',
-			'ip_rate_limited',
-			'ip_blacklisted',
-			'ip_whitelisted_bypass',
-			'ip_entry_created',
-			'ip_entry_deleted',
-			'ip_entries_delete_expired',
-			'auth_access_whitelist',
-			'auth_success',
-			'auth_failed',
-			'auth_revoked',
-			'auth_attempts_limit',
-			'admin_login_access_whitelist',
-			'admin_login_success',
-			'admin_login_failed',
-			'admin_login_attempts_limit',
-			'admin_login_banned',
-			'emergency_token_used',
-			'plugin_settings_changed',
-			'log_entries_delete_expired',
-			'import_fail',
-			'export_fail',
-			'import_success',
-			'export_success',
-		);
-		return in_array( $value, $allowed, true ) ? $value : 'unknown';
-	}
-
-	public static function sanitize_severity( string $raw_value ): string {
-		$value   = sanitize_key( $raw_value );
-		$allowed = array( 'info', 'warning', 'error' );
-		return in_array( $value, $allowed, true ) ? $value : 'info';
 	}
 
 	private static function normalize( array $row ): array {
