@@ -2,7 +2,6 @@ import { __ } from '@wordpress/i18n';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
-import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';

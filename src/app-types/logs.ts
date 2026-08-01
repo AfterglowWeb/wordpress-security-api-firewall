@@ -10,6 +10,7 @@ export type LogEvent =
   | 'auth_access_whitelist'
   | 'auth_success'
   | 'auth_failed'
+  | 'auth_user_added'
   | 'auth_user_removed'
   | 'auth_attempts_limit'
   | 'admin_login_access_whitelist'

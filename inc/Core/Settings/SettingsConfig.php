@@ -1,6 +1,7 @@
 <?php namespace Bromate\SecurityApiFirewall\Core\Settings;
 
 use Bromate\SecurityApiFirewall\Logs\LogsRepository;
+use Bromate\SecurityApiFirewall\Logs\NotificationsRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthorizedUserRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\Recaptcha;
@@ -658,6 +659,98 @@ final class SettingsConfig {
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 				'group'             => 'logs',
+			),
+
+			'notifications_digest_enabled'                        => array(
+				'default_value'     => false,
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'group'             => 'notifications',
+			),
+			'notifications_digest_recurrence'                   => array(
+				'default_value'     => 'daily',
+				'type'              => 'string',
+				'options'           => array( 'daily', 'weekly', 'monthly' ),
+				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'daily', 'weekly', 'monthly' ), true ) ? $v : 'daily',
+				'group'             => 'notifications',
+			),
+			'notifications_digest_time'                         => array(
+				'default_value'     => '17:00',
+				'type'              => 'string',
+				'sanitize_callback' => array( NotificationsRepository::class, 'sanitize_time' ),
+				'group'             => 'notifications',
+			),
+			'notifications_digest_to'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_email',
+				'group'             => 'notifications',
+			),
+			'notifications_digest_cc'                         => array(
+				'default_value'     => [],
+				'type'              => 'array',
+				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
+				'group'             => 'notifications',
+			),
+			'notifications_digest_cci'                         => array(
+				'default_value'     => [],
+				'type'              => 'array',
+				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
+				'group'             => 'notifications',
+			),
+			'notifications_digest_subject'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'group'             => 'notifications',
+			),
+			'notifications_digest_body'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'wp_kses_post',
+				'group'             => 'notifications',
+			),
+			'notifications_digest_format'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'wp_kses_post',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_to'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_email',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_cc'                         => array(
+				'default_value'     => [],
+				'type'              => 'array',
+				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
+				'group'             => 'notifications',
+			),
+			'notifications_instant_cci'                         => array(
+				'default_value'     => [],
+				'type'              => 'array',
+				'sanitize_callback' =>  array( NotificationsRepository::class, 'sanitize_emails' ),
+				'group'             => 'notifications',
+			),
+			'notifications_instant_subject'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_body'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'wp_kses_post',
+				'group'             => 'notifications',
+			),
+			'notifications_instant_format'                         => array(
+				'default_value'     => '',
+				'type'              => 'string',
+				'sanitize_callback' => 'wp_kses_post',
+				'group'             => 'notifications',
 			),
 
 			'config_delete_data_on_uninstall'             => array(
