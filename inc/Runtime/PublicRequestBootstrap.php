@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use Bromate\SecurityApiFirewall\Runtime\RateLimiter;
+use Bromate\SecurityApiFirewall\Runtime\RateLimiterBucket;
 use Bromate\SecurityApiFirewall\Runtime\IpAccessControl;
 
 final class PublicRequestBootstrap {
@@ -29,7 +29,7 @@ final class PublicRequestBootstrap {
 			self::deny( $blacklist_result );
 		}
 
-		$limit_result = RateLimiter::inspect();
+		$limit_result = RateLimiterBucket::inspect();
 
 		if ( is_wp_error( $limit_result ) ) {
 			self::deny( $limit_result );

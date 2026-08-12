@@ -18,5 +18,5 @@ An incoming request is checked against, in order:
 4. Whether it has exceeded the automatic request-rate threshold (auto-blacklisting).
 
 ::: warning
-The exact evaluation order and the general request rate limiter (as opposed to the *login* rate limiter, covered in [Login Hardening](../login-hardening/)) haven't been fully documented here yet — this needs a pass against `Runtime/RateLimiter.php` to confirm the precise logic and available settings.
+The exact evaluation order and the general request rate limiter (as opposed to the *login* rate limiter, covered in [Login Hardening](../login-hardening/)) haven't been fully documented here yet — this needs a pass against `Runtime/RateLimiterBucket.php` to confirm the precise logic and available settings.
 :::
