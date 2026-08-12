@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 
 use Bromate\SecurityApiFirewall\Runtime\IpAccessControl;
-use Bromate\SecurityApiFirewall\Runtime\RateLimiter;
+use Bromate\SecurityApiFirewall\Runtime\RateLimiterBucket;
 
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationRuntime;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesPolicyRepository;
@@ -152,7 +152,7 @@ final class RestRequestBootstrap {
 			return $blacklist_result;
 		}
 
-		$limit_result = RateLimiter::inspect( 'rest_api_rate_limit' );
+		$limit_result = RateLimiterBucket::inspect( 'rest_api_rate_limit' );
 
 		if ( is_wp_error( $limit_result ) ) {
 			return $limit_result;
