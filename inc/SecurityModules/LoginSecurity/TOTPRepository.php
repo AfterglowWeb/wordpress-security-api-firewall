@@ -1,4 +1,5 @@
-<?php namespace Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity;
+<?php
+namespace Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -7,11 +8,10 @@ use Exception;
 
 final class TOTPRepository {
 
-
 	private const TOTP_DIGITS       = 6;
+	private const TOTP_PERIOD       = 30; // Corrected: TOTP period should be 30 seconds
 	private const TOKEN_EXPIRY_DAYS = 30;
 	private const TOTP_ALGORITHM    = 'SHA1';
-
 
 	private const PENDING_META_KEY       = '_bromate_security_api_firewall_totp_secret_pending';
 	private const PENDING_TIME_META_KEY  = '_bromate_security_api_firewall_totp_secret_pending_time';
@@ -46,7 +46,6 @@ final class TOTPRepository {
 	}
 
 	public function generate_totp_secret( int $user_id, string $issuer, string $account_name ): array {
-
 		$existing_secret = get_user_meta( $user_id, self::SECRET_META_KEY, true );
 		if ( $existing_secret ) {
 			throw new Exception( '2FA is already enabled for this user' );
@@ -55,7 +54,7 @@ final class TOTPRepository {
 		$this->cleanup_expired_pending_secrets( $user_id );
 
 		$digits    = self::TOTP_DIGITS;
-		$period    = self::TOKEN_EXPIRY_DAYS;
+		$period    = self::TOTP_PERIOD; // Fixed: Now using correct 30-second period
 		$algorithm = self::TOTP_ALGORITHM;
 
 		$secret = $this->google2fa->generateSecretKey( 16 );
@@ -111,6 +110,7 @@ final class TOTPRepository {
 				update_user_meta( $user_id, self::SECRET_META_KEY, $secret );
 				update_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
 				update_user_meta( $user_id, self::ENABLED_TIME_META_KEY, time() );
+				update_user_meta( $user_id, self::ENABLED_META_KEY, true ); // Also set enabled
 
 				$this->clear_pending_secret( $user_id );
 
@@ -141,7 +141,8 @@ final class TOTPRepository {
 		}
 
 		try {
-			return $this->google2fa->verifyKey( $secret, $code, 1 );
+			// Use 2 for clock drift tolerance (1 before, current, 1 after)
+			return $this->google2fa->verifyKey( $secret, $code, 2 );
 		} catch ( Exception $e ) {
 			return false;
 		}
@@ -212,6 +213,10 @@ final class TOTPRepository {
 		update_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, true );
 	}
 
+	public function clear_session_verified( int $user_id ): void {
+		delete_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY );
+	}
+
 	public function get_reminder_dismissed_at( int $user_id ): int {
 		return (int) get_user_meta( $user_id, self::REMINDER_DISMISSED_META_KEY, true );
 	}
@@ -235,6 +240,16 @@ final class TOTPRepository {
 	}
 
 	public function store_trusted_token( int $user_id, string $token, array $token_data ): void {
+		$defaults = array(
+			'expires'    => time() + ( self::TOKEN_EXPIRY_DAYS * DAY_IN_SECONDS ),
+			'user_agent' => '',
+			'created'    => time(),
+			'ip'         => '',
+			'last_used'  => time(),
+		);
+		
+		$token_data = wp_parse_args( $token_data, $defaults );
+		
 		$tokens           = $this->get_trusted_tokens( $user_id );
 		$tokens[ $token ] = $token_data;
 
@@ -349,7 +364,6 @@ final class TOTPRepository {
 	}
 
 	public static function revoke_all_users_totp_enrollment(): void {
-
 		delete_metadata( 'user', 0, self::USER_SETTINGS_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::PENDING_META_KEY, '', true );
 		delete_metadata( 'user', 0, self::PENDING_TIME_META_KEY, '', true );

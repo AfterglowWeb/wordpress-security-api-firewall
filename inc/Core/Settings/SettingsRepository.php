@@ -7,7 +7,14 @@ class SettingsRepository {
 	private function __construct() {}
 
 	public static function read_options(): array {
-		return self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
+		$thread_options = [];
+		if( ! function_exists( 'get_option' ) ) {
+			return $thread_options;
+		}
+		if( empty( $thread_options ) ) {
+			$thread_options = self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
+		}
+		return $thread_options;
 	}
 
 	public static function delete_all_options(): void {
@@ -16,7 +23,7 @@ class SettingsRepository {
 
 	public static function read_option( string $option_key ) {
 		$option_key = sanitize_key( $option_key );
-		$options    = self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
+		$options    = self::read_options();
 		return isset( $options[ $option_key ] ) ? $options[ $option_key ] : false;
 	}
 
