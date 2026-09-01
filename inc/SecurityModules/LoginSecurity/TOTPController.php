@@ -1,17 +1,18 @@
-<?php namespace Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity;
+<?php
+namespace Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity;
 
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Utils\FileUtils;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 
 final class TOTPController {
 
 	public function __construct() {}
 
 	public static function register() {
-
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		add_action( 'show_user_profile', array( self::class, 'render_profile_section' ) );
 		add_action( 'edit_user_profile', array( self::class, 'render_profile_section' ) );
@@ -71,6 +72,13 @@ final class TOTPController {
 			wp_send_json_error( array( 'message' => 'Invalid user or permission denied' ), 401 );
 			return;
 		}
+
+		// Check if user is already enrolled
+		if ( TOTPRepository::get_instance()->is_user_enrolled( $user_id ) ) {
+			wp_send_json_error( array( 'message' => '2FA is already enabled for this user' ), 400 );
+			return;
+		}
+
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in self::validate_ajax_nonce()
 		$issuer       = sanitize_text_field( wp_unslash( $_POST['issuer'] ) );
 		$account_name = sanitize_text_field( wp_unslash( $_POST['account_name'] ) );
@@ -87,20 +95,28 @@ final class TOTPController {
 	public static function ajax_verify_login_code(): void {
 		if ( ! self::validate_ajax_nonce() ) {
 			wp_send_json_error( array( 'message' => 'Invalid security token' ), 403 );
+			return;
 		}
 
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
 			wp_send_json_error( array( 'message' => 'User not logged in' ), 401 );
+			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::validate_ajax_nonce()
 		if ( ! isset( $_POST['code'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing verification code' ), 400 );
+			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::validate_ajax_nonce()
 		$code = preg_replace( '/[^0-9]/', '', sanitize_text_field( wp_unslash( $_POST['code'] ) ) );
+
+		if ( strlen( $code ) !== 6 && strlen( $code ) !== 8 ) {
+			wp_send_json_error( array( 'message' => 'Invalid code format' ), 400 );
+			return;
+		}
 
 		$valid = TOTPRepository::get_instance()->verify_totp_code_for_login( $user_id, $code );
 
@@ -110,21 +126,15 @@ final class TOTPController {
 
 		if ( ! $valid ) {
 			wp_send_json_error( array( 'message' => 'Invalid verification code' ), 400 );
+			return;
 		}
 
 		TOTPRepository::get_instance()->mark_session_verified( $user_id );
 
+		// Fixed: Use consistent trusted token implementation
 		$settings = TOTPRepository::get_instance()->get_user_settings( $user_id );
 		if ( is_array( $settings ) && ! empty( $settings['remember_device'] ) ) {
-			setcookie(
-				'bromate_totp_trusted',
-				wp_hash( $user_id . ':' . wp_salt() ),
-				time() + 30 * DAY_IN_SECONDS,
-				COOKIEPATH,
-				COOKIE_DOMAIN,
-				is_ssl(),
-				true
-			);
+			self::set_trusted_cookie( $user_id );
 		}
 
 		wp_send_json_success( array( 'verified' => true ) );
@@ -159,6 +169,12 @@ final class TOTPController {
 
 		try {
 			$result = TOTPRepository::get_instance()->verify_totp_enrollment( $user_id, $code );
+			
+			// If enrollment successful, set enabled flag
+			if ( isset( $result['verified'] ) && $result['verified'] ) {
+				TOTPRepository::get_instance()->set_login_enabled( $user_id, true );
+			}
+			
 			wp_send_json_success( $result );
 		} catch ( \Exception $e ) {
 			wp_send_json_error( array( 'message' => esc_attr( $e->getMessage() ) ), 500 );
@@ -177,9 +193,17 @@ final class TOTPController {
 			return;
 		}
 
+		// Add capability check
+		if ( ! current_user_can( 'edit_user', $user_id ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Permission denied', 'bromate-security-api-firewall' ) ), 403 );
+			return;
+		}
+
 		try {
 			$result = TOTPRepository::get_instance()->revoke_user_totp_enrollment( $user_id );
 			if ( $result ) {
+				// Clear trusted cookies
+				self::clear_trusted_cookie();
 				wp_send_json_success( array( 'message' => esc_html__( '2FA disabled successfully', 'bromate-security-api-firewall' ) ) );
 			} else {
 				wp_send_json_error( array( 'message' => esc_html__( 'Failed to disable 2FA', 'bromate-security-api-firewall' ) ), 500 );
@@ -239,6 +263,63 @@ final class TOTPController {
 			return false;
 		}
 		return wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'bromate_totp_enrollment' );
+	}
+
+	private static function set_trusted_cookie( int $user_id ): void {
+		$token = self::generate_trusted_token();
+		$token_data = array(
+			'expires'    => time() + ( 30 * DAY_IN_SECONDS ),
+			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+			'created'    => time(),
+			'ip'         => IpUtils::get_client_ip(),
+			'last_used'  => time(),
+		);
+
+		TOTPRepository::get_instance()->store_trusted_token( $user_id, $token, $token_data );
+
+		setcookie(
+			'bromate_totp_trusted',
+			$token,
+			time() + 30 * DAY_IN_SECONDS,
+			COOKIEPATH,
+			COOKIE_DOMAIN,
+			is_ssl(),
+			true
+		);
+	}
+
+	private static function clear_trusted_cookie(): void {
+		if ( isset( $_COOKIE['bromate_totp_trusted'] ) ) {
+			$token = sanitize_text_field( wp_unslash( $_COOKIE['bromate_totp_trusted'] ) );
+			
+			$user_id = get_current_user_id();
+			if ( $user_id ) {
+				$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
+				if ( is_array( $tokens ) && isset( $tokens[ $token ] ) ) {
+					TOTPRepository::get_instance()->remove_trusted_token( $user_id, $token );
+				}
+			}
+
+			setcookie(
+				'bromate_totp_trusted',
+				'',
+				time() - 3600,
+				COOKIEPATH,
+				COOKIE_DOMAIN,
+				is_ssl(),
+				true
+			);
+			unset( $_COOKIE['bromate_totp_trusted'] );
+		}
+	}
+
+	private static function generate_trusted_token(): string {
+		try {
+			$bytes = random_bytes( 32 );
+			return bin2hex( $bytes );
+		} catch ( \Exception $e ) {
+			return hash( 'sha256', uniqid( 'bromate_trusted_', true ) . mt_rand() );
+		}
 	}
 
 	public static function enqueue_scripts(): void {
@@ -340,7 +421,6 @@ final class TOTPController {
 	}
 
 	public static function render_dialog(): void {
-
 		if ( ! self::is_module_enabled() ) {
 			return;
 		}
