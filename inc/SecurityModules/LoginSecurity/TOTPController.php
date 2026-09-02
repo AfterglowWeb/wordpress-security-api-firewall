@@ -103,6 +103,17 @@ final class TOTPController {
 			return;
 		}
 
+		if ( TOTPRepository::get_instance()->is_locked_out( $user_id ) ) {
+			wp_send_json_error(
+				array(
+					'message' => 'Too many failed attempts. Please try again later.',
+					'locked'  => true,
+				),
+				429
+			);
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::validate_ajax_nonce()
 		if ( ! isset( $_POST['code'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing verification code' ), 400 );
@@ -124,9 +135,21 @@ final class TOTPController {
 		}
 
 		if ( ! $valid ) {
+			TOTPRepository::get_instance()->record_user_failed_attempt( $user_id );
+
+			if ( TOTPRepository::get_instance()->is_locked_out( $user_id ) ) {
+				wp_send_json_error(
+					array( 'message' => 'Too many failed attempts. Please try again later.' ),
+					429
+				);
+				return;
+			}
+
 			wp_send_json_error( array( 'message' => 'Invalid verification code' ), 400 );
 			return;
 		}
+
+		TOTPRepository::get_instance()->clear_user_attempts( $user_id );
 
 		TOTPRepository::get_instance()->mark_session_verified( $user_id );
 
