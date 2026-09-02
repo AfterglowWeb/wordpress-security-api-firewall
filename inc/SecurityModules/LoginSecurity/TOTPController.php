@@ -73,7 +73,6 @@ final class TOTPController {
 			return;
 		}
 
-		// Check if user is already enrolled
 		if ( TOTPRepository::get_instance()->is_user_enrolled( $user_id ) ) {
 			wp_send_json_error( array( 'message' => '2FA is already enabled for this user' ), 400 );
 			return;
@@ -131,7 +130,6 @@ final class TOTPController {
 
 		TOTPRepository::get_instance()->mark_session_verified( $user_id );
 
-		// Fixed: Use consistent trusted token implementation
 		$settings = TOTPRepository::get_instance()->get_user_settings( $user_id );
 		if ( is_array( $settings ) && ! empty( $settings['remember_device'] ) ) {
 			self::set_trusted_cookie( $user_id );
@@ -170,7 +168,6 @@ final class TOTPController {
 		try {
 			$result = TOTPRepository::get_instance()->verify_totp_enrollment( $user_id, $code );
 			
-			// If enrollment successful, set enabled flag
 			if ( isset( $result['verified'] ) && $result['verified'] ) {
 				TOTPRepository::get_instance()->set_login_enabled( $user_id, true );
 			}
@@ -193,7 +190,6 @@ final class TOTPController {
 			return;
 		}
 
-		// Add capability check
 		if ( ! current_user_can( 'edit_user', $user_id ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Permission denied', 'bromate-security-api-firewall' ) ), 403 );
 			return;
@@ -202,7 +198,6 @@ final class TOTPController {
 		try {
 			$result = TOTPRepository::get_instance()->revoke_user_totp_enrollment( $user_id );
 			if ( $result ) {
-				// Clear trusted cookies
 				self::clear_trusted_cookie();
 				wp_send_json_success( array( 'message' => esc_html__( '2FA disabled successfully', 'bromate-security-api-firewall' ) ) );
 			} else {
