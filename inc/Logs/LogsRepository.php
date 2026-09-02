@@ -113,6 +113,12 @@ final class LogsRepository {
 				'group'    => 'wordpress_login',
 			),
 			array(
+				'key'      => 'totp_login_attempts_limit',
+				'severity' => 'error',
+				'label'    => esc_html__( 'Max TOTP login Attempts Reached', 'bromate-security-api-firewall' ),
+				'group'    => 'totp_login',
+			),
+			array(
 				'key'      => 'ip_entries_delete_expired',
 				'severity' => 'info',
 				'label'    => esc_html__( 'Expired IP Entries Cleaned', 'bromate-security-api-firewall' ),
@@ -176,6 +182,10 @@ final class LogsRepository {
 			array(
 				'key'   => 'wordpress_login',
 				'label' => esc_html__( 'WordPress Login', 'bromate-security-api-firewall' ),
+			),
+			array(
+				'key'   => 'totp_login',
+				'label' => esc_html__( 'TOTP Login (2FA)', 'bromate-security-api-firewall' ),
 			),
 			array(
 				'key'   => 'wordpress_cron',

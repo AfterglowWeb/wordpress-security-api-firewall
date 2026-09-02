@@ -9,7 +9,7 @@ use Exception;
 final class TOTPRepository {
 
 	private const TOTP_DIGITS       = 6;
-	private const TOTP_PERIOD       = 30; // Corrected: TOTP period should be 30 seconds
+	private const TOTP_PERIOD       = 30;
 	private const TOKEN_EXPIRY_DAYS = 30;
 	private const TOTP_ALGORITHM    = 'SHA1';
 
@@ -29,6 +29,9 @@ final class TOTPRepository {
 	private const REMINDER_DISMISSED_META_KEY = '_bromate_security_api_firewall_totp_reminder_dismissed_at';
 	private const FAILED_ATTEMPTS_META_KEY    = '_bromate_security_api_firewall_totp_failed_attempts';
 	private const TRUSTED_TOKEN_META_KEY      = '_bromate_security_api_firewall_totp_trusted_token';
+
+	private const LOCKOUT_META_KEY        = '_bromate_security_api_firewall_totp_lockout_until';
+	private const USER_ATTEMPTS_META_KEY  = '_bromate_security_api_firewall_totp_user_attempts';
 
 	private static ?self $instance = null;
 
@@ -54,7 +57,7 @@ final class TOTPRepository {
 		$this->cleanup_expired_pending_secrets( $user_id );
 
 		$digits    = self::TOTP_DIGITS;
-		$period    = self::TOTP_PERIOD; // Fixed: Now using correct 30-second period
+		$period    = self::TOTP_PERIOD;
 		$algorithm = self::TOTP_ALGORITHM;
 
 		$secret = $this->google2fa->generateSecretKey( 16 );
@@ -110,8 +113,8 @@ final class TOTPRepository {
 				update_user_meta( $user_id, self::SECRET_META_KEY, $secret );
 				update_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
 				update_user_meta( $user_id, self::ENABLED_TIME_META_KEY, time() );
-				update_user_meta( $user_id, self::ENABLED_META_KEY, true ); // Also set enabled
-
+				update_user_meta( $user_id, self::ENABLED_META_KEY, true );
+				
 				$this->clear_pending_secret( $user_id );
 
 				$backup_codes = $this->generate_backup_codes( $user_id );
@@ -141,7 +144,6 @@ final class TOTPRepository {
 		}
 
 		try {
-			// Use 2 for clock drift tolerance (1 before, current, 1 after)
 			return $this->google2fa->verifyKey( $secret, $code, 2 );
 		} catch ( Exception $e ) {
 			return false;
@@ -176,6 +178,33 @@ final class TOTPRepository {
 		return $this->generate_backup_codes( $user_id );
 	}
 
+	public function get_lockout_until( int $user_id ): int {
+		return (int) get_user_meta( $user_id, self::LOCKOUT_META_KEY, true );
+	}
+
+	public function is_locked_out( int $user_id ): bool {
+		return $this->get_lockout_until( $user_id ) > time();
+	}
+
+	public function record_user_failed_attempt( int $user_id ): int {
+		$attempts = (int) get_user_meta( $user_id, self::USER_ATTEMPTS_META_KEY, true );
+		++$attempts;
+		update_user_meta( $user_id, self::USER_ATTEMPTS_META_KEY, $attempts );
+
+		if ( $attempts >= 5 ) {
+			// Exponential-ish backoff: 5 -> 1 min, 10 -> 5 min, 15+ -> 15 min.
+			$lockout_seconds = $attempts >= 15 ? 900 : ( $attempts >= 10 ? 300 : 60 );
+			update_user_meta( $user_id, self::LOCKOUT_META_KEY, time() + $lockout_seconds );
+		}
+
+		return $attempts;
+	}
+
+	public function clear_user_attempts( int $user_id ): void {
+		delete_user_meta( $user_id, self::USER_ATTEMPTS_META_KEY );
+		delete_user_meta( $user_id, self::LOCKOUT_META_KEY );
+	}
+
 	public function is_user_enrolled( int $user_id ): bool {
 		return (bool) get_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
 	}
@@ -205,12 +234,16 @@ final class TOTPRepository {
 		update_user_meta( $user_id, self::USER_SETTINGS_META_KEY, $settings );
 	}
 
-	public function is_session_verified( int $user_id ): bool {
-		return (bool) get_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, true );
+	public function mark_session_verified( int $user_id ): void {
+		$token = wp_get_session_token();
+		update_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, $token );
 	}
 
-	public function mark_session_verified( int $user_id ): void {
-		update_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, true );
+	public function is_session_verified( int $user_id ): bool {
+		$stored  = get_user_meta( $user_id, self::SESSION_VERIFIED_META_KEY, true );
+		$current = wp_get_session_token();
+
+		return $stored && $current && hash_equals( $stored, $current );
 	}
 
 	public function clear_session_verified( int $user_id ): void {

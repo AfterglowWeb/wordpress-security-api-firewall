@@ -4,6 +4,7 @@ namespace Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity;
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\Logs\Logger;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\TOTPRepository;
 use Exception;
@@ -17,7 +18,7 @@ final class TOTPLoginService {
 	private const MAX_ATTEMPTS              = 5;
 	private const TRANSIENT_EXPIRY          = 300;
 	private const TOKEN_EXPIRY_DAYS         = 30;
-	private const SESSION_COOKIE_EXPIRY     = 43200; // 12 hours in seconds
+	private const SESSION_COOKIE_EXPIRY     = 43200; // 12 hours.
 
 	public static function register(): void {
 		$service = new self();
@@ -45,7 +46,6 @@ final class TOTPLoginService {
 		add_action( 'login_enqueue_scripts', array( $service, 'enqueue_scripts' ) );
 		add_action( 'wp_enqueue_scripts', array( $service, 'enqueue_scripts' ) );
 
-		// Add cleanup schedule
 		if ( ! wp_next_scheduled( 'bromate_totp_cleanup' ) ) {
 			wp_schedule_event( time(), 'daily', 'bromate_totp_cleanup' );
 		}
@@ -57,7 +57,6 @@ final class TOTPLoginService {
 			$bytes = random_bytes( 32 );
 			return bin2hex( $bytes );
 		} catch ( Exception $e ) {
-			// Fallback for environments without proper random source
 			return hash( 'sha256', uniqid( 'bromate_totp_', true ) . mt_rand() );
 		}
 	}
@@ -115,7 +114,6 @@ final class TOTPLoginService {
 	}
 
 	private function should_load_scripts(): bool {
-		// Only load on login pages or when TOTP is needed
 		return $this->is_login_page() || $this->should_show_totp();
 	}
 
@@ -250,14 +248,12 @@ final class TOTPLoginService {
 			return;
 		}
 
-		// Check if session has expired
 		if ( ( time() - $pending['timestamp'] ) > self::TRANSIENT_EXPIRY ) {
 			delete_transient( 'bromate_totp_pending_' . $session_id );
 			wp_send_json_error( array( 'message' => 'Session expired' ), 401 );
 			return;
 		}
 
-		// Verify that TOTP was actually verified for this session
 		$verified_key = $this->get_verified_transient_key( $session_id );
 		if ( ! get_transient( $verified_key ) ) {
 			wp_send_json_error( array( 'message' => 'TOTP not verified' ), 401 );
@@ -272,7 +268,6 @@ final class TOTPLoginService {
 			return;
 		}
 
-		// Additional security: verify user matches the pending session
 		if ( $user->ID !== $user_id ) {
 			wp_send_json_error( array( 'message' => 'User mismatch' ), 403 );
 			return;
@@ -282,14 +277,12 @@ final class TOTPLoginService {
 		wp_set_auth_cookie( $user_id, true );
 		do_action( 'wp_login', $user->user_login, $user );
 
-		// Clean up after successful login
 		$this->cleanup_session_data( $session_id );
 
 		$redirect_to = isset( $pending['redirect_to'] ) && $pending['redirect_to'] 
 			? $pending['redirect_to'] 
 			: admin_url();
 
-		// Log successful TOTP login
 		$this->log_security_event( $user_id, 'totp_login_success' );
 
 		wp_send_json_success(
@@ -315,15 +308,6 @@ final class TOTPLoginService {
 			return;
 		}
 
-		$attempts_key = 'bromate_totp_attempts_' . $session_id;
-		$attempts     = (int) get_transient( $attempts_key );
-		++$attempts;
-		set_transient( $attempts_key, $attempts, self::TRANSIENT_EXPIRY );
-
-		if ( $attempts >= self::MAX_ATTEMPTS ) {
-			$this->cleanup_session_data( $session_id );
-		}
-
 		$http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) 
 			? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) 
 			: '';
@@ -337,7 +321,6 @@ final class TOTPLoginService {
 			)
 		);
 
-		// Log failed TOTP login
 		$this->log_security_event( $user_id, 'totp_login_failed' );
 	}
 
@@ -398,7 +381,7 @@ final class TOTPLoginService {
 			? preg_replace( '/[^0-9]/', '', sanitize_text_field( wp_unslash( $_POST['code'] ) ) ) 
 			: '';
 		
-		if ( strlen( $code ) !== 6 ) {
+		if ( strlen( $code ) !== 6 && strlen( $code ) !== 8 ) {
 			wp_send_json_error( array( 'message' => 'Invalid verification code format' ), 400 );
 			return;
 		}
@@ -419,7 +402,6 @@ final class TOTPLoginService {
 			return;
 		}
 
-		// Check if session has expired
 		if ( ( time() - $pending['timestamp'] ) > self::TRANSIENT_EXPIRY ) {
 			delete_transient( 'bromate_totp_pending_' . $session_id );
 			wp_send_json_error( array( 'message' => 'Session expired' ), 401 );
@@ -427,6 +409,18 @@ final class TOTPLoginService {
 		}
 
 		$user_id  = (int) $pending['user_id'];
+
+		if ( TOTPRepository::get_instance()->is_locked_out( $user_id ) ) {
+			wp_send_json_error(
+				array(
+					'message' => 'Too many failed attempts. Please try again later.',
+					'locked'  => true,
+				),
+				429
+			);
+			return;
+		}
+
 		$verified = false;
 
 		if ( TOTPRepository::get_instance()->verify_totp_code_for_login( $user_id, $code ) ) {
@@ -436,40 +430,23 @@ final class TOTPLoginService {
 		}
 
 		if ( ! $verified ) {
-			$attempts_key = 'bromate_totp_attempts_' . $session_id;
-			$attempts     = (int) get_transient( $attempts_key );
-			++$attempts;
-			set_transient( $attempts_key, $attempts, self::TRANSIENT_EXPIRY );
-
-			// Record failed attempt
+			TOTPRepository::get_instance()->record_user_failed_attempt( $user_id );
 			$this->on_login_failed( $pending['username'] );
 
-			if ( $attempts >= self::MAX_ATTEMPTS ) {
-				$this->cleanup_session_data( $session_id );
+			if ( TOTPRepository::get_instance()->is_locked_out( $user_id ) ) {
 				wp_send_json_error(
-					array(
-						'message' => 'Too many failed attempts. Please try logging in again.',
-						'locked'  => true,
-					),
+					array( 'message' => 'Too many failed attempts. Please try again later.' ),
 					429
 				);
 				return;
 			}
 
-			wp_send_json_error(
-				array(
-					'message'      => sprintf(
-						'Invalid verification code. Attempt %d of %d.',
-						$attempts,
-						self::MAX_ATTEMPTS
-					),
-					'attempts'     => $attempts,
-					'max_attempts' => self::MAX_ATTEMPTS,
-				),
-				401
-			);
+			wp_send_json_error( array( 'message' => __( 'Invalid verification code.', 'bromate-security-api-firewall' ) ), 401 );
+
 			return;
 		}
+
+		TOTPRepository::get_instance()->clear_user_attempts( $user_id );
 
 		$verified_key = $this->get_verified_transient_key( $session_id );
 		set_transient( $verified_key, true, self::TRANSIENT_EXPIRY );
@@ -481,7 +458,6 @@ final class TOTPLoginService {
 			$this->set_trusted_device( $user_id );
 		}
 
-		// Log successful TOTP verification
 		$this->log_security_event( $user_id, 'totp_verification_success' );
 
 		wp_send_json_success(
@@ -566,13 +542,11 @@ final class TOTPLoginService {
 
 		$token_data = $tokens[ $token ];
 
-		// Check expiration
 		if ( ! isset( $token_data['expires'] ) || $token_data['expires'] < time() ) {
 			TOTPRepository::get_instance()->remove_trusted_token( $user_id, $token );
 			return false;
 		}
 
-		// Check user agent if set
 		if ( isset( $token_data['user_agent'] ) ) {
 			$current_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) 
 				? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) 
@@ -583,7 +557,6 @@ final class TOTPLoginService {
 			}
 		}
 
-		// Update last used time
 		$token_data['last_used'] = time();
 		TOTPRepository::get_instance()->store_trusted_token( $user_id, $token, $token_data );
 
@@ -618,7 +591,6 @@ final class TOTPLoginService {
 
 		$token = sanitize_text_field( wp_unslash( $_COOKIE[ self::TRUSTED_COOKIE_NAME ] ) );
 
-		// Validate token format
 		if ( ! preg_match( '/^[a-f0-9]{64}$/', $token ) ) {
 			return false;
 		}
@@ -629,12 +601,21 @@ final class TOTPLoginService {
 	}
 
 	private function validate_session_id( string $session_id ): bool {
-		return (bool) preg_match( '/^[a-f0-9]{64}$/', $session_id );
+		if ( ! preg_match( '/^[a-f0-9]{64}$/', $session_id ) ) {
+			return false;
+		}
+
+		if ( ! isset( $_COOKIE[ self::SESSION_ID_COOKIE_NAME ] ) ) {
+			return false;
+		}
+
+		$cookie_session_id = sanitize_text_field( wp_unslash( $_COOKIE[ self::SESSION_ID_COOKIE_NAME ] ) );
+
+		return hash_equals( $cookie_session_id, $session_id );
 	}
 
 	private function cleanup_session_data( string $session_id ): void {
 		delete_transient( 'bromate_totp_pending_' . $session_id );
-		delete_transient( 'bromate_totp_attempts_' . $session_id );
 		delete_transient( $this->get_verified_transient_key( $session_id ) );
 	}
 
@@ -652,7 +633,6 @@ final class TOTPLoginService {
 	}
 
 	private function log_security_event( int $user_id, string $event ): void {
-		// Implement proper logging
 		if ( function_exists( 'wc_get_logger' ) ) {
 			$logger = wc_get_logger();
 			$logger->info(
@@ -664,30 +644,31 @@ final class TOTPLoginService {
 				),
 				array( 'source' => 'bromate-totp' )
 			);
-		} else {
-			// Fallback to error log
-			error_log(
-				sprintf(
-					'Bromate TOTP Event: %s for user %d from IP %s',
-					$event,
-					$user_id,
-					IpUtils::get_client_ip()
-				)
-			);
 		}
+
+		Logger::log(
+			'totp_login_attempts_limit',
+			'error',
+			[sprintf(
+				'Bromate TOTP Event: %s for user %d from IP %s',
+				$event,
+				$user_id,
+				IpUtils::get_client_ip()
+			)],
+			IpUtils::get_client_ip()
+		);
+		
 	}
 
 	public function cleanup_expired_data(): void {
 		global $wpdb;
 
-		// Clean up expired transients
 		$wpdb->query(
 			"DELETE FROM {$wpdb->options}
 			WHERE option_name LIKE '_transient_timeout_bromate_totp_%'
 			AND option_value < UNIX_TIMESTAMP()"
 		);
 
-		// Clean up expired trusted tokens
 		$users = get_users( array( 'fields' => 'ID' ) );
 		foreach ( $users as $user_id ) {
 			$this->cleanup_expired_tokens( $user_id );
