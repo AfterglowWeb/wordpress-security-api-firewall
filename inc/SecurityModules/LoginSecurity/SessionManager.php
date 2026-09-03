@@ -29,43 +29,60 @@ class SessionManager {
 	}
 
 	public static function ajax_revoke_all_users_totp_enrollment(): void {
+	if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+		wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+		return;
+	}
 
-		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-		}
+	TOTPRepository::get_instance()->revoke_all_users_totp_enrollment();
+	self::destroy_all_sessions_for_all_users();
 
-		TOTPRepository::get_instance()->revoke_all_users_totp_enrollment();
-
-		wp_send_json_success(
-			array(
-				'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ),
-			),
+	wp_send_json_success(
+		array( 'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ) ),
 			200
 		);
 	}
 
 	public static function ajax_revoke_user_totp_enrollment(): void {
-
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
 		if ( ! isset( $_POST['user_id'] ) ) {
 			wp_send_json_error( array( 'message' => 'Missing argument' ), 403 );
+			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps().
 		$user_id = absint( wp_unslash( $_POST['user_id'] ) );
 
-		TOTPRepository::get_instance()->revoke_user_totp_enrollment( $user_id );
+		if ( ! $user_id || ! get_user_by( 'id', $user_id ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid user' ), 400 );
+			return;
+		}
+
+		try {
+			TOTPRepository::get_instance()->revoke_user_totp_enrollment( $user_id );
+		} catch ( \Exception $e ) {
+			wp_send_json_error( array( 'message' => $e->getMessage() ), 500 );
+			return;
+		}
+
+		WP_Session_Tokens::get_instance( $user_id )->destroy_all();
 
 		wp_send_json_success(
-			array(
-				'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ),
-			),
+			array( 'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ) ),
 			200
 		);
+	}
+
+	private static function destroy_all_sessions_for_all_users(): void {
+		$user_ids = get_users( array( 'fields' => 'ID' ) );
+		foreach ( $user_ids as $user_id ) {
+			WP_Session_Tokens::get_instance( (int) $user_id )->destroy_all();
+		}
 	}
 
 	public static function enforce_session_limit( int $user_id, int $max ): void {
