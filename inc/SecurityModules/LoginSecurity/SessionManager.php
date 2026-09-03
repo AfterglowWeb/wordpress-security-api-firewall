@@ -86,8 +86,6 @@ class SessionManager {
 	}
 
 	public static function enforce_session_limit( int $user_id, int $max ): void {
-		$manager = WP_Session_Tokens::get_instance( $user_id );
-
 		$sessions = get_user_meta( $user_id, 'session_tokens', true );
 		if ( ! is_array( $sessions ) || count( $sessions ) <= $max ) {
 			return;
@@ -95,18 +93,34 @@ class SessionManager {
 
 		uasort( $sessions, static fn( $a, $b ) => ( $a['login'] ?? 0 ) <=> ( $b['login'] ?? 0 ) );
 
-		$excess        = count( $sessions ) - $max;
-		$current_token = (string) wp_get_session_token();
+		$excess                = count( $sessions ) - $max;
+		$current_verifier_hash = hash( 'sha256', (string) wp_get_session_token() );
+		$to_remove             = array();
 
 		foreach ( $sessions as $verifier => $session ) {
 			if ( $excess <= 0 ) {
 				break;
 			}
-			if ( hash_equals( (string) $verifier, $current_token ) ) {
+			if ( hash_equals( (string) $verifier, $current_verifier_hash ) ) {
 				continue;
 			}
-			$manager->destroy( (string) $verifier );
+			$to_remove[] = $verifier;
 			--$excess;
 		}
+
+		if ( empty( $to_remove ) ) {
+			return;
+		}
+
+		$fresh_sessions = get_user_meta( $user_id, 'session_tokens', true );
+		if ( ! is_array( $fresh_sessions ) || empty( $fresh_sessions ) ) {
+			return;
+		}
+
+		foreach ( $to_remove as $verifier ) {
+			unset( $fresh_sessions[ $verifier ] );
+		}
+
+		update_user_meta( $user_id, 'session_tokens', $fresh_sessions );
 	}
 }
