@@ -4,6 +4,7 @@ namespace Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity;
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\Logs\Logger;
 
 class SameSiteCookies {
 
@@ -22,7 +23,17 @@ class SameSiteCookies {
 		if ( headers_sent() ) {
 			return;
 		}
-		header_register_callback( array( self::class, 'rewrite_set_cookie_headers' ) );
+
+		$registered = header_register_callback( array( self::class, 'rewrite_set_cookie_headers' ) );
+
+		if ( ! $registered ) {
+			Logger::log(
+				'samesite_cookie_hardening',
+				'warning',
+				array( 'Failed to register Set-Cookie rewrite callback; another callback may already be registered.' ),
+				''
+			);
+		}
 	}
 
 	public static function rewrite_set_cookie_headers(): void {
@@ -33,9 +44,13 @@ class SameSiteCookies {
 			defined( 'SECURE_AUTH_COOKIE' ) ? SECURE_AUTH_COOKIE : 'wordpress_sec_',
 			defined( 'LOGGED_IN_COOKIE' ) ? LOGGED_IN_COOKIE : 'wordpress_logged_in_',
 			'wordpress_test_cookie',
+			'bromate_totp_session',
+			'bromate_totp_trusted',
 		);
 		$samesite        = SettingsRepository::read_option( 'cookie_hardening_samesite_mode' );
-
+		if ( ! in_array( $samesite, array( 'Lax', 'Strict', 'None' ), true ) ) {
+			$samesite = 'Lax';
+		}
 		foreach ( $headers as $header ) {
 			if ( stripos( $header, 'Set-Cookie:' ) === 0 ) {
 				$cookie_headers[] = substr( $header, strlen( 'Set-Cookie:' ) );
@@ -64,8 +79,18 @@ class SameSiteCookies {
 				continue;
 			}
 
-			$raw     = trim( $raw );
-			$rewrote = preg_replace( '/;\s*SameSite=[^;]*/i', '; SameSite=' . $samesite, $raw );
+			$raw = trim( $raw );
+			$rewrote = $raw;
+			$effective_samesite = $samesite;
+			if ( 'None' === $samesite && stripos( $raw, 'Secure' ) === false ) {
+				$effective_samesite = 'Lax';
+			}
+
+			if ( preg_match( '/;\s*SameSite=[^;]*/i', $raw ) ) {
+				$rewrote = preg_replace( '/;\s*SameSite=[^;]*/i', '; SameSite=' . $effective_samesite, $raw );
+			} else {
+				$rewrote = $raw . '; SameSite=' . $effective_samesite;
+			}
 
 			header( 'Set-Cookie: ' . $rewrote, false );
 		}
