@@ -10,6 +10,7 @@ use WP_User;
 final class Recaptcha {
 
 	protected static ?self $instance = null;
+	private ?float $pending_score = null;
 
 	public static function get_instance(): self {
 		if ( null === self::$instance ) {
@@ -115,39 +116,30 @@ final class Recaptcha {
 		}
 
 		if ( $verification_result['score'] < $options['threshold'] ) {
-			return new WP_Error(
-				'recaptcha_score_too_low',
-				__( 'reCAPTCHA verification failed. Please try again.', 'bromate-security-api-firewall' )
-			);
+			return new WP_Error( 'recaptcha_score_too_low', __( 'reCAPTCHA verification failed. Please try again.', 'bromate-security-api-firewall' ) );
 		}
 
+		$this->pending_score = $verification_result['score'];
 		add_filter( 'authenticate', array( $this, 'store_recaptcha_data' ), 999, 1 );
 
 		return $user;
 	}
 
 	public function store_recaptcha_data( $user ) {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
-		if ( $user instanceof WP_User && isset( $_POST['g-recaptcha-token'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
-			$token        = sanitize_text_field( wp_unslash( $_POST['g-recaptcha-token'] ) );
-			$options      = $this->get_options();
-			$verification = $this->verify_recaptcha_token( $token, $options['secret_key'] );
-
-			if ( ! is_wp_error( $verification ) ) {
-				update_user_meta(
-					$user->ID,
-					'last_recaptcha_score',
-					array(
-						'score'  => $verification['score'],
-						'time'   => time(),
-						'action' => 'login',
-					)
-				);
-			}
+		if ( $user instanceof WP_User && null !== $this->pending_score ) {
+			update_user_meta(
+				$user->ID,
+				'last_recaptcha_score',
+				array(
+					'score'  => $this->pending_score,
+					'time'   => time(),
+					'action' => 'login',
+				)
+			);
 		}
 		return $user;
 	}
+
 
 	public function on_login_failed(): void {
 		if ( ! $this->is_enabled() ) {
@@ -239,13 +231,15 @@ final class Recaptcha {
 			return true;
 		}
 
-		if ( isset( $_SERVER['REQUEST_URI'] ) ) {
-			$rest_route  = rest_get_url_prefix();
-			$request_uri = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
-			return false !== strpos( $request_uri, '/' . $rest_route . '/' );
+		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+			return false;
 		}
 
-		return false;
+		$request_uri = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		$path        = (string) wp_parse_url( $request_uri, PHP_URL_PATH );
+		$rest_route  = trim( rest_get_url_prefix(), '/' );
+
+		return (bool) preg_match( '#/' . preg_quote( $rest_route, '#' ) . '(/|$)#', $path );
 	}
 
 	public static function sanitize_recaptcha_threshold( $value ): float {

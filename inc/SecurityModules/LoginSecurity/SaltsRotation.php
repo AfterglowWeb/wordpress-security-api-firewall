@@ -14,7 +14,6 @@ class SaltsRotation {
 	const RECURRENCE_KEY    = self::KEYS_PREFIX . 'recurrence';
 	const LAST_RUN_KEY      = self::KEYS_PREFIX . 'last_run';
 	const SCHEDULE_KEY      = self::KEYS_PREFIX . 'cron_schedule_key';
-	const SALT_API_ENDPOINT = 'https://api.wordpress.org/secret-key/1.1/salt/';
 
 	public static function register(): void {
 		if ( ! empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
