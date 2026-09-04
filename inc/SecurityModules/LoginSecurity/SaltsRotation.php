@@ -48,7 +48,7 @@ class SaltsRotation {
 
 		$desired_config = array(
 			'recurrence' => SettingsRepository::read_option( 'salts_rotation_recurrence' ),
-			'time'       => SettingsRepository::read_option( 'salts_rotation_time' ),
+			'time'       => self::sanitize_time( SettingsRepository::read_option( 'salts_rotation_time' ) ),
 		);
 		$current_config = get_option( self::RECURRENCE_KEY );
 		if ( wp_next_scheduled( self::SCHEDULE_KEY ) && $current_config === $desired_config ) {
@@ -76,12 +76,14 @@ class SaltsRotation {
 	}
 
 	public static function filter_salt( $salt, $scheme ) {
-
 		if ( empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
 			return $salt;
 		}
 
-		$stored = get_option( self::SALTS_KEY );
+		$stored = get_option( self::SALTS_KEY, array() );
+		if ( ! is_array( $stored ) ) {
+			$stored = array();
+		}
 
 		if ( empty( $stored[ $scheme ] ) ) {
 			$stored[ $scheme ] = self::generate_salt();
@@ -109,6 +111,7 @@ class SaltsRotation {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			return;
 		}
 
 		wp_send_json_success(
@@ -124,6 +127,7 @@ class SaltsRotation {
 
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			return;
 		}
 
 		self::rotate_salts_now();
