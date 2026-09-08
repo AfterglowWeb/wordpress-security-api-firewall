@@ -8,57 +8,65 @@ class ViolationTracker {
 	private const VIOLATION_LOCK_PREFIX = 'bromate_security_api_firewall_violation_lock_';
 
 	public static function record_violation( string $client_ip, int $memory_window, int $lock_window ): int {
+		global $wpdb;
 
-		$lock_key = self::VIOLATION_LOCK_PREFIX . md5( $client_ip );
+		$hash             = md5( $client_ip );
+		$lock_window_start = (int) ( floor( time() / $lock_window ) * $lock_window );
+		$lock_option      = '_transient_' . self::VIOLATION_LOCK_PREFIX . $hash . '_' . $lock_window_start;
 
-		if ( get_transient( $lock_key ) ) {
+		$claimed = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, '1', 'no')",
+				$lock_option
+			)
+		);
+
+		if ( ! $claimed ) {
 			return self::get_violation_count( $client_ip );
 		}
 
-		set_transient(
-			$lock_key,
-			1,
-			$lock_window
+		$window_start = (int) ( floor( time() / $memory_window ) * $memory_window );
+		$count_option = '_transient_' . self::VIOLATIONS_KEY_PREFIX . $hash . '_' . $window_start;
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$wpdb->options} (option_name, option_value, autoload)
+				VALUES (%s, '1', 'no')
+				ON DUPLICATE KEY UPDATE option_value = option_value + 1",
+				$count_option
+			)
 		);
 
-		$key  = self::VIOLATIONS_KEY_PREFIX . md5( $client_ip );
-		$data = get_transient( $key );
-		$now  = time();
-
-		if (
-			! is_array( $data )
-			|| ! isset( $data['count'], $data['window_start'] )
-			|| ( $now - (int) $data['window_start'] ) >= $memory_window
-		) {
-			$data = array(
-				'count'        => 1,
-				'window_start' => $now,
-			);
-		} else {
-			++$data['count'];
-		}
-
-		$remaining = max( 1, $memory_window - ( $now - $data['window_start'] ) );
-		set_transient( $key, $data, $remaining );
-
-		return $data['count'];
+		return (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $count_option )
+		);
 	}
 
 	public static function get_violation_count( string $client_ip ): int {
+		global $wpdb;
 
-		$data = get_transient( self::VIOLATIONS_KEY_PREFIX . md5( $client_ip ) );
+		$hash = md5( $client_ip );
+		$like = $wpdb->esc_like( '_transient_' . self::VIOLATIONS_KEY_PREFIX . $hash . '_' ) . '%';
 
-		return is_array( $data ) ? (int) ( $data['count'] ?? 0 ) : 0;
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE %s ORDER BY option_name DESC LIMIT 1",
+				$like
+			)
+		);
 	}
 
 	public static function clear_violations( string $client_ip ): void {
+		global $wpdb;
 
-		delete_transient(
-			self::VIOLATIONS_KEY_PREFIX . md5( $client_ip )
-		);
+		$hash = md5( $client_ip );
 
-		delete_transient(
-			self::VIOLATION_LOCK_PREFIX . md5( $client_ip )
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::VIOLATIONS_KEY_PREFIX . $hash . '_' ) . '%',
+				$wpdb->esc_like( '_transient_' . self::VIOLATION_LOCK_PREFIX . $hash . '_' ) . '%'
+			)
 		);
 	}
 
