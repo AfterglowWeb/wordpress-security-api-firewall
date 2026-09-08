@@ -9,7 +9,7 @@ final class SchemaManager {
 	public static function install(): void {
 		$current = get_option( self::SCHEMA_VERSION_OPTION_KEY, '0.0.0' );
 
-		if ( '0.0.0' === $current && version_compare( $current, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, '>=' ) ) {
+		if ( version_compare( $current, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, '>=' ) ) {
 			return;
 		}
 
@@ -18,6 +18,7 @@ final class SchemaManager {
 
 		self::create_ip_entries( $wpdb );
 		self::create_logs( $wpdb );
+		self::create_rate_buckets( $wpdb );
 
 		update_option( self::SCHEMA_VERSION_OPTION_KEY, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, false );
 	}
@@ -29,11 +30,17 @@ final class SchemaManager {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_logs" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_rate_buckets" );
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
 	}
 
 	public static function delete_schema_version(): void {
 		delete_option( self::SCHEMA_VERSION_OPTION_KEY );
+	}
+
+	public static function rate_buckets_table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'bromate_rate_buckets';
 	}
 
 	private static function create_ip_entries( \wpdb $wpdb ): void {
@@ -91,6 +98,22 @@ final class SchemaManager {
 			KEY idx_event_created (event, created_at),
 			FULLTEXT KEY idx_uri_ft (uri)
 			) ENGINE=InnoDB {$charset_collate};"
+		);
+	}
+
+	private static function create_rate_buckets( \wpdb $wpdb ): void {
+		$table           = $wpdb->prefix . 'bromate_rate_buckets';
+		$charset_collate = $wpdb->get_charset_collate();
+
+		dbDelta(
+			"CREATE TABLE {$table} (
+			client_hash CHAR(32)        NOT NULL,
+			tokens      DOUBLE          NOT NULL,
+			last_refill DOUBLE          NOT NULL,
+			updated_at  BIGINT UNSIGNED NOT NULL,
+			PRIMARY KEY  (client_hash),
+			KEY updated_at (updated_at)
+		) {$charset_collate};"
 		);
 	}
 }

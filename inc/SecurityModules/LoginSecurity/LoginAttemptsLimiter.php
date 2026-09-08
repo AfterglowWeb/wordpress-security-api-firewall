@@ -27,6 +27,35 @@ final class LoginAttemptsLimiter {
 		add_action( 'wp_login_failed', array( $this, 'on_login_failed' ), 10 );
 	}
 
+	private function atomic_increment_in_window( string $hash, int $window ): array {
+		global $wpdb;
+
+		$window_start = (int) ( floor( time() / $window ) * $window );
+		$option_name  = '_transient_' . self::COUNT_PREFIX . $hash . '_' . $window_start;
+
+		// Atomic upsert-increment: the unique key on option_name means a concurrent
+		// INSERT for the same window serializes on that row, and ON DUPLICATE KEY
+		// UPDATE performs the increment under the winning row's lock — no
+		// read-modify-write race, regardless of how many requests land at once.
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$wpdb->options} (option_name, option_value, autoload)
+				VALUES (%s, '1', 'no')
+				ON DUPLICATE KEY UPDATE option_value = option_value + 1",
+				$option_name
+			)
+		);
+
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $option_name )
+		);
+
+		return array(
+			'count'       => $count,
+			'retry_after' => max( 1, ( $window_start + $window ) - time() ),
+		);
+	}
+
 	public function check_before_auth( $user ) {
 
 		if ( ! $this->is_enabled() ) {
@@ -65,13 +94,11 @@ final class LoginAttemptsLimiter {
 		}
 
 		$opts      = $this->get_options();
-		$count_key = self::COUNT_PREFIX . $hash;
-		$count     = (int) get_transient( $count_key );
-		++$count;
+		$rate_data = $this->atomic_increment_in_window( $hash, $opts['window'] );
+		$count     = $rate_data['count'];
 
 		if ( $count >= $opts['attempts'] ) {
 			set_transient( self::BLOCK_PREFIX . $hash, $ip, $opts['blacklist_time'] );
-			delete_transient( $count_key );
 
 			if ( $opts['blacklist_after'] > 0 ) {
 				$strike_key = self::STRIKE_PREFIX . $hash;
@@ -84,8 +111,6 @@ final class LoginAttemptsLimiter {
 					set_transient( $strike_key, $strikes, $opts['blacklist_time'] * ( $opts['blacklist_after'] + 1 ) );
 				}
 			}
-		} else {
-			set_transient( $count_key, $count, $opts['window'] );
 		}
 	}
 
