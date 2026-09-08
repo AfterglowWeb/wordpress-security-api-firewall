@@ -9,12 +9,31 @@ use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\AutoBlacklist;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\ViolationTracker;
 use Bromate\SecurityApiFirewall\Logs\Logger;
+use Bromate\SecurityApiFirewall\Cron\Cron;
 
 use WP_Error;
 
 class RateLimiterBucket {
 
 	private const STALE_ROW_TTL = DAY_IN_SECONDS;
+
+	public static function register(): void {
+		add_action( 'init', array( self::class, 'schedule_cleanup' ) );
+		add_action( 'bromate_rate_buckets_cleanup', array( self::class, 'cleanup_stale_buckets' ) );
+	}
+
+	public static function schedule_cleanup(): void {
+		if ( wp_next_scheduled( 'bromate_rate_buckets_cleanup' ) ) {
+			return;
+		}
+
+		Cron::schedule(
+			'bromate_rate_buckets_cleanup',
+			'daily',
+			array( self::class, 'cleanup_stale_buckets' ),
+			time() + DAY_IN_SECONDS
+		);
+	}
 
 	public static function inspect( $origin = 'public_rate_limit' ) {
 
