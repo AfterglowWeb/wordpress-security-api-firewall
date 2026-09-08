@@ -1,6 +1,6 @@
-# Bromate Security & API Firewall
+# Bromate Security & API Firewall (currently under development)
 
-📖 **[Documentation](https://www.moriskelly.com/wordpress-security-api-firewall)**
+A complete, 100% free WordPress security suite built on trust and transparency. From login hardening to REST API firewalls, protect your data without selling your soul to big tech.
 
 Bromate Security & API Firewall is a complete security suite for WordPress, hardening login, core endpoints, and server-level exposure — including rate limiting, IP/GeoIP blocking, 2FA, and Recaptcha. It secures REST API access with JWT and Application Password hardening, per-route authentication and restriction rules to reduce data exposure.
 
@@ -13,9 +13,8 @@ Bromate Security & API Firewall is a complete security suite for WordPress, hard
 | **Application Only Mode** | Redirect or hide front |
 | **REST Routes** | Enforce authentication and disable routes on a per-route basis and criteria |
 | **Logs** | Security event logs | Stats | Email notifications
-
-| **REST Response (PRO)** | Cache Response, Remove empty props, Resolve embedded data, flatten rendered fields, strip domain from URLs | Build your own Data Schemas
-| **Webhooks (PRO)** | Fire secured webhooks on WordPress and plugins events, schedule recurring webhooks.
+| **REST Response** | Cache Response, Remove empty props, Resolve embedded data, flatten rendered fields, strip domain from URLs | Build your own Data Schemas
+| **Webhooks** | Fire secured webhooks on WordPress and plugins events, schedule recurring webhooks.
 
 ## Requirements
 
