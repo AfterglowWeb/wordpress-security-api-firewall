@@ -41,7 +41,7 @@ class IpEntriesRepository {
 			'entry_type'   => array(
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'ip', 'cidr' ), true ) ? $v : 'ip',
-				'default'           => 'manual',
+				'default'           => 'ip',
 				'allowed_values'    => array( 'ip', 'cidr' ),
 				'sortable'          => true,
 			),
@@ -260,17 +260,7 @@ class IpEntriesRepository {
 		if ( self::find_by_ip( $ip, $list_type ) ) {
 			return true;
 		}
-
-		$sql = '
-			SELECT ip 
-			FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries 
-			WHERE list_type = %s 
-			AND ip LIKE %s 
-			AND (
-				expires_at IS NULL 
-				OR expires_at > NOW()
-			)
-			';
+		
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$may_be_cidrs = $wpdb->get_col(
 			$wpdb->prepare(
@@ -295,16 +285,14 @@ class IpEntriesRepository {
 		return false;
 	}
 
-	private static function ip_in_db( string $ip ): ?array {
+	private static function ip_in_db( string $ip, string $list_type ): ?array {
 		global $wpdb;
 
-		$table = self::table();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$exact = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip = %s",
-				$ip
+				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip = %s AND list_type = %s",
+				$ip,
+				$list_type
 			),
 			ARRAY_A
 		);
@@ -317,11 +305,11 @@ class IpEntriesRepository {
 			return null;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$cidr_entries = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip LIKE %s",
-				'%/%'
+				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip LIKE %s AND list_type = %s",
+				'%/%',
+				$list_type
 			),
 			ARRAY_A
 		);
@@ -373,7 +361,7 @@ class IpEntriesRepository {
 
 		$now = current_time( 'mysql' );
 
-		$existing = self::ip_in_db( $sanitized['ip'] );
+		$existing = self::ip_in_db( $sanitized['ip'], $sanitized['list_type'] ?? 'blacklist' );
 
 		if ( $existing ) {
 			$update_data               = $sanitized;
@@ -438,10 +426,10 @@ class IpEntriesRepository {
 			return 0;
 		}
 
-		$placeholders = implode( ',', array_fill( 0, count( $ips ), '%d' ) );
+		$placeholders = implode( ',', array_fill( 0, count( $ips ), '%s' ) );
 		$sql          = 'DELETE FROM ' . self::table() . " WHERE ip IN ({$placeholders})";
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders generated from validated integer IDs
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders generated from validated IP strings
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ips ) );
 	}
 
@@ -526,7 +514,7 @@ class IpEntriesRepository {
 		return false !== $result;
 	}
 
-	protected static function sanitize_entry( array $data ): array {
+	protected static function sanitize_entry( array $data, bool $require_ip = true ): array {
 		$config    = self::entry_config();
 		$sanitized = array();
 
@@ -552,7 +540,11 @@ class IpEntriesRepository {
 			$sanitized[ $key ] = $value;
 		}
 
-		if ( empty( $sanitized['ip'] ) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) {
+		if ( $require_ip ) {
+			if ( empty( $sanitized['ip'] ) || ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) {
+				return array();
+			}
+		} elseif ( isset( $sanitized['ip'] ) && ! IpUtils::is_valid_ip_or_cidr( $sanitized['ip'] ) ) {
 			return array();
 		}
 
