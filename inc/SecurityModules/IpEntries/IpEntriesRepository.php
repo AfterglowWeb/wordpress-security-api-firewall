@@ -74,6 +74,35 @@ class IpEntriesRepository {
 				'default'           => null,
 				'sortable'          => true,
 			),
+			'city' => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => null,
+				'sortable'          => false,
+			),
+			'isp' => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => null,
+				'sortable'          => false,
+			),
+			'latitude' => array(
+				'type'              => 'float',
+				'sanitize_callback' => static fn( $v ) => is_numeric( $v ) ? (float) $v : null,
+				'default'           => null,
+				'sortable'          => false,
+			),
+			'longitude' => array(
+				'type'              => 'float',
+				'sanitize_callback' => static fn( $v ) => is_numeric( $v ) ? (float) $v : null,
+				'default'           => null,
+				'sortable'          => false,
+			),
+			'geoip_enriched_at' => array(
+				'type'     => 'datetime',
+				'default'  => null,
+				'sortable' => true,
+			),
 			'created_at'   => array(
 				'type'     => 'datetime',
 				'sortable' => true,
@@ -102,6 +131,11 @@ class IpEntriesRepository {
 			'referrer'     => $row['referrer'],
 			'country_code' => $row['country_code'],
 			'country_name' => $row['country_name'],
+			'city'              => $row['city'] ?? null,
+			'isp'               => $row['isp'] ?? null,
+			'latitude'          => isset( $row['latitude'] ) ? (float) $row['latitude'] : null,
+			'longitude'         => isset( $row['longitude'] ) ? (float) $row['longitude'] : null,
+			'geoip_enriched_at' => $row['geoip_enriched_at'] ?? null,
 			'expires_at'   => $row['expires_at'],
 			'created_at'   => $row['created_at'],
 			'updated_at'   => $row['updated_at'],
@@ -411,6 +445,23 @@ class IpEntriesRepository {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (bool) $wpdb->update( self::table(), $sanitized, array( 'id' => $id ) );
+	}
+
+	public static function update_geoip_data( int $id, array $geoip ): bool {
+		global $wpdb;
+
+		$data = array(
+			'city'              => $geoip['city'] ?? null,
+			'isp'               => $geoip['isp'] ?? null,
+			'latitude'          => $geoip['latitude'] ?? null,
+			'longitude'         => $geoip['longitude'] ?? null,
+			'country_code'      => $geoip['country'] ?? null,
+			'country_name'      => $geoip['countryName'] ?? null,
+			'geoip_enriched_at' => current_time( 'mysql' ),
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (bool) $wpdb->update( self::table(), $data, array( 'id' => $id ) );
 	}
 
 	public static function delete( int $id ): bool {
