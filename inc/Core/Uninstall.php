@@ -6,7 +6,8 @@ use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Cron\CronIpEntries;
-use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\AutoBlacklist;
+
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\ViolationTracker;
 use Bromate\SecurityApiFirewall\SecurityModules\LoginSecurity\LoginAttemptsLimiter;
@@ -24,6 +25,7 @@ final class Uninstall {
 	public static function delete_data(): void {
 
 		CronIpEntries::unschedule();
+		GeoIpLookup::unschedule();
 		SaltsRotation::unschedule();
 		AdminPage::remove_edit_options_custom_cap();
 		RestAccessCustomCap::remove_rest_api_access_custom_cap();
@@ -50,6 +52,7 @@ final class Uninstall {
 	public static function deactivate(): void {
 
 		CronIpEntries::unschedule();
+		GeoIpLookup::unschedule();
 		SaltsRotation::unschedule();
 		AdminPage::remove_edit_options_custom_cap();
 		RestAccessCustomCap::remove_rest_api_access_custom_cap();

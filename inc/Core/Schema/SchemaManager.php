@@ -63,6 +63,7 @@ final class SchemaManager {
 				isp VARCHAR(255) NULL,
 				latitude DECIMAL(9,6) NULL,
 				longitude DECIMAL(10,6) NULL,
+				geoip_enriched_at DATETIME NULL,
 				created_at DATETIME NOT NULL,
 				updated_at DATETIME NOT NULL,
 				expires_at DATETIME NULL,
@@ -75,7 +76,7 @@ final class SchemaManager {
 				KEY idx_country_code (country_code),
 				KEY idx_created_at (created_at),
 				KEY idx_expires_at (expires_at)
-			) ENGINE=InnoDB{$charset_collate};"
+			) ENGINE=InnoDB {$charset_collate};"
 		);
 	}
 
