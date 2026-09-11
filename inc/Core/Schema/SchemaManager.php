@@ -49,28 +49,33 @@ final class SchemaManager {
 
 		dbDelta(
 			"CREATE TABLE {$table} (
-			id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			ip           VARCHAR(45)     NOT NULL,
-			list_type    ENUM('whitelist','blacklist') NOT NULL DEFAULT 'blacklist',
-			entry_type   ENUM('ip','cidr')             NOT NULL DEFAULT 'ip',
-			entry_origin ENUM('manual','auth_user_ip','public_rate_limit','login_attempts_limit','auth_attempts_limit','country') NOT NULL DEFAULT 'manual',
-			agent        VARCHAR(255)    NULL DEFAULT NULL,
-			user_id      BIGINT UNSIGNED NULL DEFAULT NULL,
-			referrer     VARCHAR(255)    NULL DEFAULT NULL,
-			country_code CHAR(2)         NULL DEFAULT NULL,
-			country_name VARCHAR(100)    NULL DEFAULT NULL,
-			created_at   DATETIME        NOT NULL,
-			updated_at   DATETIME        NOT NULL,
-			expires_at   DATETIME        NULL DEFAULT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY   ip_list (ip, list_type),
-			KEY          list_type    (list_type),
-			KEY          entry_type   (entry_type),
-			KEY          entry_origin (entry_origin),
-			KEY          user_id      (user_id),
-			KEY          country_code (country_code),
-			KEY          created_at   (created_at)
-		) {$charset_collate};"
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				ip VARCHAR(45) NOT NULL,
+				list_type ENUM('whitelist','blacklist') NOT NULL DEFAULT 'blacklist',
+				entry_type ENUM('ip','cidr') NOT NULL DEFAULT 'ip',
+				entry_origin ENUM('manual','auth_user_ip','public_rate_limit','login_attempts_limit','auth_attempts_limit','country') NOT NULL DEFAULT 'manual',
+				agent VARCHAR(255) NULL,
+				user_id BIGINT UNSIGNED NULL,
+				referrer VARCHAR(255) NULL,
+				country_code CHAR(2) NULL,
+				country_name VARCHAR(255) NULL,
+				city VARCHAR(255) NULL,
+				isp VARCHAR(255) NULL,
+				latitude DECIMAL(9,6) NULL,
+				longitude DECIMAL(10,6) NULL,
+				created_at DATETIME NOT NULL,
+				updated_at DATETIME NOT NULL,
+				expires_at DATETIME NULL,
+				PRIMARY KEY  (id),
+				UNIQUE KEY idx_ip_list (ip, list_type),
+				KEY idx_list_type (list_type),
+				KEY idx_entry_type (entry_type),
+				KEY idx_entry_origin (entry_origin),
+				KEY idx_user_id (user_id),
+				KEY idx_country_code (country_code),
+				KEY idx_created_at (created_at),
+				KEY idx_expires_at (expires_at)
+			) ENGINE=InnoDB{$charset_collate};"
 		);
 	}
 
@@ -80,23 +85,23 @@ final class SchemaManager {
 
 		dbDelta(
 			"CREATE TABLE {$table} (
-			id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			event       VARCHAR(64)     NOT NULL,
-			details     LONGTEXT        DEFAULT NULL,
-			severity    ENUM('info','warning','error') NOT NULL DEFAULT 'info',
-			ip          VARCHAR(45)     DEFAULT NULL,
-			user_agent  VARCHAR(512)    DEFAULT NULL,
-			referrer    VARCHAR(512)    DEFAULT NULL,
-			method      VARCHAR(10)     DEFAULT NULL,
-			uri         VARCHAR(1024)   DEFAULT NULL,
-			user_id     BIGINT UNSIGNED DEFAULT NULL,
-			created_at  DATETIME        NOT NULL,
-			PRIMARY KEY  (id),
-			KEY idx_user_id (user_id),
-			KEY idx_created_at (created_at),
-			KEY idx_severity_created (severity, created_at),
-			KEY idx_event_created (event, created_at),
-			FULLTEXT KEY idx_uri_ft (uri)
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				event VARCHAR(64) NOT NULL,
+				details LONGTEXT NULL,
+				severity ENUM('info','warning','error') NOT NULL DEFAULT 'info',
+				ip VARCHAR(45) NULL,
+				user_agent VARCHAR(512) NULL,
+				referrer VARCHAR(512) NULL,
+		b		method VARCHAR(10) NULL,
+				uri VARCHAR(1024) NULL,
+				user_id BIGINT UNSIGNED NULL,
+				created_at DATETIME NOT NULL,
+				PRIMARY KEY  (id),
+				KEY idx_user_id (user_id),
+				KEY idx_created_at (created_at),
+				KEY idx_severity_created (severity, created_at),
+				KEY idx_event_created (event, created_at),
+				FULLTEXT KEY idx_uri_ft (uri)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
 	}
@@ -107,13 +112,13 @@ final class SchemaManager {
 
 		dbDelta(
 			"CREATE TABLE {$table} (
-			client_hash CHAR(32)        NOT NULL,
-			tokens      DOUBLE          NOT NULL,
-			last_refill DOUBLE          NOT NULL,
-			updated_at  BIGINT UNSIGNED NOT NULL,
-			PRIMARY KEY  (client_hash),
-			KEY updated_at (updated_at)
-		) {$charset_collate};"
+				client_hash CHAR(32) NOT NULL,
+				tokens DOUBLE NOT NULL DEFAULT 0,
+				last_refill DOUBLE NOT NULL DEFAULT 0,
+				updated_at BIGINT UNSIGNED NOT NULL,
+				PRIMARY KEY  (client_hash),
+				KEY idx_updated_at (updated_at)
+			) ENGINE=InnoDB {$charset_collate};"
 		);
 	}
 }
