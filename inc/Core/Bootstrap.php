@@ -10,9 +10,13 @@ use Bromate\SecurityApiFirewall\Runtime\RestRequestBootstrap;
 use Bromate\SecurityApiFirewall\Runtime\PublicRequestBootstrap;
 use Bromate\SecurityApiFirewall\Runtime\LoginBootstrap;
 
+
+
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwksEndpoint;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationAjaxController;
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\GlobalSecurityBootstrap;
+
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesAjaxController;
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
@@ -39,7 +43,7 @@ final class Bootstrap {
 		LoginBootstrap::register();
 		PublicRequestBootstrap::register();
 		GlobalSecurityBootstrap::register();
-
+		GeoIpLookup::register();
 		JwksEndpoint::register();
 
 		Cron::register();
@@ -62,6 +66,7 @@ final class Bootstrap {
 	public static function activate(): void {
 
 		SchemaManager::install();
+		GeoIpLookup::schedule();
 
 		if ( false === get_option( SettingsConfig::SETTINGS_OPTION_KEY ) ) {
 			update_option(
@@ -84,6 +89,7 @@ final class Bootstrap {
 		}
 
 		if ( SettingsRepository::read_option( 'config_delete_data_on_uninstall' ) ) {
+			Uninstall::deactivate();
 			Uninstall::delete_data();
 		}
 	}

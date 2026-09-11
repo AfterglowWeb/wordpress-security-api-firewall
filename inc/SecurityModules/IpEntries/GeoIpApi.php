@@ -1,14 +1,16 @@
-<?php namespace Bromate\SecurityApiFirewall\SecurityModules\IpEntries;
+<?php
+namespace Bromate\SecurityApiFirewall\SecurityModules\IpEntries;
 
 use League\ISO3166\ISO3166;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
 
 class GeoIpApi {
 
-	private const CACHE_KEY_PREFIX = 'bromate_security_api_firewall_fw_geoip_';
-	private const CACHE_GROUP_KEY  = 'bromate_security_api_firewall_geoip';
-	private const CACHE_TTL        = 86400 * 7;
+	private const CACHE_KEY_PREFIX   = 'bromate_security_api_firewall_fw_geoip_';
+	private const CACHE_GROUP_KEY    = 'bromate_security_api_firewall_geoip';
+	private const CACHE_TTL          = 86400 * 7;
 	private const NEGATIVE_CACHE_TTL = HOUR_IN_SECONDS;
-	private const API_ENDPOINT     = 'https://ipapi.co/%s/json/';
+	private const API_ENDPOINT       = 'https://ipapi.co/%s/json/';
 
 	public static function get_all_countries(): array {
 		$custom_names = array(
@@ -27,7 +29,6 @@ class GeoIpApi {
 			);
 		}
 
-		// XC and XO are not in the ISO standard — append them.
 		foreach ( $custom_names as $code => $name ) {
 			if ( ! in_array( $code, array_column( $countries, 'country_code' ), true ) ) {
 				$countries[] = array(
@@ -43,10 +44,9 @@ class GeoIpApi {
 	}
 
 	public static function is_country_blocked( string $ip ): bool {
-
 		$country_code = self::get_country_code( $ip );
 
-		if ( empty( $country_code ) ) {
+		if ( '' === $country_code ) {
 			return false;
 		}
 
@@ -54,13 +54,54 @@ class GeoIpApi {
 	}
 
 	public static function get_country_code( string $ip ): string {
+		$ip = IpUtils::cidr_to_ip( $ip );
+		if ( ! $ip ) {
+			return '';
+		}
 
-		$geoip = self::get_geoip( $ip );
+		$cc = GeoIpLookup::lookup( $ip );
 
-		return isset( $geoip['country'] ) ? $geoip['country'] : '';
+		return is_string( $cc ) ? strtoupper( $cc ) : '';
 	}
 
-	public static function get_geoip( string $ip ): array {
+	public static function get_country_name( string $ip ): string {
+		$cc = self::get_country_code( $ip );
+		if ( '' === $cc ) {
+			return '';
+		}
+
+		try {
+			$iso3166 = new ISO3166();
+			$entry   = $iso3166->alpha2( $cc );
+			return $entry['name'] ?? $cc;
+		} catch ( \Exception $e ) {
+			return $cc;
+		}
+	}
+	
+	public static function get_geoip( string $ip, bool $include_details = false ): array {
+		$ip = IpUtils::cidr_to_ip( $ip );
+		if ( ! $ip ) {
+			return array();
+		}
+
+		// Fast path: local dataset, no HTTP.
+		$country_code = self::get_country_code( $ip );
+
+		$local = array(
+			'country'     => '' !== $country_code ? $country_code : null,
+			'countryName' => '' !== $country_code ? self::country_name_from_code( $country_code ) : null,
+			'city'        => null,
+			'latitude'    => null,
+			'longitude'   => null,
+			'isp'         => null,
+		);
+
+		if ( ! $include_details ) {
+			return $local;
+		}
+
+		// Slow path: full details from ipapi.co, cached.
 		$cached = self::get_cached( $ip );
 		if ( null !== $cached ) {
 			return $cached;
@@ -69,14 +110,27 @@ class GeoIpApi {
 		$geoip = self::fetch_from_api( $ip );
 
 		if ( ! empty( $geoip ) ) {
+			// Prefer local country code if API disagrees (local is authoritative
+			// for firewall decisions, since it's what we cache in the DB).
+			if ( '' !== $country_code ) {
+				$geoip['country']     = $country_code;
+				$geoip['countryName'] = self::country_name_from_code( $country_code );
+			}
 			self::cache_result( $ip, $geoip, self::CACHE_TTL );
 			return $geoip;
 		}
 
-		self::cache_result( $ip, array(), self::NEGATIVE_CACHE_TTL );
-		return array();
+		// API failed; fall back to local-only data.
+		self::cache_result( $ip, $local, self::NEGATIVE_CACHE_TTL );
+		return $local;
 	}
 
+	/**
+	 * Sanitize an array of country codes.
+	 *
+	 * @param array $country_codes
+	 * @return string[]
+	 */
 	public static function sanitize_country_codes( array $country_codes ): array {
 		$sanitized = array();
 		foreach ( $country_codes as $country_code ) {
@@ -88,13 +142,32 @@ class GeoIpApi {
 		return array_values( array_unique( $sanitized ) );
 	}
 
+	/**
+	 * Resolve a country code to its English name via ISO 3166.
+	 */
+	private static function country_name_from_code( string $code ): string {
+		$custom_names = array(
+			'XC' => 'Northern Cyprus',
+			'XO' => 'South Ossetia',
+		);
+
+		if ( isset( $custom_names[ $code ] ) ) {
+			return $custom_names[ $code ];
+		}
+
+		try {
+			$iso3166 = new ISO3166();
+			$entry   = $iso3166->alpha2( $code );
+			return $entry['name'] ?? $code;
+		} catch ( \Exception $e ) {
+			return $code;
+		}
+	}
+
 	private static function build_api_url( string $ip ): string {
 		$ip = IpUtils::cidr_to_ip( $ip );
 		if ( $ip ) {
-			return sprintf(
-				self::API_ENDPOINT,
-				rawurlencode( $ip )
-			);
+			return sprintf( self::API_ENDPOINT, rawurlencode( $ip ) );
 		}
 		return '';
 	}

@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
-use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
 
 class IpEntriesAjaxController {
 
@@ -342,7 +342,7 @@ class IpEntriesAjaxController {
 
 		wp_send_json_success(
 			array(
-				'countries' => GeoIpApi::get_all_countries(),
+				'countries' => GeoIpLookup::get_all_countries(),
 				'stats'     => $stats,
 			),
 			200
