@@ -74,6 +74,8 @@ final class SchemaManager {
 				KEY idx_entry_origin (entry_origin),
 				KEY idx_user_id (user_id),
 				KEY idx_country_code (country_code),
+				KEY idx_geoip_enriched_at (geoip_enriched_at),
+				KEY idx_expires_at (expires_at),
 				KEY idx_created_at (created_at),
 				KEY idx_expires_at (expires_at)
 			) ENGINE=InnoDB {$charset_collate};"
