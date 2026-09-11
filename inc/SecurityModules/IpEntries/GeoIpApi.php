@@ -7,6 +7,7 @@ class GeoIpApi {
 	private const CACHE_KEY_PREFIX = 'bromate_security_api_firewall_fw_geoip_';
 	private const CACHE_GROUP_KEY  = 'bromate_security_api_firewall_geoip';
 	private const CACHE_TTL        = 86400 * 7;
+	private const NEGATIVE_CACHE_TTL = HOUR_IN_SECONDS;
 	private const API_ENDPOINT     = 'https://ipapi.co/%s/json/';
 
 	public static function get_all_countries(): array {
@@ -60,31 +61,31 @@ class GeoIpApi {
 	}
 
 	public static function get_geoip( string $ip ): array {
-
 		$cached = self::get_cached( $ip );
-		if ( $cached ) {
+		if ( null !== $cached ) {
 			return $cached;
 		}
 
 		$geoip = self::fetch_from_api( $ip );
 
 		if ( ! empty( $geoip ) ) {
-			self::cache_result( $ip, $geoip );
+			self::cache_result( $ip, $geoip, self::CACHE_TTL );
 			return $geoip;
 		}
 
+		self::cache_result( $ip, array(), self::NEGATIVE_CACHE_TTL );
 		return array();
 	}
 
 	public static function sanitize_country_codes( array $country_codes ): array {
-		$country_codes = array_filter(
-			$country_codes,
-			function ( $country_code ) {
-				preg_match( '/^[A-Z]{2}$/i', sanitize_key( $country_code ), $matches );
-				return ! empty( $matches );
+		$sanitized = array();
+		foreach ( $country_codes as $country_code ) {
+			$clean = strtoupper( sanitize_key( $country_code ) );
+			if ( preg_match( '/^[A-Z]{2}$/', $clean ) ) {
+				$sanitized[] = $clean;
 			}
-		);
-		return $country_codes;
+		}
+		return array_values( array_unique( $sanitized ) );
 	}
 
 	private static function build_api_url( string $ip ): string {
@@ -163,13 +164,10 @@ class GeoIpApi {
 		return null;
 	}
 
-	private static function cache_result( string $ip, array $data ): void {
+	private static function cache_result( string $ip, array $data, int $ttl ): void {
 		$key = self::CACHE_KEY_PREFIX . md5( $ip );
-		wp_cache_set( $key, $data, self::CACHE_GROUP_KEY, self::CACHE_TTL );
-
-		if ( wp_using_ext_object_cache() || is_admin() ) {
-			set_transient( $key, $data, self::CACHE_TTL );
-		}
+		wp_cache_set( $key, $data, self::CACHE_GROUP_KEY, $ttl );
+		set_transient( $key, $data, $ttl );
 	}
 
 	public static function delete_all_geoip_transients(): void {
