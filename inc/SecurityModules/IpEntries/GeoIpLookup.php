@@ -8,25 +8,17 @@ use League\ISO3166\ISO3166;
 
 final class GeoIpLookup {
 
-	private const CRON_HOOK = 'bromate_security_api_firewall_refresh_country_ips';
+	private const CRON_HOOK           = 'bromate_security_api_firewall_refresh_country_ips';
 	private const LAST_REFRESH_OPTION = 'bromate_security_api_firewall_country_ips_last_refresh';
-	private const SOURCE_BASE = 'https://raw.githubusercontent.com/ipverse/country-ip-blocks/master/country';	private static string $data_file = '';
-	private static ?array $ipv4_ranges = null;
-	private static ?array $ipv6_ranges = null;
+	private const SOURCE_BASE         = 'https://raw.githubusercontent.com/ipverse/country-ip-blocks/master/country';
+	private const CACHE_GROUP         = 'bromate_security_api_firewall_country_lookup';
 
 	public static function register(): void {
-		self::$data_file = self::get_data_file_path();
-
 		add_action( self::CRON_HOOK, array( __CLASS__, 'refresh_data' ) );
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
 		}
-	}
-
-	private static function get_data_file_path(): string {
-		$upload_dir = wp_upload_dir();
-		return trailingslashit( $upload_dir['basedir'] ) . 'bromate-country-ip-lookup.php';
 	}
 
 	public static function schedule(): void {
@@ -53,31 +45,42 @@ final class GeoIpLookup {
 		foreach ( $countries as $cc ) {
 			$url = self::SOURCE_BASE . '/' . strtolower( $cc ) . '/aggregated.json';
 
-			$response = wp_remote_get( $url, array(
-				'timeout' => 15,
-				'headers' => array( 'Accept' => 'application/json' ),
-			) );
+			$response = wp_remote_get(
+				$url,
+				array(
+					'timeout' => 15,
+					'headers' => array( 'Accept' => 'application/json' ),
+				)
+			);
 
 			if ( is_wp_error( $response ) ) {
 				$all_ok = false;
 				continue;
 			}
 
-			$body = wp_remote_retrieve_body( $response );
-			$data = json_decode( $body, true );
-
-			if ( ! is_array( $data ) || empty( $data['subnets'] ) ) {
+			$response_code = wp_remote_retrieve_response_code( $response );
+			if ( 200 !== $response_code ) {
+				if ( 404 !== $response_code ) {
+					$all_ok = false;
+				}
 				continue;
 			}
 
-			foreach ( $data['subnets']['ipv4'] ?? array() as $cidr ) {
+			$body = wp_remote_retrieve_body( $response );
+			$data = json_decode( $body, true );
+
+			if ( ! is_array( $data ) || empty( $data['prefixes'] ) ) {
+				continue;
+			}
+
+			foreach ( $data['prefixes']['ipv4'] ?? array() as $cidr ) {
 				$range = self::cidr_to_range_ipv4( $cidr, $cc );
 				if ( $range ) {
 					$ipv4_ranges[] = $range;
 				}
 			}
 
-			foreach ( $data['subnets']['ipv6'] ?? array() as $cidr ) {
+			foreach ( $data['prefixes']['ipv6'] ?? array() as $cidr ) {
 				$range = self::cidr_to_range_ipv6( $cidr, $cc );
 				if ( $range ) {
 					$ipv6_ranges[] = $range;
@@ -95,15 +98,85 @@ final class GeoIpLookup {
 		$ipv4_ranges = self::merge_ranges_ipv4( $ipv4_ranges );
 		$ipv6_ranges = self::merge_ranges_ipv6( $ipv6_ranges );
 
-		$php = self::generate_php_file( $ipv4_ranges, $ipv6_ranges );
-
-		if ( ! self::atomic_write( self::$data_file, $php ) ) {
+		if ( ! self::write_ranges( $ipv4_ranges, $ipv6_ranges ) ) {
 			return false;
 		}
 
 		update_option( self::LAST_REFRESH_OPTION, time(), false );
+		wp_cache_flush_group( self::CACHE_GROUP );
 
 		return $all_ok;
+	}
+
+	private static function write_ranges( array $ipv4_ranges, array $ipv6_ranges ): bool {
+		global $wpdb;
+
+		$live   = self::table_name();
+		$shadow = $live . '_shadow';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Shadow-table swap for atomic bulk refresh; no wpdb/dbDelta helper covers this.
+		$wpdb->query( "DROP TABLE IF EXISTS {$shadow}" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+		$wpdb->query( "CREATE TABLE {$shadow} LIKE {$live}" );
+
+		$ok = self::bulk_insert( $shadow, 4, $ipv4_ranges )
+			&& self::bulk_insert( $shadow, 6, $ipv6_ranges );
+
+		if ( ! $ok ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( "DROP TABLE IF EXISTS {$shadow}" );
+			return false;
+		}
+
+		$tmp = $live . '_old_' . time();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Atomic RENAME TABLE swap.
+		$renamed = $wpdb->query( "RENAME TABLE {$live} TO {$tmp}, {$shadow} TO {$live}" );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+		$wpdb->query( "DROP TABLE IF EXISTS {$tmp}" );
+
+		return (bool) $renamed;
+	}
+
+	private static function bulk_insert( string $table, int $ip_version, array $ranges ): bool {
+		global $wpdb;
+
+		if ( empty( $ranges ) ) {
+			return true;
+		}
+
+		foreach ( array_chunk( $ranges, 500 ) as $chunk ) {
+			$placeholders = array();
+			$values       = array();
+
+			foreach ( $chunk as $range ) {
+				$placeholders[] = '(%d, %s, %s, %s)';
+				$values[]       = $ip_version;
+				$values[]       = self::to_binary( $range['start'], $ip_version );
+				$values[]       = self::to_binary( $range['end'], $ip_version );
+				$values[]       = $range['cc'];
+			}
+
+			$sql = "INSERT INTO {$table} (ip_version, range_start, range_end, country_code) VALUES "
+				. implode( ', ', $placeholders );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders bound via $wpdb->prepare below
+			$result = $wpdb->query( $wpdb->prepare( $sql, $values ) );
+
+			if ( false === $result ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static function to_binary( $value, int $ip_version ): string {
+		if ( 6 === $ip_version ) {
+			return $value;
+		}
+		return pack( 'N', $value );
 	}
 
 	private static function cidr_to_range_ipv4( string $cidr, string $cc ): ?array {
@@ -142,7 +215,7 @@ final class GeoIpLookup {
 			return null;
 		}
 
-		$end_bin = $start_bin;
+		$end_bin    = $start_bin;
 		$full_bytes = intdiv( $bits, 8 );
 		$remaining  = $bits % 8;
 
@@ -151,7 +224,7 @@ final class GeoIpLookup {
 		}
 
 		if ( $remaining > 0 ) {
-			$mask = ~( ( 1 << ( 8 - $remaining ) ) - 1 ) & 0xFF;
+			$mask                   = ~( ( 1 << ( 8 - $remaining ) ) - 1 ) & 0xFF;
 			$end_bin[ $full_bytes ] = chr( ord( $end_bin[ $full_bytes ] ) | $mask );
 		}
 
@@ -218,120 +291,61 @@ final class GeoIpLookup {
 		return null;
 	}
 
-	private static function generate_php_file( array $ipv4, array $ipv6 ): string {
-		$ipv4_export = var_export( $ipv4, true );
-		$ipv6_export = var_export( $ipv6, true );
-
-		return "<?php\n"
-			. "// Auto-generated by Bromate CountryIpLookup. Do not edit.\n"
-			. "// Generated: " . gmdate( 'Y-m-d H:i:s' ) . " UTC\n"
-			. "return array(\n"
-			. "'ipv4' => " . $ipv4_export . ",\n"
-			. "'ipv6' => " . $ipv6_export . ",\n"
-			. ");\n";
-	}
-
-	private static function atomic_write( string $path, string $contents ): bool {
-		$tmp = $path . '.tmp.' . uniqid( '', true );
-
-		if ( file_put_contents( $tmp, $contents, LOCK_EX ) === false ) {
-			return false;
-		}
-
-		if ( ! rename( $tmp, $path ) ) {
-			@unlink( $tmp );
-			return false;
-		}
-
-		return true;
-	}
-
-	private static function load_data(): void {
-		if ( self::$ipv4_ranges !== null || self::$ipv6_ranges !== null ) {
-			return;
-		}
-
-		if ( ! file_exists( self::$data_file ) ) {
-			self::$ipv4_ranges = array();
-			self::$ipv6_ranges = array();
-			return;
-		}
-
-		$data = include self::$data_file;
-
-		if ( ! is_array( $data ) ) {
-			self::$ipv4_ranges = array();
-			self::$ipv6_ranges = array();
-			return;
-		}
-
-		self::$ipv4_ranges = $data['ipv4'] ?? array();
-		self::$ipv6_ranges = $data['ipv6'] ?? array();
-	}
-
 	public static function lookup( string $ip ): ?string {
-		self::load_data();
+		$cache_key = md5( $ip );
+		$cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+		if ( false !== $cached ) {
+			return '' === $cached ? null : $cached;
+		}
+
+		$result = self::lookup_uncached( $ip );
+
+		wp_cache_set( $cache_key, $result ?? '', self::CACHE_GROUP, HOUR_IN_SECONDS );
+
+		return $result;
+	}
+
+	private static function lookup_uncached( string $ip ): ?string {
+		global $wpdb;
+
+		$table = self::table_name();
 
 		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
-			return self::lookup_ipv4( ip2long( $ip ) );
-		}
-
-		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$bin        = pack( 'N', ip2long( $ip ) );
+			$ip_version = 4;
+		} elseif ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
 			$bin = inet_pton( $ip );
-			if ( $bin !== false ) {
-				return self::lookup_ipv6( $bin );
+			if ( false === $bin ) {
+				return null;
 			}
-		}
-
-		return null;
-	}
-
-	private static function lookup_ipv4( $ip ): ?string {
-		if ( $ip === false || empty( self::$ipv4_ranges ) ) {
+			$ip_version = 6;
+		} else {
 			return null;
 		}
 
-		$lo = 0;
-		$hi = count( self::$ipv4_ranges ) - 1;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$country_code = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT country_code FROM {$table}
+				 WHERE ip_version = %d AND range_start <= %s AND range_end >= %s
+				 ORDER BY range_start DESC LIMIT 1",
+				$ip_version,
+				$bin,
+				$bin
+			)
+		);
 
-		while ( $lo <= $hi ) {
-			$mid   = ( $lo + $hi ) >> 1;
-			$range = self::$ipv4_ranges[ $mid ];
-
-			if ( $ip < $range['start'] ) {
-				$hi = $mid - 1;
-			} elseif ( $ip > $range['end'] ) {
-				$lo = $mid + 1;
-			} else {
-				return $range['cc'];
-			}
-		}
-
-		return null;
+		return $country_code ?: null;
 	}
 
-	private static function lookup_ipv6( string $ip ): ?string {
-		if ( empty( self::$ipv6_ranges ) ) {
-			return null;
-		}
+	public static function table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'bromate_country_ip_ranges';
+	}
 
-		$lo = 0;
-		$hi = count( self::$ipv6_ranges ) - 1;
-
-		while ( $lo <= $hi ) {
-			$mid   = ( $lo + $hi ) >> 1;
-			$range = self::$ipv6_ranges[ $mid ];
-
-			if ( strcmp( $ip, $range['start'] ) < 0 ) {
-				$hi = $mid - 1;
-			} elseif ( strcmp( $ip, $range['end'] ) > 0 ) {
-				$lo = $mid + 1;
-			} else {
-				return $range['cc'];
-			}
-		}
-
-		return null;
+	public static function get_last_refresh(): ?int {
+		$ts = get_option( self::LAST_REFRESH_OPTION );
+		return $ts ? (int) $ts : null;
 	}
 
 	public static function get_iso_country_codes(): array {
@@ -360,7 +374,6 @@ final class GeoIpLookup {
 			);
 		}
 
-		// XC and XO are not in the ISO standard — append them if missing.
 		$known_codes = array_column( $countries, 'country_code' );
 		foreach ( $custom_names as $code => $name ) {
 			if ( ! in_array( $code, $known_codes, true ) ) {

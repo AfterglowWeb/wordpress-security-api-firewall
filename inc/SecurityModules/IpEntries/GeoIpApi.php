@@ -1,6 +1,7 @@
 <?php
 namespace Bromate\SecurityApiFirewall\SecurityModules\IpEntries;
 
+use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 use League\ISO3166\ISO3166;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
 
@@ -78,14 +79,13 @@ class GeoIpApi {
 			return $cc;
 		}
 	}
-	
+
 	public static function get_geoip( string $ip, bool $include_details = false ): array {
 		$ip = IpUtils::cidr_to_ip( $ip );
 		if ( ! $ip ) {
 			return array();
 		}
 
-		// Fast path: local dataset, no HTTP.
 		$country_code = self::get_country_code( $ip );
 
 		$local = array(
@@ -101,7 +101,6 @@ class GeoIpApi {
 			return $local;
 		}
 
-		// Slow path: full details from ipapi.co, cached.
 		$cached = self::get_cached( $ip );
 		if ( null !== $cached ) {
 			return $cached;
@@ -110,8 +109,6 @@ class GeoIpApi {
 		$geoip = self::fetch_from_api( $ip );
 
 		if ( ! empty( $geoip ) ) {
-			// Prefer local country code if API disagrees (local is authoritative
-			// for firewall decisions, since it's what we cache in the DB).
 			if ( '' !== $country_code ) {
 				$geoip['country']     = $country_code;
 				$geoip['countryName'] = self::country_name_from_code( $country_code );
@@ -120,17 +117,10 @@ class GeoIpApi {
 			return $geoip;
 		}
 
-		// API failed; fall back to local-only data.
 		self::cache_result( $ip, $local, self::NEGATIVE_CACHE_TTL );
 		return $local;
 	}
 
-	/**
-	 * Sanitize an array of country codes.
-	 *
-	 * @param array $country_codes
-	 * @return string[]
-	 */
 	public static function sanitize_country_codes( array $country_codes ): array {
 		$sanitized = array();
 		foreach ( $country_codes as $country_code ) {
@@ -142,9 +132,6 @@ class GeoIpApi {
 		return array_values( array_unique( $sanitized ) );
 	}
 
-	/**
-	 * Resolve a country code to its English name via ISO 3166.
-	 */
 	private static function country_name_from_code( string $code ): string {
 		$custom_names = array(
 			'XC' => 'Northern Cyprus',
@@ -170,6 +157,24 @@ class GeoIpApi {
 			return sprintf( self::API_ENDPOINT, rawurlencode( $ip ) );
 		}
 		return '';
+	}
+
+	public static function enrich_pending_batch( int $batch_size = 25 ): void {
+		global $wpdb;
+		$table = SchemaManager::ip_entries_table_name();
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, ip FROM {$table} WHERE geoip_enriched_at IS NULL ORDER BY created_at ASC LIMIT %d",
+				$batch_size
+			),
+			ARRAY_A
+		);
+
+		foreach ( (array) $rows as $row ) {
+			$geoip = GeoIpApi::get_geoip( $row['ip'], true );
+			IpEntriesRepository::update_geoip_data( (int) $row['id'], $geoip );
+		}
 	}
 
 	private static function fetch_from_api( string $ip ): array {
