@@ -10,7 +10,7 @@ final class GeoIpLookup {
 
 	private const CRON_HOOK = 'bromate_security_api_firewall_refresh_country_ips';
 	private const LAST_REFRESH_OPTION = 'bromate_security_api_firewall_country_ips_last_refresh';
-	private const SOURCE_BASE = 'https://raw.githubusercontent.com/ipverse/country-ip-blocks/master/country';
+	private const SOURCE_BASE = 'https://github.com/ipverse/country-ip-blocks/tree/master/country';
 	private static string $data_file = '';
 	private static ?array $ipv4_ranges = null;
 	private static ?array $ipv6_ranges = null;
