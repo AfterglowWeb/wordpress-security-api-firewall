@@ -100,6 +100,9 @@ class IpEntriesRepository {
 			),
 			'geoip_enriched_at' => array(
 				'type'     => 'datetime',
+				'sanitize_callback' => static function ( $v ) {
+					return ( is_string( $v ) && false !== strtotime( $v ) ) ? $v : null;
+				},
 				'default'  => null,
 				'sortable' => true,
 			),
@@ -398,36 +401,38 @@ class IpEntriesRepository {
 		$existing = self::ip_in_db( $sanitized['ip'], $sanitized['list_type'] ?? 'blacklist' );
 
 		if ( $existing ) {
-			$update_data               = $sanitized;
-			$update_data['updated_at'] = $now;
-			unset( $update_data['ip'] );
+		$update_data               = $sanitized;
+		$update_data['updated_at'] = $now;
+		unset( $update_data['ip'] );
 
-			if ( empty( $existing['country_code'] ) ) {
-				$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
-				if ( $geoip ) {
-					$update_data['country_code'] = $geoip['country'] ?? null;
-					$update_data['country_name'] = $geoip['countryName'] ?? null;
-				}
-			}
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$result = $wpdb->update( self::table(), $update_data, array( 'id' => $existing['id'] ) );
-
-			if ( false !== $result ) {
-				return 'updated';
+		if ( empty( $existing['country_code'] ) && empty( $sanitized['country_code'] ) ) {
+			$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
+			if ( ! empty( $geoip['country'] ) ) {
+				$update_data['country_code'] = $geoip['country'];
+				$update_data['country_name'] = $geoip['countryName'] ?? null;
 			}
 		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->update( self::table(), $update_data, array( 'id' => $existing['id'] ) );
+
+		if ( false !== $result ) {
+			return 'updated';
+		}
+	}
 
 		$sanitized['created_at'] = $now;
 		$sanitized['updated_at'] = $now;
 
-		$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
-		if ( $geoip ) {
-			$sanitized['country_code'] = $geoip['country'] ?? null;
-			$sanitized['country_name'] = $geoip['countryName'] ?? null;
+		if ( empty( $sanitized['country_code'] ) ) {
+			$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
+			if ( ! empty( $geoip['country'] ) ) {
+				$sanitized['country_code'] = $geoip['country'];
+				$sanitized['country_name'] = $geoip['countryName'] ?? null;
+			}
 		}
 
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+	    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert( self::table(), $sanitized );
 
 		return $result ? 'inserted' : '';

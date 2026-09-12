@@ -17,10 +17,15 @@ final class SchemaManager {
 		global $wpdb;
 
 		self::create_ip_entries( $wpdb );
+		self::create_country_ip_ranges( $wpdb );
 		self::create_logs( $wpdb );
 		self::create_rate_buckets( $wpdb );
 
 		update_option( self::SCHEMA_VERSION_OPTION_KEY, BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION, false );
+	}
+
+	public static function delete_schema_version(): void {
+		delete_option( self::SCHEMA_VERSION_OPTION_KEY );
 	}
 
 	public static function drop_tables(): void {
@@ -28,14 +33,26 @@ final class SchemaManager {
 		global $wpdb;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_security_api_firewall_logs" );
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}bromate_rate_buckets" );
+		$wpdb->query( "DROP TABLE IF EXISTS " . self::ip_entries_table_name() );
+		$wpdb->query( "DROP TABLE IF EXISTS " . self::country_ip_ranges_table_name() );
+		$wpdb->query( "DROP TABLE IF EXISTS " . self::logs_table_name() );
+		$wpdb->query( "DROP TABLE IF EXISTS " . self::rate_buckets_table_name() );
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
 	}
 
-	public static function delete_schema_version(): void {
-		delete_option( self::SCHEMA_VERSION_OPTION_KEY );
+	public static function ip_entries_table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'bromate_security_api_firewall_ip_entries';
+	}
+
+	public static function country_ip_ranges_table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'bromate_security_api_firewall_country_ip_ranges';
+	}
+
+	public static function logs_table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'bromate_security_api_firewall_logs';
 	}
 
 	public static function rate_buckets_table_name(): string {
@@ -79,6 +96,23 @@ final class SchemaManager {
 				KEY idx_created_at (created_at),
 				KEY idx_expires_at (expires_at)
 			) ENGINE=InnoDB {$charset_collate};"
+		);
+	}
+
+	private static function create_country_ip_ranges( \wpdb $wpdb ): void {
+		$table           = $wpdb->prefix . 'bromate_security_api_firewall_country_ip_ranges';
+		$charset_collate = $wpdb->get_charset_collate();
+
+		dbDelta(
+			"CREATE TABLE {$wpdb->prefix}bromate_country_ip_ranges (
+				id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				ip_version    TINYINT UNSIGNED NOT NULL,
+				range_start   VARBINARY(16) NOT NULL,
+				range_end     VARBINARY(16) NOT NULL,
+				country_code  CHAR(2) NOT NULL,
+				PRIMARY KEY  (id),
+				KEY idx_lookup (ip_version, range_start, range_end)
+			) {$charset_collate};"
 		);
 	}
 
