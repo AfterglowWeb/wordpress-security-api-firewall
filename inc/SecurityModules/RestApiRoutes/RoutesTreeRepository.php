@@ -8,8 +8,11 @@ use Throwable;
 
 class RoutesTreeRepository {
 
-	const DEFAULT_HIDDEN_ROUTES     = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
-	const ROUTES_LIST_TRANSIENT_KEY = 'bromate_security_api_firewall_routes_list';
+	const CORE_NAMESPACE             = 'wp/v2';
+	const DEFAULT_HIDDEN_ROUTES      = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
+	const ROUTES_LIST_TRANSIENT_KEY  = 'bromate_security_api_firewall_routes_list';
+	const NAMESPACES_TRANSIENT_KEY   = 'bromate_security_api_firewall_routes_namespaces';
+	const UNROUTED_NODE_KEY          = '__unrouted__';
 
 	public static function get_routes_policy_tree(): array {
 		$tree       = self::build_policy_tree();
@@ -71,46 +74,76 @@ class RoutesTreeRepository {
 		return $output;
 	}
 
+	private static function get_registered_namespaces(): array {
+		$cached = get_transient( self::NAMESPACES_TRANSIENT_KEY );
+		if ( false !== $cached && is_array( $cached ) ) {
+			return $cached;
+		}
+
+		$namespaces = rest_get_server()->get_namespaces();
+
+		// ok for 'oembed/1.0', 'wp-site-health/v1', 'wp-abilities/v1', 'wp-block-editor/v1'.
+		$known_specials = array( 'batch/v1' );
+		foreach ( $known_specials as $special ) {
+			if ( ! in_array( $special, $namespaces, true ) ) {
+				$namespaces[] = $special;
+			}
+		}
+
+		usort( $namespaces, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+
+		set_transient( self::NAMESPACES_TRANSIENT_KEY, $namespaces, HOUR_IN_SECONDS );
+		return $namespaces;
+	}
+
 	private static function build_policy_tree(): array {
-		$flat_routes       = self::list_all_rest_routes();
-		$known_namespaces  = RouteParser::get_registered_namespaces();
-		$tree              = array();
-		$unrouted          = array();
+		$flat_routes      = self::list_all_rest_routes();
+		$known_namespaces = self::get_registered_namespaces();
+		$tree             = array();
+		$unrouted         = array();
 
 		foreach ( $flat_routes as $route ) {
 			$parsed = RouteParser::route_to_segments( $route['route'], $known_namespaces );
+
 			if ( empty( $parsed ) ) {
 				$unrouted[] = $route;
 				continue;
 			}
+
 			$namespace = $parsed['namespace'];
-				$segments  = $parsed['segments'];
+			$segments  = $parsed['segments'];
 
-				if ( ! isset( $tree[ $namespace ] ) ) {
-					$tree[ $namespace ] = array(
-						'id'       => self::node_id( '/' . $namespace ),
-						'label'    => $namespace,
-						'path'     => '/' . $namespace,
-						'children' => array(),
-						'routes'   => array(),
-					);
-				}
+			if ( ! isset( $tree[ $namespace ] ) ) {
+				$tree[ $namespace ] = array(
+					'id'       => self::node_id( '/' . $namespace ),
+					'label'    => $namespace,
+					'path'     => '/' . $namespace,
+					'is_core'  => ( self::CORE_NAMESPACE === $namespace ),
+					'children' => array(),
+					'routes'   => array(),
+				);
+			}
 
-				if ( empty( $segments ) ) {
-					self::add_route_to_collection( $tree[ $namespace ]['routes'], $route );
-				} else {
-					self::insert_route_into_tree( $tree[ $namespace ]['children'], $segments, $route, '/' . $namespace );
-				}
+			if ( empty( $segments ) ) {
+				self::add_route_to_collection( $tree[ $namespace ]['routes'], $route );
+			} else {
+				self::insert_route_into_tree( $tree[ $namespace ]['children'], $segments, $route, '/' . $namespace );
+			}
 		}
 
 		if ( ! empty( $unrouted ) ) {
-			$tree['__unrouted__'] = array(
-				'id'       => self::node_id( '/__unrouted__' ),
+			$tree[ self::UNROUTED_NODE_KEY ] = array(
+				'id'       => self::node_id( '/' . self::UNROUTED_NODE_KEY ),
 				'label'    => __( 'Unrecognized Routes', 'bromate-security-api-firewall' ),
-				'path'     => '/__unrouted__',
+				'path'     => '/' . self::UNROUTED_NODE_KEY,
+				'is_core'  => false,
 				'children' => array(),
-				'routes'   => $unrouted,
+				'routes'   => array(),
 			);
+
+			foreach ( $unrouted as $route ) {
+				self::add_route_to_collection( $tree[ self::UNROUTED_NODE_KEY ]['routes'], $route );
+			}
 		}
 
 		return self::normalize_tree( $tree );
@@ -210,16 +243,8 @@ class RoutesTreeRepository {
 
 		$merged = $node;
 
-		foreach ( $saved_node as $key => $value ) {
-			if ( ! in_array( $key, array( 'settings', 'children', 'permission' ), true ) ) {
-				$merged[ $key ] = $value;
-			}
-		}
-
-		foreach ( array( 'settings', 'permission' ) as $key ) {
-			if ( isset( $saved_node[ $key ] ) ) {
-				$merged[ $key ] = self::merge_recursive( $merged[ $key ] ?? array(), $saved_node[ $key ] );
-			}
+		if ( isset( $saved_node['settings'] ) ) {
+			$merged['settings'] = self::merge_recursive( $merged['settings'] ?? array(), $saved_node['settings'] );
 		}
 
 		if ( isset( $saved_node['children'] ) ) {
@@ -316,6 +341,11 @@ class RoutesTreeRepository {
 					$sanitized[ $key ] = sanitize_text_field( (string) $value );
 					break;
 
+				case 'is_core':
+				case 'isMethod':
+					$sanitized[ $key ] = (bool) $value;
+					break;
+
 				case 'params':
 					$sanitized[ $key ] = is_array( $value ) ? self::sanitize_params( $value ) : array();
 					break;
@@ -332,12 +362,8 @@ class RoutesTreeRepository {
 					$sanitized[ $key ] = is_array( $value ) ? self::sanitize_routes_policy_tree( $value ) : array();
 					break;
 
-				case 'isMethod':
-					$sanitized[ $key ] = (bool) $value;
-					break;
-
 				default:
-					$sanitized[ $key ] = $value;
+					break;
 			}
 		}
 
@@ -414,5 +440,6 @@ class RoutesTreeRepository {
 
 	public static function delete_routes_list_transient(): void {
 		delete_transient( self::ROUTES_LIST_TRANSIENT_KEY );
+		delete_transient( self::NAMESPACES_TRANSIENT_KEY );
 	}
 }

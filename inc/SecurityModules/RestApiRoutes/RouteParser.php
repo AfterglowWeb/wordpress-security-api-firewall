@@ -46,19 +46,14 @@ class RouteParser {
 		}
 
 		if ( is_array( $cb ) ) {
-			return 'protected';
+			return 'requires_check';
 		}
 
 		return 'custom';
 	}
 
-	public static function get_registered_namespaces(): array {
-		$namespaces = rest_get_server()->get_namespaces();
-		usort( $namespaces, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
-		return $namespaces;
-	}
-
 	public static function route_to_segments( string $route, array $known_namespaces ): array {
+
 		$trimmed = trim( $route, '/' );
 		if ( '' === $trimmed ) {
 			return array();
@@ -69,6 +64,9 @@ class RouteParser {
 
 		foreach ( $known_namespaces as $ns ) {
 			$ns = trim( $ns, '/' );
+			if ( '' === $ns ) {
+				continue;
+			}
 			if ( $trimmed === $ns || 0 === strpos( $trimmed, $ns . '/' ) ) {
 				$namespace = $ns;
 				$rest      = trim( substr( $trimmed, strlen( $ns ) ), '/' );
@@ -80,7 +78,7 @@ class RouteParser {
 			return array();
 		}
 
-		$segments = '' === $rest ? array() : self::split_respecting_regex_groups( $rest );
+		$segments = ( '' === $rest ) ? array() : self::split_respecting_regex_groups( $rest );
 
 		$segments = array_map(
 			static function ( $segment ) {
@@ -102,19 +100,23 @@ class RouteParser {
 		$segments = array();
 		$buffer   = '';
 		$depth    = 0;
+		$length   = strlen( $path );
 
-		for ( $i = 0, $len = strlen( $path ); $i < $len; $i++ ) {
+		for ( $i = 0; $i < $length; $i++ ) {
 			$char = $path[ $i ];
+
 			if ( '(' === $char ) {
 				++$depth;
 			} elseif ( ')' === $char ) {
 				--$depth;
 			}
+
 			if ( '/' === $char && 0 === $depth ) {
 				$segments[] = $buffer;
 				$buffer     = '';
 				continue;
 			}
+
 			$buffer .= $char;
 		}
 
