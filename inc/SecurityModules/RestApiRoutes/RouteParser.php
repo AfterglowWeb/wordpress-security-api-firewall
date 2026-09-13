@@ -46,26 +46,64 @@ class RouteParser {
 		}
 
 		if ( is_array( $cb ) ) {
-			return 'protected';
+			return 'requires_check';
 		}
 
 		return 'custom';
 	}
 
-	public static function route_to_segments( string $route ): array {
+	public static function route_to_segments( string $route, array $known_namespaces ): array {
 
-		$route = trim( $route, '/' );
-		if ( '' === $route ) {
+		$trimmed = trim( $route, '/' );
+		if ( '' === $trimmed ) {
 			return array();
 		}
 
+		$namespace = null;
+		$rest      = null;
+
+		foreach ( $known_namespaces as $ns ) {
+			$ns = trim( $ns, '/' );
+			if ( '' === $ns ) {
+				continue;
+			}
+			if ( $trimmed === $ns || 0 === strpos( $trimmed, $ns . '/' ) ) {
+				$namespace = $ns;
+				$rest      = trim( substr( $trimmed, strlen( $ns ) ), '/' );
+				break;
+			}
+		}
+
+		if ( null === $namespace ) {
+			return array();
+		}
+
+		$segments = ( '' === $rest ) ? array() : self::split_respecting_regex_groups( $rest );
+
+		$segments = array_map(
+			static function ( $segment ) {
+				if ( preg_match( '#^\(\?P<([^>]+)>#', $segment, $m ) ) {
+					return '{' . $m[1] . '}';
+				}
+				return $segment;
+			},
+			$segments
+		);
+
+		return array(
+			'namespace' => $namespace,
+			'segments'  => $segments,
+		);
+	}
+
+	private static function split_respecting_regex_groups( string $path ): array {
 		$segments = array();
 		$buffer   = '';
 		$depth    = 0;
-		$length   = strlen( $route );
+		$length   = strlen( $path );
 
 		for ( $i = 0; $i < $length; $i++ ) {
-			$char = $route[ $i ];
+			$char = $path[ $i ];
 
 			if ( '(' === $char ) {
 				++$depth;
@@ -86,29 +124,7 @@ class RouteParser {
 			$segments[] = $buffer;
 		}
 
-		if ( count( $segments ) < 2 ) {
-			return array();
-		}
-
-		$namespace = $segments[0] . '/' . $segments[1];
-		$segments  = array_slice( $segments, 2 );
-
-		$segments = array_map(
-			static function ( $segment ) {
-
-				if ( preg_match( '#^\(\?P<([^>]+)>#', $segment, $m ) ) {
-					return '{' . $m[1] . '}';
-				}
-
-				return $segment;
-			},
-			$segments
-		);
-
-		return array(
-			'namespace' => $namespace,
-			'segments'  => $segments,
-		);
+		return $segments;
 	}
 
 	public static function extract_route_params( string $route ): array {
