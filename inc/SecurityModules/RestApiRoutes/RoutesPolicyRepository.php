@@ -6,8 +6,6 @@ use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 
 class RoutesPolicyRepository {
 
-	protected static $instance = null;
-
 	const GLOBAL_SETTINGS_DEFAULTS = array(
 		'routes_policy_enabled'                         => false,
 		'routes_policy_default_hidden_routes'           => false,
@@ -17,13 +15,6 @@ class RoutesPolicyRepository {
 		'routes_policy_hidden_routes_redirect_option'   => '404',
 		'routes_policy_hidden_routes_redirect_user_url' => '',
 	);
-
-	public static function get_instance() {
-		if ( null === static::$instance ) {
-			static::$instance = new static();
-		}
-		return static::$instance;
-	}
 
 	public static function get_global_settings(): array {
 		$saved = SettingsRepository::read_options();
@@ -57,18 +48,13 @@ class RoutesPolicyRepository {
 	}
 
 	public static function save_all_settings( array $settings ): bool {
-		$global_settings       = isset( $settings['settings'] ) ? $settings['settings'] : array();
-		$tree                  = isset( $settings['tree'] ) ? $settings['tree'] : array();
-		$global_settings_saved = false;
-		$tree_saved            = false;
+		$global_settings = isset( $settings['settings'] ) ? $settings['settings'] : array();
+		$tree            = isset( $settings['tree'] ) ? $settings['tree'] : array();
 
-		if ( ! empty( $global_settings ) ) {
-			$global_settings_saved = self::save_global_settings( $global_settings );
-		}
-		if ( ! empty( $tree ) ) {
-			$tree_saved = RoutesTreeRepository::save_routes_policy_tree( $tree );
-		}
-			return $global_settings_saved || $tree_saved;
+		$global_ok = empty( $global_settings ) || self::save_global_settings( $global_settings );
+		$tree_ok   = empty( $tree ) || RoutesTreeRepository::save_routes_policy_tree( $tree );
+
+		return $global_ok && $tree_ok;
 	}
 
 	public static function get_settings_payload(): array {
