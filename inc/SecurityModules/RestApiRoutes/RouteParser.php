@@ -52,54 +52,41 @@ class RouteParser {
 		return 'custom';
 	}
 
-	public static function route_to_segments( string $route ): array {
+	public static function get_registered_namespaces(): array {
+		$namespaces = rest_get_server()->get_namespaces();
+		usort( $namespaces, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+		return $namespaces;
+	}
 
-		$route = trim( $route, '/' );
-		if ( '' === $route ) {
+	public static function route_to_segments( string $route, array $known_namespaces ): array {
+		$trimmed = trim( $route, '/' );
+		if ( '' === $trimmed ) {
 			return array();
 		}
 
-		$segments = array();
-		$buffer   = '';
-		$depth    = 0;
-		$length   = strlen( $route );
+		$namespace = null;
+		$rest      = null;
 
-		for ( $i = 0; $i < $length; $i++ ) {
-			$char = $route[ $i ];
-
-			if ( '(' === $char ) {
-				++$depth;
-			} elseif ( ')' === $char ) {
-				--$depth;
+		foreach ( $known_namespaces as $ns ) {
+			$ns = trim( $ns, '/' );
+			if ( $trimmed === $ns || 0 === strpos( $trimmed, $ns . '/' ) ) {
+				$namespace = $ns;
+				$rest      = trim( substr( $trimmed, strlen( $ns ) ), '/' );
+				break;
 			}
-
-			if ( '/' === $char && 0 === $depth ) {
-				$segments[] = $buffer;
-				$buffer     = '';
-				continue;
-			}
-
-			$buffer .= $char;
 		}
 
-		if ( '' !== $buffer ) {
-			$segments[] = $buffer;
-		}
-
-		if ( count( $segments ) < 2 ) {
+		if ( null === $namespace ) {
 			return array();
 		}
 
-		$namespace = $segments[0] . '/' . $segments[1];
-		$segments  = array_slice( $segments, 2 );
+		$segments = '' === $rest ? array() : self::split_respecting_regex_groups( $rest );
 
 		$segments = array_map(
 			static function ( $segment ) {
-
 				if ( preg_match( '#^\(\?P<([^>]+)>#', $segment, $m ) ) {
 					return '{' . $m[1] . '}';
 				}
-
 				return $segment;
 			},
 			$segments
@@ -109,6 +96,33 @@ class RouteParser {
 			'namespace' => $namespace,
 			'segments'  => $segments,
 		);
+	}
+
+	private static function split_respecting_regex_groups( string $path ): array {
+		$segments = array();
+		$buffer   = '';
+		$depth    = 0;
+
+		for ( $i = 0, $len = strlen( $path ); $i < $len; $i++ ) {
+			$char = $path[ $i ];
+			if ( '(' === $char ) {
+				++$depth;
+			} elseif ( ')' === $char ) {
+				--$depth;
+			}
+			if ( '/' === $char && 0 === $depth ) {
+				$segments[] = $buffer;
+				$buffer     = '';
+				continue;
+			}
+			$buffer .= $char;
+		}
+
+		if ( '' !== $buffer ) {
+			$segments[] = $buffer;
+		}
+
+		return $segments;
 	}
 
 	public static function extract_route_params( string $route ): array {

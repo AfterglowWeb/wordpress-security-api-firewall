@@ -174,11 +174,6 @@ class RoutesResolver {
 			'protect'  => false,
 		);
 
-		// Tracks whether disabled/protect were EXPLICITLY overridden somewhere
-		// along the chain (parent node or the route itself), as opposed to
-		// merely inheriting a resolved value. An explicit override must win
-		// over a global rule cascading down — same priority order enforced
-		// on the frontend in routeInheritance.ts.
 		$overridden = array(
 			'disabled' => false,
 			'protect'  => false,
@@ -206,10 +201,6 @@ class RoutesResolver {
 		return in_array( $namespace, array( 'wp', 'oembed', 'batch', 'wp-site-health', 'wp-abilities', 'wp-block-editor' ), true );
 	}
 
-	// Narrower than is_wordpress_core_route(): matches only the wp/v2
-	// namespace itself and routes beneath it, to line up with the UI label
-	// ("Enforce Authentication On `wp/v2/*` Routes") and the frontend's
-	// isGloballyProtected() check in routeInheritance.ts.
 	public static function is_wp_v2_namespace( string $route ): bool {
 		$segments = explode( '/', ltrim( $route, '/' ) );
 		return isset( $segments[0], $segments[1] ) && 'wp' === $segments[0] && 'v2' === $segments[1];

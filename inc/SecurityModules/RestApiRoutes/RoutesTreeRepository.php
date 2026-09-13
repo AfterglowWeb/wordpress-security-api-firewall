@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RouteParser;
 use Throwable;
 
 class RoutesTreeRepository {
@@ -71,33 +72,45 @@ class RoutesTreeRepository {
 	}
 
 	private static function build_policy_tree(): array {
-		$flat_routes = self::list_all_rest_routes();
-		$tree        = array();
+		$flat_routes       = self::list_all_rest_routes();
+		$known_namespaces  = RouteParser::get_registered_namespaces();
+		$tree              = array();
+		$unrouted          = array();
 
 		foreach ( $flat_routes as $route ) {
-			$parsed = RouteParser::route_to_segments( $route['route'] );
+			$parsed = RouteParser::route_to_segments( $route['route'], $known_namespaces );
 			if ( empty( $parsed ) ) {
+				$unrouted[] = $route;
 				continue;
 			}
-
 			$namespace = $parsed['namespace'];
-			$segments  = $parsed['segments'];
+				$segments  = $parsed['segments'];
 
-			if ( ! isset( $tree[ $namespace ] ) ) {
-				$tree[ $namespace ] = array(
-					'id'       => self::node_id( '/' . $namespace ),
-					'label'    => $namespace,
-					'path'     => '/' . $namespace,
-					'children' => array(),
-					'routes'   => array(),
-				);
-			}
+				if ( ! isset( $tree[ $namespace ] ) ) {
+					$tree[ $namespace ] = array(
+						'id'       => self::node_id( '/' . $namespace ),
+						'label'    => $namespace,
+						'path'     => '/' . $namespace,
+						'children' => array(),
+						'routes'   => array(),
+					);
+				}
 
-			if ( empty( $segments ) ) {
-				self::add_route_to_collection( $tree[ $namespace ]['routes'], $route );
-			} else {
-				self::insert_route_into_tree( $tree[ $namespace ]['children'], $segments, $route, '/' . $namespace );
-			}
+				if ( empty( $segments ) ) {
+					self::add_route_to_collection( $tree[ $namespace ]['routes'], $route );
+				} else {
+					self::insert_route_into_tree( $tree[ $namespace ]['children'], $segments, $route, '/' . $namespace );
+				}
+		}
+
+		if ( ! empty( $unrouted ) ) {
+			$tree['__unrouted__'] = array(
+				'id'       => self::node_id( '/__unrouted__' ),
+				'label'    => __( 'Unrecognized Routes', 'bromate-security-api-firewall' ),
+				'path'     => '/__unrouted__',
+				'children' => array(),
+				'routes'   => $unrouted,
+			);
 		}
 
 		return self::normalize_tree( $tree );
