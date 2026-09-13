@@ -48,13 +48,18 @@ class RoutesPolicyRepository {
 	}
 
 	public static function save_all_settings( array $settings ): bool {
-		$global_settings = isset( $settings['settings'] ) ? $settings['settings'] : array();
-		$tree            = isset( $settings['tree'] ) ? $settings['tree'] : array();
+		$global_settings       = isset( $settings['settings'] ) ? $settings['settings'] : array();
+		$tree                  = isset( $settings['tree'] ) ? $settings['tree'] : array();
+		$global_settings_saved = false;
+		$tree_saved            = false;
 
-		$global_ok = empty( $global_settings ) || self::save_global_settings( $global_settings );
-		$tree_ok   = empty( $tree ) || RoutesTreeRepository::save_routes_policy_tree( $tree );
-
-		return $global_ok && $tree_ok;
+		if ( ! empty( $global_settings ) ) {
+			$global_settings_saved = self::save_global_settings( $global_settings );
+		}
+		if ( ! empty( $tree ) ) {
+			$tree_saved = RoutesTreeRepository::save_routes_policy_tree( $tree );
+		}
+			return $global_settings_saved || $tree_saved;
 	}
 
 	public static function get_settings_payload(): array {
