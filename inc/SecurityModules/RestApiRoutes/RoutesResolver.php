@@ -28,12 +28,12 @@ class RoutesResolver {
 		return $policy;
 	}
 
-
 	protected static function resolve_for_route( string $route, string $method ): array {
 
 		$tree = RoutesTreeRepository::get_routes_policy_tree();
 
 		$node_chain = self::find_node_chain( $tree, $route );
+		$is_core    = ! empty( $node_chain[0]['is_core'] );
 
 		$node_settings = array();
 
@@ -49,11 +49,7 @@ class RoutesResolver {
 			$method
 		);
 
-		$effective = self::resolve_settings(
-			$node_settings,
-			$route_settings,
-			self::is_wp_v2_namespace( $route )
-		);
+		$effective = self::resolve_settings( $node_settings, $route_settings, $is_core );
 
 		if ( isset( $effective['disabled'] ) ) {
 
@@ -69,12 +65,12 @@ class RoutesResolver {
 				$match_count = 0;
 
 				foreach ( $default_hidden_routes as $hidden_route ) {
-					if ( 0 === strpos( $route, $hidden_route ) ) {
+					if ( 0 === strpos( $route, '/' . ltrim( $hidden_route, '/' ) ) ) {
 						++$match_count;
 					}
 				}
 
-				if ( 1 === $match_count ) {
+				if ( $match_count > 0 ) {
 					$effective['disabled'] = true;
 				}
 			}
@@ -105,22 +101,20 @@ class RoutesResolver {
 	}
 
 	protected static function find_node_chain( array $tree, string $route ): array {
+		$known_namespaces = RoutesTreeRepository::get_registered_namespaces();
+		$parsed = RouteParser::route_to_segments( $route, $known_namespaces );
 
-		$segments = explode( '/', trim( $route, '/' ) );
+		if ( empty( $parsed ) ) {
+			return array();
+		}
 
-		$namespace = $segments[0] . '/' . $segments[1];
-		$path      = '/' . $namespace;
-
+		$path  = '/' . $parsed['namespace'];
 		$chain = array();
 
 		foreach ( $tree as $node ) {
 			if ( $node['path'] === $path ) {
 				$chain[] = $node;
-				self::walk_chain(
-					$node,
-					array_slice( $segments, 2 ),
-					$chain
-				);
+				self::walk_chain( $node, $parsed['segments'], $chain );
 				break;
 			}
 		}
@@ -193,17 +187,6 @@ class RoutesResolver {
 			'disabled' => $final['disabled'],
 			'protect'  => $final['protect'],
 		);
-	}
-
-	public static function is_wordpress_core_route( string $route ): bool {
-		$segments  = explode( '/', ltrim( $route, '/' ) );
-		$namespace = $segments[0] ?? '';
-		return in_array( $namespace, array( 'wp', 'oembed', 'batch', 'wp-site-health', 'wp-abilities', 'wp-block-editor' ), true );
-	}
-
-	public static function is_wp_v2_namespace( string $route ): bool {
-		$segments = explode( '/', ltrim( $route, '/' ) );
-		return isset( $segments[0], $segments[1] ) && 'wp' === $segments[0] && 'v2' === $segments[1];
 	}
 
 	private static function merge_settings( array $base, array $override, array &$overridden ): array {

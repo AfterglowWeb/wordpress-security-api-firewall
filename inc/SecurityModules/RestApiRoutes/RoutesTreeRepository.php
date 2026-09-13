@@ -74,7 +74,7 @@ class RoutesTreeRepository {
 		return $output;
 	}
 
-	private static function get_registered_namespaces(): array {
+	public static function get_registered_namespaces(): array {
 		$cached = get_transient( self::NAMESPACES_TRANSIENT_KEY );
 		if ( false !== $cached && is_array( $cached ) ) {
 			return $cached;
