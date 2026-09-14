@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 
+use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Runtime\IpAccessControl;
 use Bromate\SecurityApiFirewall\Runtime\RateLimiterBucket;
 
@@ -32,34 +33,17 @@ final class RestRequestBootstrap {
 
 		add_filter(
 			'application_password_is_api_request',
-			'__return_true',
+			array( self::class, 'maybe_allow_application_passwords' ),
 			10,
 			1
 		);
 
-		add_filter(
-			'rest_authentication_errors',
-			array( self::class, 'authenticate_request' ),
-			10,
-			100
-		);
-
-		add_filter(
-			'rest_pre_dispatch',
-			array( self::class, 'apply_route_policy' ),
-			5,
-			3
-		);
-
-		add_filter(
-			'rest_pre_dispatch',
-			array( self::class, 'rate_limit_request' ),
-			10,
-			1
-		);
+		add_filter( 'rest_pre_dispatch', array( self::class, 'rate_limit_request' ), 5, 1 );
+		add_filter( 'rest_pre_dispatch', array( self::class, 'apply_route_policy' ), 7, 3 );
+		add_filter( 'rest_pre_dispatch', array( self::class, 'authenticate_request' ), 10, 3 );
 	}
 
-	public static function authenticate_request( $result, $request = null ) {
+	public static function authenticate_request( $result, $server = null, $request = null ) {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -82,9 +66,13 @@ final class RestRequestBootstrap {
 
 		$auth_result = RestAuthenticationRuntime::authenticate();
 
+		if ( is_wp_error( $auth_result ) ) {
+			RestAuthenticationAttemptsLimiter::record_failure();
+			return $auth_result;
+		}
+
 		if ( ! $auth_result ) {
 			RestAuthenticationAttemptsLimiter::record_failure();
-
 			return new WP_Error(
 				'rest_authentication_failed',
 				esc_html__( 'Invalid or missing authentication credentials.', 'bromate-security-api-firewall' ),
@@ -92,12 +80,23 @@ final class RestRequestBootstrap {
 			);
 		}
 
-		if ( is_wp_error( $auth_result ) ) {
-			RestAuthenticationAttemptsLimiter::record_failure();
-			return $auth_result;
+		return $result;
+	}
+
+	public static function maybe_allow_application_passwords( $is_api_request ) {
+		if ( empty( SettingsRepository::read_option( 'auth_control_enabled' ) ) ) {
+			return $is_api_request;
 		}
 
-		return $result;
+		$method = SettingsRepository::read_option( 'firewall_auth_method' ) ?: 'wp_auth';
+
+		if ( 'jwt' === $method ) {
+			// JWT-only: application passwords must not authenticate REST
+			// requests at all, not even as a side channel WP core handles itself.
+			return false;
+		}
+
+		return true;
 	}
 
 	public static function apply_route_policy( $result, $server = null, $request = null ) {

@@ -2,7 +2,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Logs\Logger;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -33,33 +32,38 @@ class JwtAuthentication {
 
 		$decoded = null;
 
-		try {
-			if ( ! empty( $jwks_url ) ) {
+		if ( ! empty( $jwks_url ) ) {
+			try {
 				$jwks = self::get_remote_jwks( $jwks_url );
-
 				if ( ! empty( $jwks ) ) {
-					$keys    = JWK::parseKeySet( $jwks, $algorithm );
-					$decoded = JWT::decode( $token, $keys );
+					$decoded = JWT::decode( $token, JWK::parseKeySet( $jwks, $algorithm ) );
 				}
+			} catch ( Throwable $e ) {
+				Logger::log( 'jwt_auth_attempt_failed', 'info', array( 'source' => 'jwks_url', 'error' => $e->getMessage() ) );
 			}
+		}
 
-			if ( null === $decoded && ! empty( $public_key ) ) {
+		if ( null === $decoded && ! empty( $public_key ) ) {
+			try {
 				$decoded = JWT::decode( $token, new Key( $public_key, $algorithm ) );
+			} catch ( Throwable $e ) {
+				Logger::log( 'jwt_auth_attempt_failed', 'info', array( 'source' => 'public_key', 'error' => $e->getMessage() ) );
 			}
-
-			if ( null === $decoded ) {
-				$jwks = self::build_jwks( true );
-				if ( ! empty( $jwks['keys'] ) ) {
-					$keys    = JWK::parseKeySet( $jwks, $algorithm );
-					$decoded = JWT::decode( $token, $keys );
-				}
-			}
-		} catch ( Throwable $e ) {
-			Logger::log( 'jwt_auth_failed', 'warning', (array) $e );
-			return false;
 		}
 
 		if ( null === $decoded ) {
+			try {
+				$jwks = self::build_jwks( true );
+				if ( ! empty( $jwks['keys'] ) ) {
+					$decoded = JWT::decode( $token, JWK::parseKeySet( $jwks, $algorithm ) );
+				}
+			} catch ( Throwable $e ) {
+				Logger::log( 'jwt_auth_attempt_failed', 'info', array( 'source' => 'internal_jwks', 'error' => $e->getMessage() ) );
+			}
+		}
+
+		if ( null === $decoded ) {
+			Logger::log( 'jwt_auth_failed', 'warning', array( 'reason' => 'No configured key source could validate the token.' ) );
 			return false;
 		}
 
@@ -259,8 +263,7 @@ class JwtAuthentication {
 	}
 
 	private static function encrypt_private_key( string $private_key ): string {
-		$encryption_key = wp_salt( 'auth' ) . wp_salt( 'secure_auth' );
-		$encryption_key = hash( 'sha256', $encryption_key, true );
+		$encryption_key = self::get_static_encryption_material();
 
 		$iv = openssl_random_pseudo_bytes( 16 );
 		if ( false === $iv ) {
@@ -284,8 +287,7 @@ class JwtAuthentication {
 	}
 
 	private static function decrypt_private_key_pem( string $encrypted_data ): ?string {
-		$encryption_key = wp_salt( 'auth' ) . wp_salt( 'secure_auth' );
-		$encryption_key = hash( 'sha256', $encryption_key, true );
+		$encryption_key = self::get_static_encryption_material();
 
 		$decoded = hex2bin( $encrypted_data );
 		if ( false === $decoded || strlen( $decoded ) < 16 ) {
@@ -304,6 +306,14 @@ class JwtAuthentication {
 		);
 
 		return false !== $private_key ? $private_key : null;
+	}
+
+
+	private static function get_static_encryption_material(): string {
+		if ( defined( 'AUTH_KEY' ) && defined( 'SECURE_AUTH_KEY' ) && '' !== AUTH_KEY && '' !== SECURE_AUTH_KEY ) {
+			return AUTH_KEY . SECURE_AUTH_KEY;
+		}
+		return wp_salt( 'auth' ) . wp_salt( 'secure_auth' );
 	}
 
 	private static function get_all_key_records(): array {
