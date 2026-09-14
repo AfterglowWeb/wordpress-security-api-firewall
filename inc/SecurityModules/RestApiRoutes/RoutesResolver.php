@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesTreeRepository;
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RouteParser;
 use WP_REST_Request;
 
 class RoutesResolver {
@@ -33,7 +34,6 @@ class RoutesResolver {
 		$tree = RoutesTreeRepository::get_routes_policy_tree();
 
 		$node_chain = self::find_node_chain( $tree, $route );
-		$is_core    = ! empty( $node_chain[0]['is_core'] );
 
 		$node_settings = array();
 
@@ -49,7 +49,17 @@ class RoutesResolver {
 			$method
 		);
 
-		$effective = self::resolve_settings( $node_settings, $route_settings, $is_core );
+		// The root of the chain is the namespace node, which carries the
+		// authoritative is_core flag computed in RoutesTreeRepository from
+		// WordPress's actual registered namespace list — not re-derived
+		// here from the route string.
+		$is_core = ! empty( $node_chain[0]['is_core'] );
+
+		$effective = self::resolve_settings(
+			$node_settings,
+			$route_settings,
+			$is_core
+		);
 
 		if ( isset( $effective['disabled'] ) ) {
 
@@ -58,20 +68,25 @@ class RoutesResolver {
 			if ( ! empty( $opts['routes_policy_default_hidden_routes'] ) ) {
 
 				$default_hidden_routes = RoutesTreeRepository::get_default_hidden_routes();
-				if ( empty( $default_hidden_routes ) ) {
-					return $effective;
-				}
 
-				$match_count = 0;
+				if ( ! empty( $default_hidden_routes ) ) {
 
-				foreach ( $default_hidden_routes as $hidden_route ) {
-					if ( 0 === strpos( $route, '/' . ltrim( $hidden_route, '/' ) ) ) {
-						++$match_count;
+					$match_count = 0;
+
+					foreach ( $default_hidden_routes as $hidden_route ) {
+						// $route (from $request->get_route()) always has a
+						// leading slash; entries in DEFAULT_HIDDEN_ROUTES do
+						// not. Normalize both sides before comparing, or the
+						// prefix match never lines up.
+						$needle = '/' . ltrim( $hidden_route, '/' );
+						if ( 0 === strpos( $route, $needle ) ) {
+							++$match_count;
+						}
 					}
-				}
 
-				if ( $match_count > 0 ) {
-					$effective['disabled'] = true;
+					if ( $match_count > 0 ) {
+						$effective['disabled'] = true;
+					}
 				}
 			}
 
@@ -101,8 +116,9 @@ class RoutesResolver {
 	}
 
 	protected static function find_node_chain( array $tree, string $route ): array {
+
 		$known_namespaces = RoutesTreeRepository::get_registered_namespaces();
-		$parsed = RouteParser::route_to_segments( $route, $known_namespaces );
+		$parsed           = RouteParser::route_to_segments( $route, $known_namespaces );
 
 		if ( empty( $parsed ) ) {
 			return array();
@@ -114,7 +130,11 @@ class RoutesResolver {
 		foreach ( $tree as $node ) {
 			if ( $node['path'] === $path ) {
 				$chain[] = $node;
-				self::walk_chain( $node, $parsed['segments'], $chain );
+				self::walk_chain(
+					$node,
+					$parsed['segments'],
+					$chain
+				);
 				break;
 			}
 		}
