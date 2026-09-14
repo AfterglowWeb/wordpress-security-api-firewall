@@ -165,7 +165,10 @@ class RestAuthorizedUserRepository {
 
 		$merged_users = array_values( $merged );
 
-		return SettingsRepository::update_option( 'auth_users', $merged_users );
+		if( SettingsRepository::update_option( 'auth_users', $merged_users ) ) {
+			return $merged_users;
+		}
+		return $existing_users;
 	}
 
 	public static function get_authorized_users(): array {
