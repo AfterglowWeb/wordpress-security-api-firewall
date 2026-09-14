@@ -43,6 +43,7 @@ class RoutesAjaxController {
 	public function ajax_get_routes_settings(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+			return;
 		}
 
 		wp_send_json_success(
@@ -54,6 +55,7 @@ class RoutesAjaxController {
 	public function ajax_save_all_routes_settings(): void {
 		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
@@ -64,9 +66,10 @@ class RoutesAjaxController {
 				),
 				400
 			);
+			return;
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
-		$settings_payload = isset( $_POST['settings'] ) ? sanitize_text_field( wp_unslash( $_POST['settings'] ) ) : '';
+		$settings_payload = isset( $_POST['settings'] ) ? wp_unslash( $_POST['settings'] ) : '';
 		$settings         = json_decode( $settings_payload, true );
 
 		$result = RoutesPolicyRepository::save_all_settings( $settings );
@@ -77,6 +80,7 @@ class RoutesAjaxController {
 				),
 				500
 			);
+			return;
 		}
 
 		wp_send_json_success(
