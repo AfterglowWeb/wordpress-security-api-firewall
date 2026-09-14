@@ -10,14 +10,15 @@ use Bromate\SecurityApiFirewall\Runtime\RestRequestBootstrap;
 use Bromate\SecurityApiFirewall\Runtime\PublicRequestBootstrap;
 use Bromate\SecurityApiFirewall\Runtime\LoginBootstrap;
 
-
-
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\JwksEndpoint;
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthenticationAjaxController;
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\GlobalSecurityBootstrap;
+use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeadersAjaxController;
 
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesAjaxController;
+
+use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesAjaxController;
 
 use Bromate\SecurityApiFirewall\Admin\AdminPage;
 use Bromate\SecurityApiFirewall\Admin\Documentation;
@@ -54,8 +55,10 @@ final class Bootstrap {
 		if ( is_admin() ) {
 			AdminPage::register();
 			SettingsAjaxController::register();
+			HttpHeadersAjaxController::register();
 			RestAuthenticationAjaxController::register();
 			IpEntriesAjaxController::register();
+			RoutesAjaxController::register();
 			LogsAjaxController::register();
 			SettingsMigrateAjaxController::register();
 			Documentation::register();
