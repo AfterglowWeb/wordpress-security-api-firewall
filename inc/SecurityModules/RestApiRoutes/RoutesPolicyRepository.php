@@ -38,17 +38,8 @@ class RoutesPolicyRepository {
 		}
 
 		foreach ( $sanitized as $key => $value ) {
-			$result = SettingsRepository::update_option( $key, $value );
-
-			if ( false === $result ) {
-				// update_option() returns false both on a genuine write
-				// failure and when the value is unchanged (a WP no-op).
-				// Only treat it as a real failure if the stored value
-				// actually doesn't match what we tried to save.
-				$current = SettingsRepository::read_option( $key );
-				if ( $current !== $value ) {
-					return false;
-				}
+			if ( ! SettingsRepository::update_option( $key, $value ) ) {
+				return false;
 			}
 		}
 

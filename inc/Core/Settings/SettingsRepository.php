@@ -51,15 +51,22 @@ class SettingsRepository {
 
 		$sanitized_option = self::sanitize_option( $option_key, $new_option );
 		$options          = self::read_options();
-		$current_value    = $options[ $option_key ];
-		if ( $sanitized_option === $current_value ) {
+
+		if ( array_key_exists( $option_key, $options ) && $sanitized_option === $options[ $option_key ] ) {
 			return true;
 		}
+
 		$options[ $option_key ] = $sanitized_option;
 
-		update_option( SettingsConfig::SETTINGS_OPTION_KEY, $options );
+		$write_result = update_option( SettingsConfig::SETTINGS_OPTION_KEY, $options );
 
-		return $sanitized_option;
+		if ( false === $write_result ) {
+			$current_options = get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() );
+			return isset( $current_options[ $option_key ] )
+				&& $current_options[ $option_key ] === $sanitized_option;
+		}
+
+		return true;
 	}
 
 	public static function sanitize_options( array $options, bool $use_defaults = true ): array {

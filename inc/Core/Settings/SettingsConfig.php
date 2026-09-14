@@ -229,7 +229,7 @@ final class SettingsConfig {
 			'routes_policy_hidden_methods'                 => array(
 				'default_value'     => array(),
 				'type'              => 'array',
-				'sanitize_callback' => array( RoutesTreeRepository::class, 'sanitize_hidden_methods' ),
+				'sanitize_callback' => array( RoutesPolicyRepository::class, 'sanitize_hidden_methods' ),
 				'group'             => 'routes',
 			),
 
