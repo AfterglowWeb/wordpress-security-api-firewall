@@ -16,6 +16,8 @@ class RoutesPolicyRepository {
 		'routes_policy_hidden_routes_redirect_user_url' => '',
 	);
 
+	private const ALLOWED_METHODS = array( 'GET', 'POST', 'PUT', 'DELETE', 'PATCH' );
+
 	public static function get_global_settings(): array {
 		$saved = SettingsRepository::read_options();
 
@@ -118,7 +120,7 @@ class RoutesPolicyRepository {
 					array_map(
 						static function ( $method ) {
 							$method = sanitize_key( (string) $method );
-							return '' !== $method ? $method : null;
+							return in_array( strtoupper( $method ), self::ALLOWED_METHODS, true ) ? $method : null;
 						},
 						$value
 					)
