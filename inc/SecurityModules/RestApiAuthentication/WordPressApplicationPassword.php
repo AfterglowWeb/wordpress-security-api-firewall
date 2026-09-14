@@ -10,7 +10,7 @@ class WordPressApplicationPassword {
 
 
 	public static function user_has_valid_application_password( $user_id ) {
-		if ( ! function_exists( 'WP_Application_Passwords' ) ) {
+		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
 			return false;
 		}
 
