@@ -115,8 +115,6 @@ final class GeoIpLookup {
 		$live   = SchemaManager::country_ip_ranges_table_name();
 		$shadow = $live . '_shadow';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Shadow-table swap for atomic bulk refresh; no wpdb/dbDelta helper covers this.
-		$wpdb->query( "DROP TABLE IF EXISTS {$shadow}" );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
 		$wpdb->query( "CREATE TABLE {$shadow} LIKE {$live}" );
 
