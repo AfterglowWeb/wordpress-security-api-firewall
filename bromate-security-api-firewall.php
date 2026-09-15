@@ -34,7 +34,7 @@ require_once BROMATE_SECURITY_API_FIREWALL_DIR . 'vendor/autoload.php';
 Core\Bootstrap::register();
 
 register_activation_hook( __FILE__, array( Core\Bootstrap::class, 'activate' ) );
-
+register_activation_hook( __FILE__, array( SecurityModules\RestApiAuthentication\RestAccessCustomCap::class, 'add_api_access_cap_on_authorized_users' ) );
 register_deactivation_hook( __FILE__, array( Core\Bootstrap::class, 'deactivate' ) );
 
 add_filter(
