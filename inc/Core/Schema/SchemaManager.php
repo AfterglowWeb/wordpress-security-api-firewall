@@ -42,29 +42,28 @@ final class SchemaManager {
 
 	public static function ip_entries_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'bromate_security_api_firewall_ip_entries';
+		return $wpdb->prefix . 'bsaf_ip_entries';
 	}
 
 	public static function country_ip_ranges_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'bromate_security_api_firewall_country_ip_ranges';
+		return $wpdb->prefix . 'bsaf_country_ip_ranges';
 	}
 
 	public static function logs_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'bromate_security_api_firewall_logs';
+		return $wpdb->prefix . 'bsaf_logs';
 	}
 
 	public static function rate_buckets_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'bromate_security_api_firewall_rate_buckets';
+		return $wpdb->prefix . 'bsaf_rate_buckets';
 	}
 
 	private static function create_ip_entries( \wpdb $wpdb ): void {
 		$table           = self::ip_entries_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -97,14 +96,12 @@ final class SchemaManager {
 				KEY idx_created_at (created_at)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
-		// phpcs:enable
 	}
 
 	private static function create_country_ip_ranges( \wpdb $wpdb ): void {
 		$table           = self::country_ip_ranges_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -116,14 +113,12 @@ final class SchemaManager {
 				KEY idx_lookup (ip_version, range_start, range_end)
 			) {$charset_collate};"
 		);
-		// phpcs:enable
 	}
-
+	
 	private static function create_logs( \wpdb $wpdb ): void {
 		$table           = self::logs_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -145,14 +140,12 @@ final class SchemaManager {
 				FULLTEXT KEY idx_uri_ft (uri)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
-		// phpcs:enable
 	}
 
 	private static function create_rate_buckets( \wpdb $wpdb ): void {
 		$table           = self::rate_buckets_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
-		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				client_hash CHAR(32) NOT NULL,
@@ -163,6 +156,5 @@ final class SchemaManager {
 				KEY idx_updated_at (updated_at)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
-		// phpcs:enable
 	}
 }

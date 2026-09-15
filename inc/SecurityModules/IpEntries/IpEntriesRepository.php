@@ -4,13 +4,9 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpApi;
+use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 
 class IpEntriesRepository {
-
-	protected static function table(): string {
-		global $wpdb;
-		return $wpdb->prefix . 'bromate_security_api_firewall_ip_entries';
-	}
 
 	public static function entry_config(): array {
 		return array(
@@ -160,7 +156,7 @@ class IpEntriesRepository {
 		);
 
 		$args   = wp_parse_args( $args, $defaults );
-		$table  = self::table();
+		$table  = SchemaManager::ip_entries_table_name();
 		$where  = array( '1=1' );
 		$values = array();
 		$config = self::entry_config();
@@ -241,10 +237,11 @@ class IpEntriesRepository {
 
 	public static function get_all_entries(): array {
 		global $wpdb;
+		$table = SchemaManager::ip_entries_table_name();
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $wpdb->get_results(
-			"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries ORDER BY created_at DESC",
+			"SELECT * FROM {$table} ORDER BY created_at DESC",
 			ARRAY_A
 		);
 
@@ -254,7 +251,7 @@ class IpEntriesRepository {
 	public static function find_by_id( int $id ): ?array {
 		global $wpdb;
 
-		$sql = 'SELECT * FROM ' . self::table() . ' WHERE id = %d LIMIT 1';
+		$sql = 'SELECT * FROM ' . SchemaManager::ip_entries_table_name() . ' WHERE id = %d LIMIT 1';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$row = $wpdb->get_row( $wpdb->prepare( $sql, $id ), ARRAY_A );
 
@@ -266,7 +263,7 @@ class IpEntriesRepository {
 
 		$sql = '
 			SELECT *
-			FROM ' . self::table() . '
+			FROM ' . SchemaManager::ip_entries_table_name() . '
 			WHERE ip = %s
 			AND list_type = %s
 			AND (
@@ -284,7 +281,7 @@ class IpEntriesRepository {
 	public static function find_by_user( int $user_id ): array {
 		global $wpdb;
 
-		$sql = 'SELECT * FROM ' . self::table() . ' WHERE user_id = %d ORDER BY created_at DESC';
+		$sql = 'SELECT * FROM ' . SchemaManager::ip_entries_table_name() . ' WHERE user_id = %d ORDER BY created_at DESC';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $user_id ), ARRAY_A );
 
@@ -298,10 +295,12 @@ class IpEntriesRepository {
 			return true;
 		}
 
+		$table = SchemaManager::ip_entries_table_name();
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$may_be_cidrs = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT ip FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries 
+				"SELECT ip FROM {$table} 
 			WHERE list_type = %s 
 			AND ip LIKE %s 
 			AND (
@@ -324,10 +323,12 @@ class IpEntriesRepository {
 
 	private static function ip_in_db( string $ip, string $list_type ): ?array {
 		global $wpdb;
+		
+		$table = SchemaManager::ip_entries_table_name();
 
 		$exact = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip = %s AND list_type = %s",
+				"SELECT * FROM {$table} WHERE ip = %s AND list_type = %s",
 				$ip,
 				$list_type
 			),
@@ -344,7 +345,7 @@ class IpEntriesRepository {
 
 		$cidr_entries = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE ip LIKE %s AND list_type = %s",
+				"SELECT * FROM {$table} WHERE ip LIKE %s AND list_type = %s",
 				'%/%',
 				$list_type
 			),
@@ -414,7 +415,7 @@ class IpEntriesRepository {
 			}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$result = $wpdb->update( self::table(), $update_data, array( 'id' => $existing['id'] ) );
+			$result = $wpdb->update( SchemaManager::ip_entries_table_name(), $update_data, array( 'id' => $existing['id'] ) );
 
 			if ( false !== $result ) {
 				return 'updated';
@@ -433,7 +434,7 @@ class IpEntriesRepository {
 		}
 
 	    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$result = $wpdb->insert( self::table(), $sanitized );
+		$result = $wpdb->insert( SchemaManager::ip_entries_table_name(), $sanitized );
 
 		return $result ? 'inserted' : '';
 	}
@@ -449,7 +450,7 @@ class IpEntriesRepository {
 		$sanitized['updated_at'] = current_time( 'mysql' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (bool) $wpdb->update( self::table(), $sanitized, array( 'id' => $id ) );
+		return (bool) $wpdb->update( SchemaManager::ip_entries_table_name(), $sanitized, array( 'id' => $id ) );
 	}
 
 	public static function update_geoip_data( int $id, array $geoip ): bool {
@@ -466,13 +467,13 @@ class IpEntriesRepository {
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (bool) $wpdb->update( self::table(), $data, array( 'id' => $id ) );
+		return (bool) $wpdb->update( SchemaManager::ip_entries_table_name(), $data, array( 'id' => $id ) );
 	}
 
 	public static function delete( int $id ): bool {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (bool) $wpdb->delete( self::table(), array( 'id' => $id ) );
+		return (bool) $wpdb->delete( SchemaManager::ip_entries_table_name(), array( 'id' => $id ) );
 	}
 
 	public static function delete_many_ips( array $ips ): int {
@@ -483,7 +484,7 @@ class IpEntriesRepository {
 		}
 
 		$placeholders = implode( ',', array_fill( 0, count( $ips ), '%s' ) );
-		$sql          = 'DELETE FROM ' . self::table() . " WHERE ip IN ({$placeholders})";
+		$sql          = 'DELETE FROM ' . SchemaManager::ip_entries_table_name() . " WHERE ip IN ({$placeholders})";
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders generated from validated IP strings
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ips ) );
@@ -496,9 +497,10 @@ class IpEntriesRepository {
 			return 0;
 		}
 
+		$table = SchemaManager::ip_entries_table_name();
 		$ids          = array_map( 'absint', $ids );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		$sql          = "DELETE FROM {$wpdb->prefix}bromate_security_api_firewall_ip_entries WHERE id IN ({$placeholders})";
+		$sql          = "DELETE FROM {$table} WHERE id IN ({$placeholders})";
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- placeholders generated from validated integer IDs
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
@@ -506,22 +508,23 @@ class IpEntriesRepository {
 
 	public static function delete_all_entries(): bool {
 		global $wpdb;
+		$table = SchemaManager::ip_entries_table_name();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bromate_security_api_firewall_ip_entries" );
+		$result = $wpdb->query( "TRUNCATE TABLE {$table}" );
 		return false !== $result;
 	}
 
 	public static function delete_expired(): int {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- static SQL, no user input
-		return (int) $wpdb->query( 'DELETE FROM ' . self::table() . ' WHERE expires_at IS NOT NULL AND expires_at < NOW()' );
+		return (int) $wpdb->query( 'DELETE FROM ' . SchemaManager::ip_entries_table_name() . ' WHERE expires_at IS NOT NULL AND expires_at < NOW()' );
 	}
 
 	public static function get_country_stats( string $list_type = 'blacklist' ): array {
 		global $wpdb;
 
 		$sql = 'SELECT country_code, country_name, COUNT(*) as count
-				FROM ' . self::table() . '
+				FROM ' . SchemaManager::ip_entries_table_name() . '
 				WHERE list_type = %s
 				AND (expires_at IS NULL OR expires_at > NOW())
 				AND country_code IS NOT NULL

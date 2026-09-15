@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsMigrate;
+use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 
 final class NotificationMailer {
 
@@ -52,8 +53,9 @@ final class NotificationMailer {
 
 	public static function build( array $entries, string $format ): ?string {
 		global $wpdb;
+		$table = SchemaManager::logs_table_name();
 		$format       = 'json' === $format ? 'json' : 'csv';
-		$file_details = SettingsMigrate::get_instance()->export_table_data( $wpdb->prefix . 'bromate_security_api_firewall_logs', $entries, $format );
+		$file_details = SettingsMigrate::get_instance()->export_table_data( $table, $entries, $format );
 		return $file_details ? $file_details['path'] : null;
 	}
 }
