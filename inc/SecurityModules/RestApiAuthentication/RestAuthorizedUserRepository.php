@@ -32,10 +32,15 @@ class RestAuthorizedUserRepository {
 					'id'                  => absint( $user->ID ),
 					'display_name'        => sanitize_text_field( $user->display_name ?? '' ),
 					'email'               => sanitize_email( $user->user_email ),
-					'current_user'        => $current_user_id === $user->ID ? true : false,
+					'current_user'        => $current_user_id === $user->ID,
 					'admin_url'           => sanitize_url( get_edit_user_link( $user->ID ) ),
 					'roles'               => array_map( 'sanitize_key', $user->roles ),
-					'jwt_subclaim'        => self::create_user_jwt_subclaim( $user->ID ),
+					// Read-only: creating a subclaim here as a side effect of
+					// just listing users meant opening this admin screen
+					// silently minted a bearer-secret-equivalent for every
+					// user on the site, whether or not they were ever
+					// selected for API access.
+					'jwt_subclaim'        => self::get_user_jwt_subclaim( $user->ID ),
 					'status'              => '',
 					'expires_at'          => '',
 					'ip_entries'          => IpEntriesRepository::find_by_user( $user->ID ),
@@ -165,7 +170,8 @@ class RestAuthorizedUserRepository {
 
 		$merged_users = array_values( $merged );
 
-		if( SettingsRepository::update_option( 'auth_users', $merged_users ) ) {
+		if ( SettingsRepository::update_option( 'auth_users', $merged_users ) ) {
+			do_action( 'bromate_security_api_firewall_auth_users_updated' );
 			return $merged_users;
 		}
 		return $existing_users;
@@ -176,6 +182,15 @@ class RestAuthorizedUserRepository {
 	}
 
 	public static function get_authorized_roles(): array {
+		return SettingsRepository::read_option( 'auth_authorized_roles' );
+	}
+
+	public static function update_authorized_roles( array $roles ): array {
+		$sanitized_roles = self::sanitize_authorized_roles( $roles );
+		if ( SettingsRepository::update_option( 'auth_authorized_roles', $sanitized_roles ) ) {
+			do_action( 'bromate_security_api_firewall_auth_roles_updated' );
+			return $sanitized_roles;
+		}
 		return SettingsRepository::read_option( 'auth_authorized_roles' );
 	}
 
@@ -212,7 +227,7 @@ class RestAuthorizedUserRepository {
 
 		if ( $deleted_count > 0 ) {
 			SettingsRepository::update_option( 'auth_users', $remaining_users );
-			RestAccessCustomCap::add_api_access_cap_on_authorized_users();
+			do_action( 'bromate_security_api_firewall_auth_users_updated' );
 		}
 
 		return $deleted_count;
@@ -276,37 +291,49 @@ class RestAuthorizedUserRepository {
 	}
 
 	public static function get_user_id_from_jwt_subclaim( string $subclaim ): int {
+
+		if ( '' === $subclaim ) {
+			return 0;
+		}
+
 		$parts = explode( '_', $subclaim );
 
 		if ( count( $parts ) >= 2 ) {
-			$user_id = filter_var( $parts[1], FILTER_VALIDATE_INT );
-			if ( false !== $user_id ) {
-				return $user_id;
+			$candidate_id = filter_var( $parts[1], FILTER_VALIDATE_INT );
+
+			if ( false !== $candidate_id && $candidate_id > 0 ) {
+				$stored = get_user_meta( $candidate_id, self::USER_JWT_SUBCLAIM_METAKEY, true );
+
+				if ( is_string( $stored ) && '' !== $stored && hash_equals( $stored, $subclaim ) ) {
+					return $candidate_id;
+				}
 			}
 		}
 
 		$authorized_users = SettingsRepository::read_option( 'auth_users' );
-		if ( empty( $authorized_users ) ) {
+		if ( empty( $authorized_users ) || ! is_array( $authorized_users ) ) {
 			return 0;
 		}
 
-		$users = array_values(
-			array_filter(
-				$authorized_users,
-				function ( $authorized_user ) use ( $subclaim ) {
-					return ( $authorized_user[ self::USER_JWT_SUBCLAIM_METAKEY ] ?? '' ) === $subclaim;
-				}
-			)
-		);
+		foreach ( $authorized_users as $authorized_user ) {
+			if ( ! is_array( $authorized_user ) ) {
+				continue;
+			}
 
-		return 1 === count( $users ) ? (int) $users[0] : 0;
+			$stored = (string) ( $authorized_user[ self::USER_JWT_SUBCLAIM_METAKEY ] ?? '' );
+
+			if ( '' !== $stored && hash_equals( $stored, $subclaim ) ) {
+				return (int) ( $authorized_user['id'] ?? 0 );
+			}
+		}
+
+		return 0;
 	}
 
 	public static function regenerate_user_subclaim( int $user_id ): string {
 		self::delete_user_jwt_subclaim( $user_id );
 		return self::create_user_jwt_subclaim( $user_id );
 	}
-
 
 	public static function delete_authorized_users_jwt_subclaim(): void {
 		delete_metadata( 'user', 0, self::USER_JWT_SUBCLAIM_METAKEY, '', true );
