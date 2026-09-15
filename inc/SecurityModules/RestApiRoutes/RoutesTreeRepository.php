@@ -82,7 +82,6 @@ class RoutesTreeRepository {
 
 		$namespaces = rest_get_server()->get_namespaces();
 
-		// ok for 'oembed/1.0', 'wp-site-health/v1', 'wp-abilities/v1', 'wp-block-editor/v1'.
 		$known_specials = array( 'batch/v1' );
 		foreach ( $known_specials as $special ) {
 			if ( ! in_array( $special, $namespaces, true ) ) {
