@@ -61,9 +61,10 @@ final class SchemaManager {
 	}
 
 	private static function create_ip_entries( \wpdb $wpdb ): void {
-		$table           = $wpdb->prefix . 'bromate_security_api_firewall_ip_entries';
+		$table           = self::ip_entries_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
-
+		
+		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -97,14 +98,16 @@ final class SchemaManager {
 				KEY idx_expires_at (expires_at)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
+		// phpcs:enable
 	}
 
 	private static function create_country_ip_ranges( \wpdb $wpdb ): void {
-		$table           = $wpdb->prefix . 'bromate_security_api_firewall_country_ip_ranges';
+		$table           = self::country_ip_ranges_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
+		// phpcs:disable
 		dbDelta(
-			"CREATE TABLE {$wpdb->prefix}bromate_country_ip_ranges (
+			"CREATE TABLE {$table} (
 				id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				ip_version    TINYINT UNSIGNED NOT NULL,
 				range_start   VARBINARY(16) NOT NULL,
@@ -114,12 +117,14 @@ final class SchemaManager {
 				KEY idx_lookup (ip_version, range_start, range_end)
 			) {$charset_collate};"
 		);
+		// phpcs:enable
 	}
 
 	private static function create_logs( \wpdb $wpdb ): void {
-		$table           = $wpdb->prefix . 'bromate_security_api_firewall_logs';
+		$table           = self::logs_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
+		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -129,7 +134,7 @@ final class SchemaManager {
 				ip VARCHAR(45) NULL,
 				user_agent VARCHAR(512) NULL,
 				referrer VARCHAR(512) NULL,
-		b		method VARCHAR(10) NULL,
+				method VARCHAR(10) NULL,
 				uri VARCHAR(1024) NULL,
 				user_id BIGINT UNSIGNED NULL,
 				created_at DATETIME NOT NULL,
@@ -141,12 +146,14 @@ final class SchemaManager {
 				FULLTEXT KEY idx_uri_ft (uri)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
+		// phpcs:enable
 	}
 
 	private static function create_rate_buckets( \wpdb $wpdb ): void {
-		$table           = $wpdb->prefix . 'bromate_rate_buckets';
+		$table           = self::rate_buckets_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 
+		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (
 				client_hash CHAR(32) NOT NULL,
@@ -157,5 +164,6 @@ final class SchemaManager {
 				KEY idx_updated_at (updated_at)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
+		// phpcs:enable
 	}
 }
