@@ -336,7 +336,7 @@ final class TOTPController {
 			$bytes = random_bytes( 32 );
 			return bin2hex( $bytes );
 		} catch ( \Exception $e ) {
-			return hash( 'sha256', uniqid( 'bromate_trusted_', true ) . mt_rand() );
+			return hash( 'sha256', uniqid( 'bromate_trusted_', true ) . wp_rand() );
 		}
 	}
 

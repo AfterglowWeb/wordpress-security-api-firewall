@@ -4,6 +4,7 @@ namespace Bromate\SecurityApiFirewall\SecurityModules\IpEntries;
 
 defined( 'ABSPATH' ) || exit;
 
+use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 use League\ISO3166\ISO3166;
 
 final class GeoIpLookup {
@@ -111,7 +112,7 @@ final class GeoIpLookup {
 	private static function write_ranges( array $ipv4_ranges, array $ipv6_ranges ): bool {
 		global $wpdb;
 
-		$live   = self::table_name();
+		$live   = SchemaManager::country_ip_ranges_table_name();
 		$shadow = $live . '_shadow';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Shadow-table swap for atomic bulk refresh; no wpdb/dbDelta helper covers this.
@@ -188,7 +189,7 @@ final class GeoIpLookup {
 		$start = ip2long( $parts[0] );
 		$bits  = (int) $parts[1];
 
-		if ( $start === false || $bits < 0 || $bits > 32 ) {
+		if ( false === $start || $bits < 0 || $bits > 32 ) {
 			return null;
 		}
 
@@ -211,7 +212,7 @@ final class GeoIpLookup {
 		$start_bin = inet_pton( $parts[0] );
 		$bits      = (int) $parts[1];
 
-		if ( $start_bin === false || strlen( $start_bin ) !== 16 || $bits < 0 || $bits > 128 ) {
+		if ( false === $start_bin || strlen( $start_bin ) !== 16 || $bits < 0 || $bits > 128 ) {
 			return null;
 		}
 
@@ -269,7 +270,7 @@ final class GeoIpLookup {
 
 			$last_end_plus_one = self::ipv6_increment( $last['end'] );
 
-			if ( $last_end_plus_one !== null && strcmp( $cur['start'], $last_end_plus_one ) <= 0 && $cur['cc'] === $last['cc'] ) {
+			if ( null !== $last_end_plus_one && strcmp( $cur['start'], $last_end_plus_one ) <= 0 && $cur['cc'] === $last['cc'] ) {
 				$last['end'] = strcmp( $cur['end'], $last['end'] ) > 0 ? $cur['end'] : $last['end'];
 			} else {
 				$merged[] = $cur;
@@ -308,7 +309,7 @@ final class GeoIpLookup {
 	private static function lookup_uncached( string $ip ): ?string {
 		global $wpdb;
 
-		$table = self::table_name();
+		$table = SchemaManager::country_ip_ranges_table_name();
 
 		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
 			$bin        = pack( 'N', ip2long( $ip ) );
@@ -335,12 +336,7 @@ final class GeoIpLookup {
 			)
 		);
 
-		return $country_code ?: null;
-	}
-
-	public static function table_name(): string {
-		global $wpdb;
-		return $wpdb->prefix . 'bromate_country_ip_ranges';
+		return $country_code ? $country_code : null;
 	}
 
 	public static function get_last_refresh(): ?int {

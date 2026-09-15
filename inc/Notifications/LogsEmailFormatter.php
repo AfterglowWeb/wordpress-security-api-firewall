@@ -6,7 +6,6 @@ final class LogsEmailFormatter {
 
 	public const SHORTCODE = 'bromate_logs';
 
-	/** @var array Entries currently being rendered — read by the shortcode callback. */
 	private static array $active_entries = array();
 	private static bool $active_is_html  = true;
 
@@ -14,10 +13,6 @@ final class LogsEmailFormatter {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render_shortcode' ) );
 	}
 
-	/**
-	 * Replaces the shortcode with the rendered logs if present in the body,
-	 * otherwise appends a rendered block at the end.
-	 */
 	public static function inject( string $body, array $entries, bool $is_html ): string {
 		self::$active_entries = $entries;
 		self::$active_is_html = $is_html;
@@ -33,10 +28,6 @@ final class LogsEmailFormatter {
 		return $body;
 	}
 
-	/**
-	 * Removes the shortcode without rendering anything — used when inline
-	 * logs are disabled but the user still left the shortcode in the body.
-	 */
 	public static function strip( string $body ): string {
 		$stripped = preg_replace( '/\[' . self::SHORTCODE . '(?:\s[^\]]*)?\]/', '', $body );
 		return null !== $stripped ? $stripped : $body;
