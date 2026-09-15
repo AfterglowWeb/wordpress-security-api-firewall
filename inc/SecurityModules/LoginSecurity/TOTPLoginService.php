@@ -279,8 +279,8 @@ final class TOTPLoginService {
 
 		$this->cleanup_session_data( $session_id );
 
-		$redirect_to = isset( $pending['redirect_to'] ) && $pending['redirect_to'] 
-			? $pending['redirect_to'] 
+		$redirect_to = isset( $pending['redirect_to'] ) && $pending['redirect_to']
+			? $pending['redirect_to']
 			: admin_url();
 
 		$this->log_security_event( $user_id, 'totp_login_success' );
@@ -295,7 +295,7 @@ final class TOTPLoginService {
 
 	public function on_login_failed( string $username ): void {
 		$session_id = $this->get_session_id();
-		$pending = get_transient( 'bromate_totp_pending_' . $session_id );
+		$pending    = get_transient( 'bromate_totp_pending_' . $session_id );
 
 		if ( ! $pending || ! isset( $pending['user_id'] ) ) {
 			return;
@@ -308,8 +308,8 @@ final class TOTPLoginService {
 			return;
 		}
 
-		$http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) 
-			? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) 
+		$http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) )
 			: '';
 
 		TOTPRepository::get_instance()->record_failed_attempt(
@@ -353,8 +353,8 @@ final class TOTPLoginService {
 					'username'    => $user->user_login,
 					'timestamp'   => time(),
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- No nonce provided by login form.
-					'redirect_to' => isset( $_POST['redirect_to'] ) 
-						? sanitize_text_field( wp_unslash( $_POST['redirect_to'] ) ) 
+					'redirect_to' => isset( $_POST['redirect_to'] )
+						? sanitize_text_field( wp_unslash( $_POST['redirect_to'] ) )
 						: admin_url(),
 				),
 				self::TRANSIENT_EXPIRY
@@ -377,19 +377,19 @@ final class TOTPLoginService {
 			return;
 		}
 
-		$code = isset( $_POST['code'] ) 
-			? preg_replace( '/[^0-9]/', '', sanitize_text_field( wp_unslash( $_POST['code'] ) ) ) 
+		$code = isset( $_POST['code'] )
+			? preg_replace( '/[^0-9]/', '', sanitize_text_field( wp_unslash( $_POST['code'] ) ) )
 			: '';
-		
+
 		if ( strlen( $code ) !== 6 && strlen( $code ) !== 8 ) {
 			wp_send_json_error( array( 'message' => 'Invalid verification code format' ), 400 );
 			return;
 		}
 
-		$session_id = isset( $_POST['session_id'] ) 
-			? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) 
+		$session_id = isset( $_POST['session_id'] )
+			? sanitize_text_field( wp_unslash( $_POST['session_id'] ) )
 			: '';
-		
+
 		if ( ! $this->validate_session_id( $session_id ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid session ID' ), 400 );
 			return;
@@ -408,7 +408,7 @@ final class TOTPLoginService {
 			return;
 		}
 
-		$user_id  = (int) $pending['user_id'];
+		$user_id = (int) $pending['user_id'];
 
 		if ( TOTPRepository::get_instance()->is_locked_out( $user_id ) ) {
 			wp_send_json_error(
@@ -451,9 +451,9 @@ final class TOTPLoginService {
 		$verified_key = $this->get_verified_transient_key( $session_id );
 		set_transient( $verified_key, true, self::TRANSIENT_EXPIRY );
 
-		$remember_device = isset( $_POST['remember_device'] ) 
+		$remember_device = isset( $_POST['remember_device'] )
 			&& filter_var( wp_unslash( $_POST['remember_device'] ), FILTER_VALIDATE_BOOLEAN );
-		
+
 		if ( $remember_device ) {
 			$this->set_trusted_device( $user_id );
 		}
@@ -498,9 +498,9 @@ final class TOTPLoginService {
 	}
 
 	private function set_trusted_device( int $user_id ): void {
-		$token = $this->generate_trusted_token();
-		$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) 
-			? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) 
+		$token      = $this->generate_trusted_token();
+		$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) )
 			: '';
 
 		$token_data = array(
@@ -535,7 +535,7 @@ final class TOTPLoginService {
 
 	private function verify_trusted_token( int $user_id, string $token ): bool {
 		$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );
-		
+
 		if ( ! is_array( $tokens ) || ! isset( $tokens[ $token ] ) ) {
 			return false;
 		}
@@ -548,10 +548,10 @@ final class TOTPLoginService {
 		}
 
 		if ( isset( $token_data['user_agent'] ) ) {
-			$current_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) 
-				? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) 
+			$current_agent = isset( $_SERVER['HTTP_USER_AGENT'] )
+				? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) )
 				: '';
-			
+
 			if ( $token_data['user_agent'] !== $current_agent ) {
 				return false;
 			}
@@ -569,7 +569,7 @@ final class TOTPLoginService {
 			return;
 		}
 
-		$now = time();
+		$now      = time();
 		$modified = false;
 
 		foreach ( $tokens as $key => $data ) {
@@ -649,15 +649,16 @@ final class TOTPLoginService {
 		Logger::log(
 			'totp_login_attempts_limit',
 			'error',
-			[sprintf(
-				'Bromate TOTP Event: %s for user %d from IP %s',
-				$event,
-				$user_id,
-				IpUtils::get_client_ip()
-			)],
+			array(
+				sprintf(
+					'Bromate TOTP Event: %s for user %d from IP %s',
+					$event,
+					$user_id,
+					IpUtils::get_client_ip()
+				),
+			),
 			IpUtils::get_client_ip()
 		);
-		
 	}
 
 	public function cleanup_expired_data(): void {

@@ -30,8 +30,8 @@ final class TOTPRepository {
 	private const FAILED_ATTEMPTS_META_KEY    = '_bromate_security_api_firewall_totp_failed_attempts';
 	private const TRUSTED_TOKEN_META_KEY      = '_bromate_security_api_firewall_totp_trusted_token';
 
-	private const LOCKOUT_META_KEY        = '_bromate_security_api_firewall_totp_lockout_until';
-	private const USER_ATTEMPTS_META_KEY  = '_bromate_security_api_firewall_totp_user_attempts';
+	private const LOCKOUT_META_KEY       = '_bromate_security_api_firewall_totp_lockout_until';
+	private const USER_ATTEMPTS_META_KEY = '_bromate_security_api_firewall_totp_user_attempts';
 
 	private static ?self $instance = null;
 
@@ -114,7 +114,7 @@ final class TOTPRepository {
 				update_user_meta( $user_id, self::USER_ENROLLED_META_KEY, true );
 				update_user_meta( $user_id, self::ENABLED_TIME_META_KEY, time() );
 				update_user_meta( $user_id, self::ENABLED_META_KEY, true );
-				
+
 				$this->clear_pending_secret( $user_id );
 
 				$backup_codes = $this->generate_backup_codes( $user_id );
@@ -280,9 +280,9 @@ final class TOTPRepository {
 			'ip'         => '',
 			'last_used'  => time(),
 		);
-		
+
 		$token_data = wp_parse_args( $token_data, $defaults );
-		
+
 		$tokens           = $this->get_trusted_tokens( $user_id );
 		$tokens[ $token ] = $token_data;
 

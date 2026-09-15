@@ -190,11 +190,11 @@ final class TOTPController {
 
 		try {
 			$result = TOTPRepository::get_instance()->verify_totp_enrollment( $user_id, $code );
-			
+
 			if ( isset( $result['verified'] ) && $result['verified'] ) {
 				TOTPRepository::get_instance()->set_login_enabled( $user_id, true );
 			}
-			
+
 			wp_send_json_success( $result );
 		} catch ( \Exception $e ) {
 			wp_send_json_error( array( 'message' => esc_attr( $e->getMessage() ) ), 500 );
@@ -284,7 +284,7 @@ final class TOTPController {
 	}
 
 	private static function set_trusted_cookie( int $user_id ): void {
-		$token = self::generate_trusted_token();
+		$token      = self::generate_trusted_token();
 		$token_data = array(
 			'expires'    => time() + ( 30 * DAY_IN_SECONDS ),
 			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
@@ -309,7 +309,7 @@ final class TOTPController {
 	private static function clear_trusted_cookie(): void {
 		if ( isset( $_COOKIE['bromate_totp_trusted'] ) ) {
 			$token = sanitize_text_field( wp_unslash( $_COOKIE['bromate_totp_trusted'] ) );
-			
+
 			$user_id = get_current_user_id();
 			if ( $user_id ) {
 				$tokens = TOTPRepository::get_instance()->get_trusted_tokens( $user_id );

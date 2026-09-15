@@ -29,16 +29,16 @@ class SessionManager {
 	}
 
 	public static function ajax_revoke_all_users_totp_enrollment(): void {
-	if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
-		wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
-		return;
-	}
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ), 401 );
+			return;
+		}
 
-	TOTPRepository::get_instance()->revoke_all_users_totp_enrollment();
-	self::destroy_all_sessions_for_all_users();
+		TOTPRepository::get_instance()->revoke_all_users_totp_enrollment();
+		self::destroy_all_sessions_for_all_users();
 
-	wp_send_json_success(
-		array( 'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ) ),
+		wp_send_json_success(
+			array( 'message' => esc_html__( 'All sessions and trusted 2FA devices have been revoked.', 'bromate-security-api-firewall' ) ),
 			200
 		);
 	}

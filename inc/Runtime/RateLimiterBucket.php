@@ -137,11 +137,15 @@ class RateLimiterBucket {
 				     updated_at = %d
 				 WHERE client_hash = %s
 				   AND LEAST(%f, tokens + (%f - last_refill) * %f) >= 1",
-				$capacity, $now, $refill_rate,
+				$capacity,
+				$now,
+				$refill_rate,
 				$now,
 				(int) $now,
 				$hash,
-				$capacity, $now, $refill_rate
+				$capacity,
+				$now,
+				$refill_rate
 			)
 		);
 
@@ -161,7 +165,10 @@ class RateLimiterBucket {
 			$wpdb->prepare(
 				"INSERT IGNORE INTO {$table} (client_hash, tokens, last_refill, updated_at)
 				 VALUES (%s, %f, %f, %d)",
-				$hash, (float) ( $capacity - 1 ), $now, (int) $now
+				$hash,
+				(float) ( $capacity - 1 ),
+				$now,
+				(int) $now
 			)
 		);
 

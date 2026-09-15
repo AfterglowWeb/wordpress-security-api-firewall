@@ -10,7 +10,7 @@ use WP_User;
 final class Recaptcha {
 
 	protected static ?self $instance = null;
-	private ?float $pending_score = null;
+	private ?float $pending_score    = null;
 
 	public static function get_instance(): self {
 		if ( null === self::$instance ) {

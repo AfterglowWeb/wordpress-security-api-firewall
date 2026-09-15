@@ -14,108 +14,108 @@ class IpEntriesRepository {
 
 	public static function entry_config(): array {
 		return array(
-			'id'           => array(
+			'id'                => array(
 				'type'     => 'integer',
 				'sortable' => true,
 			),
-			'ip'           => array(
+			'ip'                => array(
 				'type'              => 'string',
 				'required'          => true,
 				'sanitize_callback' => array( self::class, 'sanitize_ip_or_cidr' ),
 				'sortable'          => true,
 			),
-			'list_type'    => array(
+			'list_type'         => array(
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'whitelist', 'blacklist' ), true ) ? $v : 'blacklist',
 				'default'           => 'blacklist',
 				'allowed_values'    => array( 'whitelist', 'blacklist' ),
 				'sortable'          => true,
 			),
-			'entry_origin' => array(
+			'entry_origin'      => array(
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ), true ) ? $v : 'manual',
 				'default'           => 'manual',
 				'allowed_values'    => array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ),
 				'sortable'          => true,
 			),
-			'entry_type'   => array(
+			'entry_type'        => array(
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'ip', 'cidr' ), true ) ? $v : 'ip',
 				'default'           => 'ip',
 				'allowed_values'    => array( 'ip', 'cidr' ),
 				'sortable'          => true,
 			),
-			'agent'        => array(
+			'agent'             => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => null,
 				'sortable'          => false,
 			),
-			'user_id'      => array(
+			'user_id'           => array(
 				'type'     => 'integer',
 				'default'  => null,
 				'sortable' => true,
 			),
-			'referrer'     => array(
+			'referrer'          => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => null,
 				'sortable'          => false,
 			),
-			'country_code' => array(
+			'country_code'      => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => null,
 				'sortable'          => true,
 			),
-			'country_name' => array(
+			'country_name'      => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => null,
 				'sortable'          => true,
 			),
-			'city' => array(
+			'city'              => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => null,
 				'sortable'          => false,
 			),
-			'isp' => array(
+			'isp'               => array(
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => null,
 				'sortable'          => false,
 			),
-			'latitude' => array(
+			'latitude'          => array(
 				'type'              => 'float',
 				'sanitize_callback' => static fn( $v ) => is_numeric( $v ) ? (float) $v : null,
 				'default'           => null,
 				'sortable'          => false,
 			),
-			'longitude' => array(
+			'longitude'         => array(
 				'type'              => 'float',
 				'sanitize_callback' => static fn( $v ) => is_numeric( $v ) ? (float) $v : null,
 				'default'           => null,
 				'sortable'          => false,
 			),
 			'geoip_enriched_at' => array(
-				'type'     => 'datetime',
+				'type'              => 'datetime',
 				'sanitize_callback' => static function ( $v ) {
 					return ( is_string( $v ) && false !== strtotime( $v ) ) ? $v : null;
 				},
-				'default'  => null,
-				'sortable' => true,
+				'default'           => null,
+				'sortable'          => true,
 			),
-			'created_at'   => array(
+			'created_at'        => array(
 				'type'     => 'datetime',
 				'sortable' => true,
 			),
-			'expires_at'   => array(
+			'expires_at'        => array(
 				'type'     => 'datetime',
 				'default'  => null,
 				'sortable' => true,
 			),
-			'updated_at'   => array(
+			'updated_at'        => array(
 				'type'     => 'datetime',
 				'sortable' => true,
 			),
@@ -124,24 +124,24 @@ class IpEntriesRepository {
 
 	protected static function normalize( array $row ): array {
 		return array(
-			'id'           => (int) $row['id'],
-			'ip'           => $row['ip'],
-			'list_type'    => $row['list_type'],
-			'entry_type'   => $row['entry_type'],
-			'entry_origin' => $row['entry_origin'],
-			'agent'        => $row['agent'],
-			'user_id'      => $row['user_id'],
-			'referrer'     => $row['referrer'],
-			'country_code' => $row['country_code'],
-			'country_name' => $row['country_name'],
+			'id'                => (int) $row['id'],
+			'ip'                => $row['ip'],
+			'list_type'         => $row['list_type'],
+			'entry_type'        => $row['entry_type'],
+			'entry_origin'      => $row['entry_origin'],
+			'agent'             => $row['agent'],
+			'user_id'           => $row['user_id'],
+			'referrer'          => $row['referrer'],
+			'country_code'      => $row['country_code'],
+			'country_name'      => $row['country_name'],
 			'city'              => $row['city'] ?? null,
 			'isp'               => $row['isp'] ?? null,
 			'latitude'          => isset( $row['latitude'] ) ? (float) $row['latitude'] : null,
 			'longitude'         => isset( $row['longitude'] ) ? (float) $row['longitude'] : null,
 			'geoip_enriched_at' => $row['geoip_enriched_at'] ?? null,
-			'expires_at'   => $row['expires_at'],
-			'created_at'   => $row['created_at'],
-			'updated_at'   => $row['updated_at'],
+			'expires_at'        => $row['expires_at'],
+			'created_at'        => $row['created_at'],
+			'updated_at'        => $row['updated_at'],
 		);
 	}
 
@@ -297,7 +297,7 @@ class IpEntriesRepository {
 		if ( self::find_by_ip( $ip, $list_type ) ) {
 			return true;
 		}
-		
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		$may_be_cidrs = $wpdb->get_col(
 			$wpdb->prepare(
@@ -401,25 +401,25 @@ class IpEntriesRepository {
 		$existing = self::ip_in_db( $sanitized['ip'], $sanitized['list_type'] ?? 'blacklist' );
 
 		if ( $existing ) {
-		$update_data               = $sanitized;
-		$update_data['updated_at'] = $now;
-		unset( $update_data['ip'] );
+			$update_data               = $sanitized;
+			$update_data['updated_at'] = $now;
+			unset( $update_data['ip'] );
 
-		if ( empty( $existing['country_code'] ) && empty( $sanitized['country_code'] ) ) {
-			$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
-			if ( ! empty( $geoip['country'] ) ) {
-				$update_data['country_code'] = $geoip['country'];
-				$update_data['country_name'] = $geoip['countryName'] ?? null;
+			if ( empty( $existing['country_code'] ) && empty( $sanitized['country_code'] ) ) {
+				$geoip = GeoIpApi::get_geoip( $sanitized['ip'] );
+				if ( ! empty( $geoip['country'] ) ) {
+					$update_data['country_code'] = $geoip['country'];
+					$update_data['country_name'] = $geoip['countryName'] ?? null;
+				}
 			}
-		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->update( self::table(), $update_data, array( 'id' => $existing['id'] ) );
+			$result = $wpdb->update( self::table(), $update_data, array( 'id' => $existing['id'] ) );
 
-		if ( false !== $result ) {
-			return 'updated';
+			if ( false !== $result ) {
+				return 'updated';
+			}
 		}
-	}
 
 		$sanitized['created_at'] = $now;
 		$sanitized['updated_at'] = $now;
