@@ -45,6 +45,8 @@ final class Bootstrap {
 		PublicRequestBootstrap::register();
 		GlobalSecurityBootstrap::register();
 		GeoIpLookup::register();
+		GeoIpLookup::refresh_data();
+
 		JwksEndpoint::register();
 
 		Cron::register();
@@ -69,6 +71,7 @@ final class Bootstrap {
 	public static function activate(): void {
 
 		SchemaManager::install();
+		GeoIpLookup::refresh_data();
 		GeoIpLookup::schedule();
 
 		if ( false === get_option( SettingsConfig::SETTINGS_OPTION_KEY ) ) {

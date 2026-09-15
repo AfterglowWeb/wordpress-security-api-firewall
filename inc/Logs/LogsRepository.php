@@ -3,16 +3,11 @@
 use Bromate\SecurityApiFirewall\Cron\CronLogs;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpUtils;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
+use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
 
 defined( 'ABSPATH' ) || exit;
 
 final class LogsRepository {
-
-
-	protected static function table(): string {
-		global $wpdb;
-		return $wpdb->prefix . 'bromate_security_api_firewall_logs';
-	}
 
 	public static function events_config(): array {
 		return array(
@@ -241,10 +236,12 @@ final class LogsRepository {
 			return null;
 		}
 
+		$table = SchemaManager::logs_table_name();
+
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$existing = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs WHERE id = %d",
+				"SELECT * FROM {$table} WHERE id = %d",
 				(int) $id
 			),
 			ARRAY_A
@@ -256,7 +253,8 @@ final class LogsRepository {
 	public static function delete_all_entries(): bool {
 		global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bromate_security_api_firewall_logs" );
+		$table = SchemaManager::logs_table_name();
+		$result = $wpdb->query( "TRUNCATE TABLE {$table}" );
 		return false !== $result;
 	}
 
@@ -266,6 +264,8 @@ final class LogsRepository {
 		if ( ! SettingsRepository::read_option( 'logs_enabled' ) ) {
 			return '';
 		}
+
+		$table = SchemaManager::logs_table_name();
 
 		$event = isset( $data['event'] ) ? self::sanitize_event( $data['event'] ) : '';
 
@@ -312,13 +312,13 @@ final class LogsRepository {
 			$existing = self::log_in_db( $data['id'] );
 			if ( $existing ) {
                 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-				$result = $wpdb->update( self::table(), $row, array( 'id' => $existing['id'] ) );
+				$result = $wpdb->update( $table, $row, array( 'id' => $existing['id'] ) );
 				return ( false !== $result ) ? 'updated' : '';
 			}
 		}
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$result = $wpdb->insert( self::table(), $row );
+		$result = $wpdb->insert( $table, $row );
 
 		if ( $result ) {
 			CronLogs::maybe_rotate_logs();
@@ -374,7 +374,7 @@ final class LogsRepository {
 		);
 
 		$args   = wp_parse_args( $args, $defaults );
-		$table  = self::table();
+		$table  = SchemaManager::logs_table_name();
 		$where  = array( '1=1' );
 		$values = array();
 
@@ -466,10 +466,10 @@ final class LogsRepository {
 
 	public static function get_all_entries(): array {
 		global $wpdb;
-
+		$table = SchemaManager::logs_table_name();
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $wpdb->get_results(
-			"SELECT * FROM {$wpdb->prefix}bromate_security_api_firewall_logs ORDER BY created_at DESC",
+			"SELECT * FROM {$table} ORDER BY created_at DESC",
 			ARRAY_A
 		);
 
@@ -478,8 +478,9 @@ final class LogsRepository {
 
 	public static function delete( int $id ): bool {
 		global $wpdb;
+		$table = SchemaManager::logs_table_name();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (bool) $wpdb->delete( self::table(), array( 'id' => $id ) );
+		return (bool) $wpdb->delete( $table, array( 'id' => $id ) );
 	}
 
 	public static function delete_many( array $ids ): int {
@@ -487,21 +488,23 @@ final class LogsRepository {
 		if ( empty( $ids ) ) {
 			return 0;
 		}
+		$table = SchemaManager::logs_table_name();
 		$ids          = array_map( 'absint', $ids );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		$sql          = 'DELETE FROM ' . self::table() . " WHERE id IN ({$placeholders})";
+		$sql          = 'DELETE FROM ' . $table . " WHERE id IN ({$placeholders})";
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $ids ) );
 	}
 
 	public static function delete_expired( int $days = 90 ): int {
 		global $wpdb;
+		$table = SchemaManager::logs_table_name();
 
 		if ( $days < 1 ) {
 			$days = 90;
 		}
 
-		$sql = 'DELETE FROM ' . self::table() . ' WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)';
+		$sql = 'DELETE FROM ' . $table . ' WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)';
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->query( $wpdb->prepare( $sql, $days ) );
 	}
