@@ -16,6 +16,7 @@ class RestAuthenticationAjaxController {
 		add_action( 'wp_ajax_bromate_get_authorized_users', array( $self, 'ajax_get_authorized_users' ) );
 		add_action( 'wp_ajax_bromate_get_authorized_roles', array( $self, 'ajax_get_authorized_roles' ) );
 		add_action( 'wp_ajax_bromate_update_authorized_users', array( $self, 'ajax_update_authorized_users' ) );
+		add_action( 'wp_ajax_bromate_update_authorized_roles', array( $self, 'ajax_update_authorized_roles' ) );
 		add_action( 'wp_ajax_bromate_delete_authorized_users', array( $self, 'ajax_delete_authorized_users' ) );
 
 		add_action( 'wp_ajax_bromate_get_jwks_endpoint', array( $self, 'ajax_get_jwks_endpoint' ) );
@@ -99,6 +100,33 @@ class RestAuthenticationAjaxController {
 		}
 
 		wp_send_json_success( $authorized_users );
+	}
+
+	public function ajax_update_authorized_roles(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in self::ajax_validate_has_firewall_admin_caps()
+		if ( ! isset( $_POST['authorized_roles'] ) ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Missing args.', 'bromate-security-api-firewall' ) ), 400 );
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in SettingsAjaxController::ajax_validate_has_firewall_admin_caps()
+		$new_roles = json_decode( sanitize_text_field( wp_unslash( $_POST['authorized_roles'] ) ), true );
+
+		$authorized_roles = array();
+		if ( is_array( $new_roles ) && ! empty( $new_roles ) ) {
+			$authorized_roles = RestAuthorizedUserRepository::update_authorized_roles( $new_roles );
+		}
+
+		if ( empty( $authorized_roles ) ) {
+			wp_send_json_success( array() );
+		}
+
+		wp_send_json_success( $authorized_roles );
 	}
 
 	public function ajax_delete_authorized_users(): void {

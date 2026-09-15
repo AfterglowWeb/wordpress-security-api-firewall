@@ -30,44 +30,18 @@ class JwtAuthentication {
 
 		JWT::$leeway = 60;
 
-		$decoded = null;
-
-		if ( ! empty( $jwks_url ) ) {
-			try {
-				$jwks = self::get_remote_jwks( $jwks_url );
-				if ( ! empty( $jwks ) ) {
-					$decoded = JWT::decode( $token, JWK::parseKeySet( $jwks, $algorithm ) );
-				}
-			} catch ( Throwable $e ) {
-				Logger::log( 'jwt_auth_attempt_failed', 'info', array( 'source' => 'jwks_url', 'error' => $e->getMessage() ) );
-			}
-		}
-
-		if ( null === $decoded && ! empty( $public_key ) ) {
-			try {
-				$decoded = JWT::decode( $token, new Key( $public_key, $algorithm ) );
-			} catch ( Throwable $e ) {
-				Logger::log( 'jwt_auth_attempt_failed', 'info', array( 'source' => 'public_key', 'error' => $e->getMessage() ) );
-			}
-		}
+		$decoded = self::attempt_decode( $token, $algorithm, $public_key, $jwks_url );
 
 		if ( null === $decoded ) {
-			try {
-				$jwks = self::build_jwks( true );
-				if ( ! empty( $jwks['keys'] ) ) {
-					$decoded = JWT::decode( $token, JWK::parseKeySet( $jwks, $algorithm ) );
-				}
-			} catch ( Throwable $e ) {
-				Logger::log( 'jwt_auth_attempt_failed', 'info', array( 'source' => 'internal_jwks', 'error' => $e->getMessage() ) );
-			}
-		}
-
-		if ( null === $decoded ) {
-			Logger::log( 'jwt_auth_failed', 'warning', array( 'reason' => 'No configured key source could validate the token.' ) );
+			Logger::log(
+				'jwt_auth_failed',
+				'warning',
+				array( 'reason' => 'No configured key source could validate the token.' )
+			);
 			return false;
 		}
 
-		if ( ! empty( $audience ) && ( $decoded->aud ?? null ) !== $audience ) {
+		if ( ! empty( $audience ) && ! self::audience_matches( $decoded->aud ?? null, $audience ) ) {
 			return false;
 		}
 
@@ -81,6 +55,67 @@ class JwtAuthentication {
 		}
 
 		return RestAccessCustomCap::user_has_rest_api_access_cap( $user_id );
+	}
+
+	private static function attempt_decode( string $token, string $algorithm, string $public_key, string $jwks_url ) {
+
+		if ( ! empty( $jwks_url ) ) {
+			try {
+				$jwks = self::get_remote_jwks( $jwks_url );
+				if ( ! empty( $jwks ) ) {
+					$decoded = JWT::decode( $token, JWK::parseKeySet( $jwks, $algorithm ) );
+					if ( null !== $decoded ) {
+						return $decoded;
+					}
+				}
+			} catch ( Throwable $e ) {
+				Logger::log(
+					'jwt_auth_attempt_failed',
+					'info',
+					array( 'source' => 'jwks_url', 'error' => $e->getMessage() )
+				);
+			}
+		}
+
+		if ( ! empty( $public_key ) ) {
+			try {
+				$decoded = JWT::decode( $token, new Key( $public_key, $algorithm ) );
+				if ( null !== $decoded ) {
+					return $decoded;
+				}
+			} catch ( Throwable $e ) {
+				Logger::log(
+					'jwt_auth_attempt_failed',
+					'info',
+					array( 'source' => 'public_key', 'error' => $e->getMessage() )
+				);
+			}
+		}
+
+		try {
+			$jwks = self::build_jwks( true );
+			if ( ! empty( $jwks['keys'] ) ) {
+				$decoded = JWT::decode( $token, JWK::parseKeySet( $jwks, $algorithm ) );
+				if ( null !== $decoded ) {
+					return $decoded;
+				}
+			}
+		} catch ( Throwable $e ) {
+			Logger::log(
+				'jwt_auth_attempt_failed',
+				'info',
+				array( 'source' => 'internal_jwks', 'error' => $e->getMessage() )
+			);
+		}
+
+		return null;
+	}
+
+	private static function audience_matches( $token_aud, string $expected ): bool {
+		if ( is_array( $token_aud ) ) {
+			return in_array( $expected, $token_aud, true );
+		}
+		return $token_aud === $expected;
 	}
 
 	private static function get_remote_jwks( string $url ): array {
@@ -262,8 +297,15 @@ class JwtAuthentication {
 		return null;
 	}
 
+	private static function get_static_encryption_material(): string {
+		if ( defined( 'AUTH_KEY' ) && defined( 'SECURE_AUTH_KEY' ) && '' !== AUTH_KEY && '' !== SECURE_AUTH_KEY ) {
+			return AUTH_KEY . SECURE_AUTH_KEY;
+		}
+		return wp_salt( 'auth' ) . wp_salt( 'secure_auth' );
+	}
+
 	private static function encrypt_private_key( string $private_key ): string {
-		$encryption_key = self::get_static_encryption_material();
+		$encryption_key = hash( 'sha256', self::get_static_encryption_material(), true );
 
 		$iv = openssl_random_pseudo_bytes( 16 );
 		if ( false === $iv ) {
@@ -287,7 +329,7 @@ class JwtAuthentication {
 	}
 
 	private static function decrypt_private_key_pem( string $encrypted_data ): ?string {
-		$encryption_key = self::get_static_encryption_material();
+		$encryption_key = hash( 'sha256', self::get_static_encryption_material(), true );
 
 		$decoded = hex2bin( $encrypted_data );
 		if ( false === $decoded || strlen( $decoded ) < 16 ) {
@@ -306,14 +348,6 @@ class JwtAuthentication {
 		);
 
 		return false !== $private_key ? $private_key : null;
-	}
-
-
-	private static function get_static_encryption_material(): string {
-		if ( defined( 'AUTH_KEY' ) && defined( 'SECURE_AUTH_KEY' ) && '' !== AUTH_KEY && '' !== SECURE_AUTH_KEY ) {
-			return AUTH_KEY . SECURE_AUTH_KEY;
-		}
-		return wp_salt( 'auth' ) . wp_salt( 'secure_auth' );
 	}
 
 	private static function get_all_key_records(): array {
@@ -389,7 +423,16 @@ class JwtAuthentication {
 	}
 
 	public static function delete_key_pair(): bool {
-		return update_option( self::JWKS_KEYS_OPTION, array() );
+		$current = self::get_all_key_records();
+		if ( empty( $current ) ) {
+			return true;
+		}
+
+		$result = update_option( self::JWKS_KEYS_OPTION, array() );
+		if ( false === $result ) {
+			return array() === self::get_all_key_records();
+		}
+		return true;
 	}
 
 	public static function build_jwks( bool $include_grace_period_keys = false ): array {

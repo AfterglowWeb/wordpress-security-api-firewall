@@ -2,7 +2,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Runtime\IpAccessControl;
 use Bromate\SecurityApiFirewall\Runtime\RateLimiterBucket;
@@ -43,6 +42,21 @@ final class RestRequestBootstrap {
 		add_filter( 'rest_pre_dispatch', array( self::class, 'authenticate_request' ), 10, 3 );
 	}
 
+	public static function maybe_allow_application_passwords( $is_api_request ) {
+
+		if ( empty( SettingsRepository::read_option( 'auth_control_enabled' ) ) ) {
+			return $is_api_request;
+		}
+
+		$method = SettingsRepository::read_option( 'firewall_auth_method' ) ?: 'wp_auth';
+
+		if ( 'jwt' === $method ) {
+			return false;
+		}
+
+		return $is_api_request;
+	}
+
 	public static function authenticate_request( $result, $server = null, $request = null ) {
 
 		if ( is_wp_error( $result ) ) {
@@ -73,6 +87,7 @@ final class RestRequestBootstrap {
 
 		if ( ! $auth_result ) {
 			RestAuthenticationAttemptsLimiter::record_failure();
+
 			return new WP_Error(
 				'rest_authentication_failed',
 				esc_html__( 'Invalid or missing authentication credentials.', 'bromate-security-api-firewall' ),
@@ -81,22 +96,6 @@ final class RestRequestBootstrap {
 		}
 
 		return $result;
-	}
-
-	public static function maybe_allow_application_passwords( $is_api_request ) {
-		if ( empty( SettingsRepository::read_option( 'auth_control_enabled' ) ) ) {
-			return $is_api_request;
-		}
-
-		$method = SettingsRepository::read_option( 'firewall_auth_method' ) ?: 'wp_auth';
-
-		if ( 'jwt' === $method ) {
-			// JWT-only: application passwords must not authenticate REST
-			// requests at all, not even as a side channel WP core handles itself.
-			return false;
-		}
-
-		return true;
 	}
 
 	public static function apply_route_policy( $result, $server = null, $request = null ) {
