@@ -191,9 +191,15 @@ export default function AuthOptions({
     onChange({ ...settings, [key]: value });
 
   const handleSave = useCallback(async () => {
-    await SettingsAPI.updateOptions(settings);
+    const { auth_authorized_roles, ...otherSettings } = settings;
+    if (rolesDirty) {
+      await apiRequest('bromate_update_authorized_roles', {
+        authorized_roles: JSON.stringify(auth_authorized_roles ?? []),
+      });
+    }
+    await SettingsAPI.updateOptions(otherSettings);
     onSaved(settings);
-  }, [settings, onSaved]);
+  }, [settings, rolesDirty, onSaved]);
 
   const saveConfirmContent = useMemo(() => {
     const base = __('Apply these REST API authentication settings now?', 'bromate-security-api-firewall');

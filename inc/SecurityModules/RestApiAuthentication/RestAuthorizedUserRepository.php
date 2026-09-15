@@ -35,11 +35,6 @@ class RestAuthorizedUserRepository {
 					'current_user'        => $current_user_id === $user->ID,
 					'admin_url'           => sanitize_url( get_edit_user_link( $user->ID ) ),
 					'roles'               => array_map( 'sanitize_key', $user->roles ),
-					// Read-only: creating a subclaim here as a side effect of
-					// just listing users meant opening this admin screen
-					// silently minted a bearer-secret-equivalent for every
-					// user on the site, whether or not they were ever
-					// selected for API access.
 					'jwt_subclaim'        => self::get_user_jwt_subclaim( $user->ID ),
 					'status'              => '',
 					'expires_at'          => '',

@@ -15,7 +15,6 @@ final class RestAccessCustomCap {
 	public static function register(): void {
 		add_action( 'bromate_security_api_firewall_auth_users_updated', array( self::class, 'add_api_access_cap_on_authorized_users' ) );
 		add_action( 'bromate_security_api_firewall_auth_roles_updated', array( self::class, 'add_api_access_cap_on_authorized_users' ) );
-		register_activation_hook( BROMATE_SECURITY_API_FIREWALL_FILE, array( self::class, 'add_api_access_cap_on_authorized_users' ) );
 	}
 
 	public static function user_has_rest_api_access_cap( $user ): bool {
