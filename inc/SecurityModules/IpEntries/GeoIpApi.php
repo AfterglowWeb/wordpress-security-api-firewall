@@ -172,7 +172,7 @@ class GeoIpApi {
 		);
 
 		foreach ( (array) $rows as $row ) {
-			$geoip = GeoIpApi::get_geoip( $row['ip'], true );
+			$geoip = self::get_geoip( $row['ip'], true );
 			IpEntriesRepository::update_geoip_data( (int) $row['id'], $geoip );
 		}
 	}

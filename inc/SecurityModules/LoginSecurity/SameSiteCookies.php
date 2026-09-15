@@ -79,8 +79,8 @@ class SameSiteCookies {
 				continue;
 			}
 
-			$raw = trim( $raw );
-			$rewrote = $raw;
+			$raw                = trim( $raw );
+			$rewrote            = $raw;
 			$effective_samesite = $samesite;
 			if ( 'None' === $samesite && stripos( $raw, 'Secure' ) === false ) {
 				$effective_samesite = 'Lax';

@@ -8,11 +8,11 @@ use Throwable;
 
 class RoutesTreeRepository {
 
-	const CORE_NAMESPACE             = 'wp/v2';
-	const DEFAULT_HIDDEN_ROUTES      = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
-	const ROUTES_LIST_TRANSIENT_KEY  = 'bromate_security_api_firewall_routes_list';
-	const NAMESPACES_TRANSIENT_KEY   = 'bromate_security_api_firewall_routes_namespaces';
-	const UNROUTED_NODE_KEY          = '__unrouted__';
+	const CORE_NAMESPACE            = 'wp/v2';
+	const DEFAULT_HIDDEN_ROUTES     = array( 'wp/v2/users', 'oembed/1.0', 'batch/v1', 'wp-site-health/v1', 'wp-abilities/v1' );
+	const ROUTES_LIST_TRANSIENT_KEY = 'bromate_security_api_firewall_routes_list';
+	const NAMESPACES_TRANSIENT_KEY  = 'bromate_security_api_firewall_routes_namespaces';
+	const UNROUTED_NODE_KEY         = '__unrouted__';
 
 	public static function get_routes_policy_tree(): array {
 		$tree       = self::build_policy_tree();

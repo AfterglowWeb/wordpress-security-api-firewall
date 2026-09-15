@@ -19,5 +19,4 @@ class HttpHeadersAjaxController {
 
 		wp_send_json_success( HttpHeaders::get_all_headers_options() );
 	}
-
 }

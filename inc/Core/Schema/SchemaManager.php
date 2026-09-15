@@ -33,10 +33,10 @@ final class SchemaManager {
 		global $wpdb;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
-		$wpdb->query( "DROP TABLE IF EXISTS " . self::ip_entries_table_name() );
-		$wpdb->query( "DROP TABLE IF EXISTS " . self::country_ip_ranges_table_name() );
-		$wpdb->query( "DROP TABLE IF EXISTS " . self::logs_table_name() );
-		$wpdb->query( "DROP TABLE IF EXISTS " . self::rate_buckets_table_name() );
+		$wpdb->query( 'DROP TABLE IF EXISTS ' . self::ip_entries_table_name() );
+		$wpdb->query( 'DROP TABLE IF EXISTS ' . self::country_ip_ranges_table_name() );
+		$wpdb->query( 'DROP TABLE IF EXISTS ' . self::logs_table_name() );
+		$wpdb->query( 'DROP TABLE IF EXISTS ' . self::rate_buckets_table_name() );
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- DROP TABLE on uninstall is mandatory.
 	}
 
@@ -63,7 +63,7 @@ final class SchemaManager {
 	private static function create_ip_entries( \wpdb $wpdb ): void {
 		$table           = self::ip_entries_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
-		
+
 		// phpcs:disable
 		dbDelta(
 			"CREATE TABLE {$table} (

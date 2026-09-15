@@ -7,11 +7,11 @@ class SettingsRepository {
 	private function __construct() {}
 
 	public static function read_options(): array {
-		$thread_options = [];
-		if( ! function_exists( 'get_option' ) ) {
+		$thread_options = array();
+		if ( ! function_exists( 'get_option' ) ) {
 			return $thread_options;
 		}
-		if( empty( $thread_options ) ) {
+		if ( empty( $thread_options ) ) {
 			$thread_options = self::sanitize_options( get_option( SettingsConfig::SETTINGS_OPTION_KEY, array() ) );
 		}
 		return $thread_options;

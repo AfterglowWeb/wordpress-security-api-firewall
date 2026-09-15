@@ -10,9 +10,9 @@ class ViolationTracker {
 	public static function record_violation( string $client_ip, int $memory_window, int $lock_window ): int {
 		global $wpdb;
 
-		$hash             = md5( $client_ip );
+		$hash              = md5( $client_ip );
 		$lock_window_start = (int) ( floor( time() / $lock_window ) * $lock_window );
-		$lock_option      = '_transient_' . self::VIOLATION_LOCK_PREFIX . $hash . '_' . $lock_window_start;
+		$lock_option       = '_transient_' . self::VIOLATION_LOCK_PREFIX . $hash . '_' . $lock_window_start;
 
 		$claimed = $wpdb->query(
 			$wpdb->prepare(

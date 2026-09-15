@@ -18,19 +18,17 @@ use WP_User;
  * This class is a draft to check login runtime hooks and filters. It is not yet fully implemented and will change.
  */
 final class LoginRuntime {
-	const KEYS_PREFIX       = 'bromate_security_api_firewall_salts_rotation_hook_';
+	const KEYS_PREFIX = 'bromate_security_api_firewall_salts_rotation_hook_';
 
 	private function __construct() {
 
 		add_filter( 'authenticate', array( LoginAttemptsLimiter::class, 'check_before_auth' ), 5, 1 );
 		add_action( 'wp_login_failed', array( LoginAttemptsLimiter::class, 'on_login_failed' ), 10 );
 
-
 		add_action( 'login_enqueue_scripts', array( Recaptcha::class, 'enqueue_recaptcha_script' ) );
 		add_action( 'login_form', array( Recaptcha::class, 'render_recaptcha_field' ) );
 		add_filter( 'authenticate', array( Recaptcha::class, 'check_before_auth' ), 5, 3 );
 		add_action( 'wp_login_failed', array( Recaptcha::class, 'on_login_failed' ), 10 );
-
 
 		add_action( 'login_form', array( TOTPLoginService::class, 'add_totp_field_to_login' ) );
 		add_action( 'woocommerce_login_form', array( TOTPLoginService::class, 'add_totp_field_to_login' ) );
@@ -61,7 +59,6 @@ final class LoginRuntime {
 		add_action( 'wp_ajax_bromate_regenerate_backup_codes', array( TOTPController::class, 'ajax_regenerate_backup_codes' ) );
 		add_action( 'wp_ajax_bromate_get_totp_user_status', array( TOTPController::class, 'ajax_get_status' ) );
 		add_action( 'wp_ajax_bromate_dismiss_totp_reminder', array( TOTPController::class, 'ajax_dismiss_reminder' ) );
-
 
 		if ( ! empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {
 			Cron::add_custom_schedule(
@@ -97,6 +94,5 @@ final class LoginRuntime {
 
 		add_action( 'wp_ajax_bromate_security_api_firewall_revoke_all_users_totp_enrollment', array( SessionManager::class, 'ajax_revoke_all_users_totp_enrollment' ) );
 		add_action( 'wp_ajax_bromate_security_api_firewall_revoke_user_totp_enrollment', array( SessionManager::class, 'ajax_revoke_user_totp_enrollment' ) );
-
 	}
 }

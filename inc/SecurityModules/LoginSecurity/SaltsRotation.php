@@ -9,11 +9,11 @@ use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
 
 class SaltsRotation {
 
-	const KEYS_PREFIX       = 'bromate_security_api_firewall_salts_rotation_hook_';
-	const SALTS_KEY         = self::KEYS_PREFIX . 'salts';
-	const RECURRENCE_KEY    = self::KEYS_PREFIX . 'recurrence';
-	const LAST_RUN_KEY      = self::KEYS_PREFIX . 'last_run';
-	const SCHEDULE_KEY      = self::KEYS_PREFIX . 'cron_schedule_key';
+	const KEYS_PREFIX    = 'bromate_security_api_firewall_salts_rotation_hook_';
+	const SALTS_KEY      = self::KEYS_PREFIX . 'salts';
+	const RECURRENCE_KEY = self::KEYS_PREFIX . 'recurrence';
+	const LAST_RUN_KEY   = self::KEYS_PREFIX . 'last_run';
+	const SCHEDULE_KEY   = self::KEYS_PREFIX . 'cron_schedule_key';
 
 	public static function register(): void {
 		if ( ! empty( SettingsRepository::read_option( 'salts_rotation_enabled' ) ) ) {

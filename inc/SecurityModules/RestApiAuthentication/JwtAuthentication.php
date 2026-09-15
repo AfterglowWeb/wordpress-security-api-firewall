@@ -72,7 +72,10 @@ class JwtAuthentication {
 				Logger::log(
 					'jwt_auth_attempt_failed',
 					'info',
-					array( 'source' => 'jwks_url', 'error' => $e->getMessage() )
+					array(
+						'source' => 'jwks_url',
+						'error'  => $e->getMessage(),
+					)
 				);
 			}
 		}
@@ -87,7 +90,10 @@ class JwtAuthentication {
 				Logger::log(
 					'jwt_auth_attempt_failed',
 					'info',
-					array( 'source' => 'public_key', 'error' => $e->getMessage() )
+					array(
+						'source' => 'public_key',
+						'error'  => $e->getMessage(),
+					)
 				);
 			}
 		}
@@ -104,7 +110,10 @@ class JwtAuthentication {
 			Logger::log(
 				'jwt_auth_attempt_failed',
 				'info',
-				array( 'source' => 'internal_jwks', 'error' => $e->getMessage() )
+				array(
+					'source' => 'internal_jwks',
+					'error'  => $e->getMessage(),
+				)
 			);
 		}
 
