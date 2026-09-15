@@ -57,7 +57,7 @@ final class SchemaManager {
 
 	public static function rate_buckets_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'bromate_rate_buckets';
+		return $wpdb->prefix . 'bromate_security_api_firewall_rate_buckets';
 	}
 
 	private static function create_ip_entries( \wpdb $wpdb ): void {
@@ -94,8 +94,7 @@ final class SchemaManager {
 				KEY idx_country_code (country_code),
 				KEY idx_geoip_enriched_at (geoip_enriched_at),
 				KEY idx_expires_at (expires_at),
-				KEY idx_created_at (created_at),
-				KEY idx_expires_at (expires_at)
+				KEY idx_created_at (created_at)
 			) ENGINE=InnoDB {$charset_collate};"
 		);
 		// phpcs:enable
