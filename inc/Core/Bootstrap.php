@@ -44,8 +44,8 @@ final class Bootstrap {
 		LoginBootstrap::register();
 		PublicRequestBootstrap::register();
 		GlobalSecurityBootstrap::register();
-		GeoIpLookup::register();
 		JwksEndpoint::register();
+		GeoIpLookup::register();
 
 		Cron::register();
 		CronLogs::register();
