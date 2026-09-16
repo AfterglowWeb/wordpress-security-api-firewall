@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from '@wordpress/element';
+import { useState, useEffect, useMemo, useRef, useCallback } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import type { AuthorizedUser, AuthorizedUserDialogProps, AuthorizedUserMeta } from '@app-types/auth';
 import type { IpEntry } from '@services/ip';
@@ -54,7 +54,7 @@ function serializeIpRows(rows: IpOriginRow[]): string {
 
 export default function UserDialog({
   open, user, onSave, onDelete, onClose,
-  wpUsers, wpUsersLoading, fetchWordPressUsers, authorizedUserIds, authorizedUsers, authorizedRoles,
+  authorizedUserIds, authorizedUsers, authorizedRoles,
   authMethod,
 }: AuthorizedUserDialogProps): JSX.Element {
 
@@ -72,10 +72,14 @@ export default function UserDialog({
   const currentUserId = isEditing ? user!.id : (selectedWpUser?.id ?? null);
   const isValid = wpUserId !== '' && form.display_name.trim() !== '';
 
+  const [pickerOptions, setPickerOptions] = useState<AuthorizedUser[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerInput, setPickerInput] = useState('');
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const hasAppPassword = selectedWpUser?.has_wp_app_password ?? user?.has_wp_app_password ?? false;
   const showAppPasswordWarning = isWpAuth && !noUser && !hasAppPassword;
 
-  // A user's role must intersect the authorized-roles list (empty list = any role allowed).
   const isRoleAuthorized = (candidate: Pick<AuthorizedUser, 'roles'>): boolean =>
     authorizedRoles.length === 0 || (candidate.roles ?? []).some((r) => authorizedRoles.includes(r));
 
@@ -117,6 +121,28 @@ export default function UserDialog({
       referrer: e.referrer ?? '', 
       expires_at: e.expires_at ?? '' 
     })));
+  };
+
+  const runSearch = useCallback((term: string) => {
+    setPickerLoading(true);
+    apiRequest<{ users: AuthorizedUser[]; total: number }>('bromate_search_wp_users', {
+      search: term,
+      page: 1,
+    })
+      .then((res) => setPickerOptions(Array.isArray(res.users) ? res.users : []))
+      .catch(() => setPickerOptions([]))
+      .finally(() => setPickerLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!open || isEditing) return;
+    runSearch(''); // initial page of candidates when the "add" dialog opens
+  }, [open, isEditing, runSearch]);
+
+  const handlePickerInputChange = (_: unknown, value: string) => {
+    setPickerInput(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => runSearch(value.trim()), 300);
   };
 
   useEffect(() => {
@@ -173,10 +199,6 @@ export default function UserDialog({
     setSaveError(null);
     setSaving(false);
   }, [open, user]);
-
-  useEffect(() => {
-    if (open && !user) fetchWordPressUsers();
-  }, [open]);
 
   useEffect(() => {
     if (!selectedWpUser) { applyIpEntries([]); return; }
@@ -336,8 +358,11 @@ export default function UserDialog({
           {!isEditing && (
       
               <Autocomplete<AuthorizedUser>
-                options={wpUsers}
-                loading={wpUsersLoading}
+                options={pickerOptions}
+                loading={pickerLoading}
+                filterOptions={(x) => x}
+                inputValue={pickerInput}
+                onInputChange={handlePickerInputChange}
                 getOptionLabel={(o) => o.display_name}
                 isOptionEqualToValue={(o, v) => o.id === v.id}
                 value={selectedWpUser}
@@ -392,12 +417,7 @@ export default function UserDialog({
                     size="small"
                     slotProps={{ input: {
                       ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {wpUsersLoading && <CircularProgress size={16} />}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
+                      endAdornment: (params.InputProps.endAdornment),
                     }}}
                   />
                 )}

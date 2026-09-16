@@ -56,9 +56,7 @@ export interface AuthorizedUserDialogProps {
   user: AuthorizedUser | null;
   onSave: (user: AuthorizedUser) => void;
   onClose: () => void;
-  onDelete: (id: GridRowId, onDeleted?: () => void) => void;  wpUsers: AuthorizedUser[];
-  wpUsersLoading: boolean;
-  fetchWordPressUsers: () => void;
+  onDelete: (id: GridRowId, onDeleted?: () => void) => void;  
   authorizedUserIds: number[];
   authorizedUsers: AuthorizedUserMeta[];
   authMethod: AuthMethod;

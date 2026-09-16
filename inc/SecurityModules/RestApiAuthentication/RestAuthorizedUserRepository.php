@@ -139,6 +139,79 @@ class RestAuthorizedUserRepository {
 		);
 	}
 
+	private static function map_wp_user( WP_User $user, int $current_user_id ): array {
+		return array(
+			'id'                  => absint( $user->ID ),
+			'display_name'        => sanitize_text_field( $user->display_name ?? '' ),
+			'email'               => sanitize_email( $user->user_email ),
+			'current_user'        => $current_user_id === $user->ID,
+			'admin_url'           => sanitize_url( get_edit_user_link( $user->ID ) ),
+			'roles'               => array_map( 'sanitize_key', $user->roles ),
+			'jwt_subclaim'        => self::get_user_jwt_subclaim( $user->ID ),
+			'status'              => '',
+			'expires_at'          => '',
+			'ip_entries'          => IpEntriesRepository::find_by_user( $user->ID ),
+			'has_wp_app_password' => WordPressApplicationPassword::user_has_valid_application_password( $user->ID ),
+		);
+	}
+
+	public static function get_users_by_ids( array $ids ): array {
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+		if ( empty( $ids ) ) {
+			return array();
+		}
+
+		// Defensive ceiling only — this should never realistically bind unless
+		// an admin has authorized an extraordinary number of accounts, in which
+		// case the authorized-list UI itself would need its own pagination.
+		$ids = array_slice( $ids, 0, 1000 );
+
+		$users            = get_users( array( 'include' => $ids ) );
+		$current_user_id  = get_current_user_id();
+
+		return array_map(
+			static fn( WP_User $user ) => self::map_wp_user( $user, $current_user_id ),
+			array_filter( (array) $users, static fn( $u ) => $u instanceof WP_User )
+		);
+	}
+
+	/**
+	 * Server-side search for the "add authorized user" picker. Bounded by
+	 * page size, not total site user count — this is what makes it possible
+	 * to authorize a user on a site with any number of accounts, not just
+	 * ones alphabetically near the top of the list.
+	 */
+	public static function search_wp_users( string $search, int $page = 1, int $per_page = 20 ): array {
+		$page     = max( 1, $page );
+		$per_page = max( 1, min( 50, $per_page ) );
+
+		$args = array(
+			'number'  => $per_page,
+			'paged'   => $page,
+			'orderby' => 'display_name',
+			'order'   => 'ASC',
+			'fields'  => 'all',
+		);
+
+		$search = trim( $search );
+		if ( '' !== $search ) {
+			$args['search']         = '*' . $search . '*';
+			$args['search_columns'] = array( 'user_login', 'user_email', 'display_name' );
+		}
+
+		$query           = new \WP_User_Query( $args );
+		$results         = $query->get_results();
+		$current_user_id = get_current_user_id();
+
+		return array(
+			'users' => array_map(
+				static fn( WP_User $user ) => self::map_wp_user( $user, $current_user_id ),
+				array_filter( (array) $results, static fn( $u ) => $u instanceof WP_User )
+			),
+			'total' => (int) $query->get_total(),
+		);
+	}
+
 	public static function update_authorized_users( array $users ): array {
 
 		$existing_users = SettingsRepository::read_option( 'auth_users' );
