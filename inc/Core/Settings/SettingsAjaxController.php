@@ -88,17 +88,17 @@ class SettingsAjaxController {
 	}
 
 	public static function ajax_validate_has_firewall_admin_caps(): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified below via wp_verify_nonce
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 
 		$valid = wp_verify_nonce( $nonce, 'bromate_security_api_firewall_update_options_nonce' );
 
 		return (bool) $valid
 			&& is_user_logged_in()
-			&& current_user_can( 'bromate_security_api_firewall_edit_options' );
+			&& current_user_can( 'manage_options' );
 	}
 
 	public function ajax_flush_rewrite_rules(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified via ajax_validate_has_firewall_admin_caps
 		if ( false === self::ajax_validate_has_firewall_admin_caps() ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
 		}
