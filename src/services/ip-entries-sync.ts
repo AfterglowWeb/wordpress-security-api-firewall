@@ -67,7 +67,8 @@ export function computeIpEntriesDiff(
 
 export async function syncUserIpEntries(
   userId: number,
-  diff: IpEntriesDiff
+  diff: IpEntriesDiff,
+  options?: { list_type: 'whitelist' | 'blacklist'; entry_origin: string }
 ): Promise<SyncIpEntriesResult> {
   const { toDelete, toAdd } = diff;
 

@@ -25,6 +25,7 @@ class IpEntriesAjaxController {
 		add_action( 'wp_ajax_bromate_get_country_stats', array( $self, 'ajax_get_country_stats' ) );
 		add_action( 'wp_ajax_bromate_toggle_country_block', array( $self, 'ajax_toggle_country_block' ) );
 		add_action( 'wp_ajax_bromate_get_user_ip_entries', array( $self, 'ajax_get_user_ip_entries' ) );
+		add_action( 'wp_ajax_bromate_get_login_ip_restricted_users', array( $self, 'ajax_get_login_ip_restricted_users' ) );
 		add_action( 'wp_ajax_bromate_get_current_user_ip', array( $self, 'ajax_get_current_user_ip' ) );
 	}
 
@@ -327,6 +328,14 @@ class IpEntriesAjaxController {
 			wp_send_json_error( array( 'message' => 'Could not resolve your IP.' ), 400 );
 		}
 		wp_send_json_success( array( 'current_user_ip' => $current_user_ip ), 200 );
+	}
+
+	public function ajax_get_login_ip_restricted_users(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+		}
+
+		wp_send_json_success( IpEntriesRepository::find_users_with_origin( 'login_ip_restriction' ) );
 	}
 
 	public function ajax_get_country_stats(): void {

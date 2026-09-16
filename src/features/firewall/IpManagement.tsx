@@ -167,8 +167,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
     quickFilterExcludeHiddenColumns: false,
   });
 
-  const [authorizedUserIds, setAuthorizedUserIds] = useState<number[]>([]);
-
   const { consumePanelParams } = useNavigation();
 
   useEffect(() => {
@@ -180,25 +178,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
       });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const fetchAuthorizedUsers = async () => {
-      try {
-        const users = await apiRequest<AuthorizedUserMeta[]>('bromate_get_authorized_users');
-        const valid = Array.isArray(users)
-          ? users.filter(
-              (u): u is AuthorizedUserMeta =>
-                u !== null && typeof u === 'object' && typeof u.id === 'number'
-            )
-          : [];
-        setAuthorizedUserIds(valid.map((u) => u.id));
-      } catch {
-        setAuthorizedUserIds([]);
-      }
-    };
-
-    fetchAuthorizedUsers();
-  }, []);
 
   const load = useCallback(async () => {
     const [black, white] = await Promise.all([
@@ -406,9 +385,6 @@ export default function IpManagement({ wpUsers, wpUsersLoading }: IpManagementPr
         defaultListType={listType}
         onSave={handleAddEntries}
         onClose={() => setAddDialogOpen(false)}
-        wpUsers={wpUsers}
-        wpUsersLoading={wpUsersLoading}
-        authorizedUserIds={authorizedUserIds}
       />
 
       <EditIpEntryDialog

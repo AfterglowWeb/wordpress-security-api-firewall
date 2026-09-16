@@ -31,7 +31,7 @@ class IpEntriesRepository {
 				'type'              => 'string',
 				'sanitize_callback' => static fn( $v ) => in_array( $v, array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ), true ) ? $v : 'manual',
 				'default'           => 'manual',
-				'allowed_values'    => array( 'manual', 'auth_user_ip', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ),
+				'allowed_values'    => array( 'manual', 'auth_user_ip', 'login_ip_restriction', 'public_rate_limit', 'login_attempts_limit', 'auth_attempts_limit', 'country' ),
 				'sortable'          => true,
 			),
 			'entry_type'        => array(
@@ -286,6 +286,32 @@ class IpEntriesRepository {
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $user_id ), ARRAY_A );
 
 		return array_map( array( self::class, 'normalize' ), is_array( $rows ) ? $rows : array() );
+	}
+
+	public static function find_users_with_origin( string $origin ): array {
+		global $wpdb;
+		$table = SchemaManager::ip_entries_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT user_id, COUNT(*) as entry_count
+				FROM {$table}
+				WHERE entry_origin = %s AND user_id IS NOT NULL
+				GROUP BY user_id
+				ORDER BY user_id ASC",
+				$origin
+			),
+			ARRAY_A
+		);
+
+		return array_map(
+			static fn( $row ) => array(
+				'user_id'     => (int) $row['user_id'],
+				'entry_count' => (int) $row['entry_count'],
+			),
+			is_array( $rows ) ? $rows : array()
+		);
 	}
 
 	public static function ip_in_list( string $ip, string $list_type = 'blacklist' ): bool {
