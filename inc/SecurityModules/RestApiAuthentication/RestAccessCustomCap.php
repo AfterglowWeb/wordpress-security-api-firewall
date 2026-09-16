@@ -3,12 +3,12 @@
 defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
-use Bromate\SecurityApiFirewall\SecurityModules\RestApiAuthentication\RestAuthorizedUserRepository;
 use WP_User;
 
 final class RestAccessCustomCap {
 
 	private const REST_API_ACCESS_CUSTOM_CAP = 'bromate_security_api_firewall_rest_api_access';
+	private const REVOKE_SCAN_BATCH_SIZE     = 500;
 
 	private function __construct() {}
 
@@ -33,48 +33,78 @@ final class RestAccessCustomCap {
 	public static function add_api_access_cap_on_authorized_users(): void {
 
 		$auth_roles = SettingsRepository::read_option( 'auth_authorized_roles' );
-		$users      = get_users(
-			array(
-				'role__in' => empty( $auth_roles ) ? RestAuthorizedUserRepository::get_roles_names() : $auth_roles,
-				'number'   => 500,
-				'orderby'  => 'display_name',
-				'order'    => 'ASC',
-			)
-		);
+		$auth_roles = is_array( $auth_roles ) ? $auth_roles : array();
 
 		$auth_users = SettingsRepository::read_option( 'auth_users' );
+		$auth_users = is_array( $auth_users ) ? $auth_users : array();
 
-		if ( empty( $auth_users ) || ! is_array( $auth_users ) ) {
+		$desired_ids = self::resolve_desired_user_ids( $auth_users, $auth_roles );
+
+		foreach ( array_keys( $desired_ids ) as $user_id ) {
+			self::add_cap_to_user( get_userdata( $user_id ) );
+		}
+
+		self::revoke_cap_from_unlisted_users( $desired_ids );
+	}
+
+	private static function resolve_desired_user_ids( array $auth_users, array $auth_roles ): array {
+		$desired_ids = array();
+
+		foreach ( $auth_users as $auth_user ) {
+			if ( ! is_array( $auth_user ) || empty( $auth_user['id'] ) ) {
+				continue;
+			}
+
+			$status = $auth_user['status'] ?? '';
+			if ( in_array( $status, array( 'revoked', 'disabled' ), true ) ) {
+				continue;
+			}
+
+			$user_id = (int) $auth_user['id'];
+			$user    = get_userdata( $user_id );
+			if ( ! $user instanceof WP_User ) {
+				continue;
+			}
+
+			if ( ! empty( $auth_roles ) && empty( array_intersect( $auth_roles, $user->roles ) ) ) {
+				continue;
+			}
+
+			$desired_ids[ $user_id ] = true;
+		}
+
+		return $desired_ids;
+	}
+
+	private static function revoke_cap_from_unlisted_users( array $desired_ids ): void {
+		global $wpdb;
+
+		$capabilities_meta_key = $wpdb->get_blog_prefix() . 'capabilities';
+		$paged                 = 1;
+
+		do {
+			$users = get_users(
+				array(
+					'meta_query' => array(
+						array(
+							'key'     => $capabilities_meta_key,
+							'value'   => '"' . self::REST_API_ACCESS_CUSTOM_CAP . '"',
+							'compare' => 'LIKE',
+						),
+					),
+					'number' => self::REVOKE_SCAN_BATCH_SIZE,
+					'paged'  => $paged,
+				)
+			);
+
 			foreach ( $users as $user ) {
-				self::remove_cap_from_user( $user );
+				if ( ! isset( $desired_ids[ $user->ID ] ) ) {
+					self::remove_cap_from_user( $user );
+				}
 			}
-			return;
-		}
 
-		$active_user_ids = array_filter(
-			array_map(
-				static function ( $auth_user ) {
-					if ( ! is_array( $auth_user ) || empty( $auth_user['id'] ) ) {
-						return null;
-					}
-					$status = $auth_user['status'] ?? '';
-					if ( in_array( $status, array( 'revoked', 'disabled' ), true ) ) {
-						return null;
-					}
-					return (int) $auth_user['id'];
-				},
-				$auth_users
-			),
-			static fn( $id ) => null !== $id
-		);
-
-		foreach ( $users as $user ) {
-			if ( in_array( $user->ID, $active_user_ids, true ) ) {
-				self::add_cap_to_user( $user );
-			} else {
-				self::remove_cap_from_user( $user );
-			}
-		}
+			++$paged;
+		} while ( count( $users ) === self::REVOKE_SCAN_BATCH_SIZE );
 	}
 
 	private static function add_cap_to_user( $user ): void {

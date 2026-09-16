@@ -16,6 +16,8 @@ use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\GlobalSecurityBoo
 use Bromate\SecurityApiFirewall\SecurityModules\GlobalSecurity\HttpHeadersAjaxController;
 
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookup;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpLookupAjaxController;
+use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\GeoIpRefreshNotice;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesAjaxController;
 
 use Bromate\SecurityApiFirewall\SecurityModules\RestApiRoutes\RoutesAjaxController;
@@ -46,7 +48,6 @@ final class Bootstrap {
 		GlobalSecurityBootstrap::register();
 		JwksEndpoint::register();
 		GeoIpLookup::register();
-
 		Cron::register();
 		CronLogs::register();
 		CronIpEntries::register();
@@ -62,7 +63,8 @@ final class Bootstrap {
 			LogsAjaxController::register();
 			SettingsMigrateAjaxController::register();
 			Documentation::register();
-
+			GeoIpLookupAjaxController::register();
+			GeoIpRefreshNotice::register();
 		}
 	}
 
