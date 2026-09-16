@@ -31,11 +31,10 @@ define( 'BROMATE_SECURITY_API_FIREWALL_SCHEMA_VERSION', '1.0.4' );
 
 
 require_once BROMATE_SECURITY_API_FIREWALL_DIR . 'vendor/autoload.php';
-Core\Bootstrap::register();
-
-register_activation_hook( __FILE__, array( Core\Bootstrap::class, 'activate' ) );
 register_activation_hook( __FILE__, array( SecurityModules\RestApiAuthentication\RestAccessCustomCap::class, 'add_api_access_cap_on_authorized_users' ) );
+register_activation_hook( __FILE__, array( Core\Bootstrap::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( Core\Bootstrap::class, 'deactivate' ) );
+Core\Bootstrap::register();
 
 add_filter(
 	'plugin_action_links_' . plugin_basename( __FILE__ ),

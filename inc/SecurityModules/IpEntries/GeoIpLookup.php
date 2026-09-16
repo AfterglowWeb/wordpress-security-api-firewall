@@ -11,8 +11,11 @@ final class GeoIpLookup {
 
 	private const CRON_HOOK           = 'bromate_security_api_firewall_refresh_country_ips';
 	private const LAST_REFRESH_OPTION = 'bromate_security_api_firewall_country_ips_last_refresh';
+	private const PROGRESS_OPTION     = 'bromate_security_api_firewall_country_ips_progress';
+	private const LOCK_TRANSIENT      = 'bromate_security_api_firewall_country_refresh_lock';
 	private const SOURCE_BASE         = 'https://raw.githubusercontent.com/ipverse/country-ip-blocks/master/country';
 	private const CACHE_GROUP         = 'bromate_security_api_firewall_country_lookup';
+	private const BATCH_SIZE          = 20;
 
 	public static function register(): void {
 		add_action( self::CRON_HOOK, array( __CLASS__, 'refresh_data' ) );
@@ -20,11 +23,17 @@ final class GeoIpLookup {
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
 		}
+
+		add_action( 'admin_init', array( __CLASS__, 'maybe_catch_up_after_cli_activation' ) );
 	}
 
 	public static function schedule(): void {
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
+		}
+
+		if ( null === self::get_last_refresh() && false === get_option( self::PROGRESS_OPTION, false ) ) {
+			wp_schedule_single_event( time(), self::CRON_HOOK );
 		}
 	}
 
@@ -35,61 +44,152 @@ final class GeoIpLookup {
 		}
 	}
 
+	public static function maybe_catch_up_after_cli_activation(): void {
+		if ( null !== self::get_last_refresh() && false === get_option( self::PROGRESS_OPTION, false ) ) {
+			return;
+		}
+		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+			wp_schedule_single_event( time(), self::CRON_HOOK );
+		}
+	}
+
+	public static function get_refresh_status(): array {
+		$progress = get_option( self::PROGRESS_OPTION, false );
+		$total    = count( self::get_iso_country_codes() );
+
+		if ( false === $progress ) {
+			return array(
+				'in_progress'  => false,
+				'last_refresh' => self::get_last_refresh(),
+			);
+		}
+
+		$processed = (int) ( $progress['offset'] ?? 0 );
+
+		return array(
+			'in_progress' => true,
+			'processed'   => $processed,
+			'total'       => $total,
+			'percent'     => $total > 0 ? (int) round( ( $processed / $total ) * 100 ) : 0,
+		);
+	}
+
+	private static function needs_initial_refresh(): bool {
+		if ( false !== get_option( self::PROGRESS_OPTION, false ) ) {
+			return false;
+		}
+		if ( null === self::get_last_refresh() ) {
+			return true;
+		}
+		return self::table_is_empty();
+	}
+
+	private static function table_is_empty(): bool {
+		global $wpdb;
+		$table = SchemaManager::country_ip_ranges_table_name();
+
+		$suppress = $wpdb->suppress_errors( true );
+		$row      = $wpdb->get_var( "SELECT 1 FROM {$table} LIMIT 1" );
+		$wpdb->suppress_errors( $suppress );
+
+		return null === $row;
+	}
+
 	public static function refresh_data(): bool {
-		$countries = self::get_iso_country_codes();
 
-		$ipv4_ranges = array();
-		$ipv6_ranges = array();
+		if ( get_transient( self::LOCK_TRANSIENT ) ) {
+			return false;
+		}
+		set_transient( self::LOCK_TRANSIENT, 1, 5 * MINUTE_IN_SECONDS );
 
-		$all_ok = true;
-
-		foreach ( $countries as $cc ) {
-			$url = self::SOURCE_BASE . '/' . strtolower( $cc ) . '/aggregated.json';
-
-			$response = wp_remote_get(
-				$url,
+		try {
+			$progress = get_option(
+				self::PROGRESS_OPTION,
 				array(
-					'timeout' => 15,
-					'headers' => array( 'Accept' => 'application/json' ),
+					'offset' => 0,
+					'ipv4'   => array(),
+					'ipv6'   => array(),
+					'all_ok' => true,
 				)
 			);
 
-			if ( is_wp_error( $response ) ) {
-				$all_ok = false;
-				continue;
+			$countries = self::get_iso_country_codes();
+			$batch     = array_slice( $countries, $progress['offset'], self::BATCH_SIZE );
+
+			if ( empty( $batch ) ) {
+				return self::finalize_refresh( $progress );
 			}
 
-			$response_code = wp_remote_retrieve_response_code( $response );
-			if ( 200 !== $response_code ) {
-				if ( 404 !== $response_code ) {
-					$all_ok = false;
-				}
-				continue;
+			foreach ( $batch as $cc ) {
+				self::fetch_country( $cc, $progress );
 			}
 
-			$body = wp_remote_retrieve_body( $response );
-			$data = json_decode( $body, true );
+			$progress['offset'] += count( $batch );
+			update_option( self::PROGRESS_OPTION, $progress, false );
 
-			if ( ! is_array( $data ) || empty( $data['prefixes'] ) ) {
-				continue;
+			if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+				wp_schedule_single_event( time() + 5, self::CRON_HOOK );
 			}
 
-			foreach ( $data['prefixes']['ipv4'] ?? array() as $cidr ) {
-				$range = self::cidr_to_range_ipv4( $cidr, $cc );
-				if ( $range ) {
-					$ipv4_ranges[] = $range;
-				}
-			}
+			return true;
+		} finally {
+			delete_transient( self::LOCK_TRANSIENT );
+		}
+	}
 
-			foreach ( $data['prefixes']['ipv6'] ?? array() as $cidr ) {
-				$range = self::cidr_to_range_ipv6( $cidr, $cc );
-				if ( $range ) {
-					$ipv6_ranges[] = $range;
-				}
+	private static function fetch_country( string $cc, array &$progress ): void {
+		$url = self::SOURCE_BASE . '/' . strtolower( $cc ) . '/aggregated.json';
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 15,
+				'headers' => array( 'Accept' => 'application/json' ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$progress['all_ok'] = false;
+			return;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $response_code ) {
+			if ( 404 !== $response_code ) {
+				$progress['all_ok'] = false;
+			}
+			return;
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+
+		if ( ! is_array( $data ) || empty( $data['prefixes'] ) ) {
+			return;
+		}
+
+		foreach ( $data['prefixes']['ipv4'] ?? array() as $cidr ) {
+			$range = self::cidr_to_range_ipv4( $cidr, $cc );
+			if ( $range ) {
+				$progress['ipv4'][] = $range;
 			}
 		}
 
+		foreach ( $data['prefixes']['ipv6'] ?? array() as $cidr ) {
+			$range = self::cidr_to_range_ipv6( $cidr, $cc );
+			if ( $range ) {
+				$progress['ipv6'][] = $range;
+			}
+		}
+	}
+
+	private static function finalize_refresh( array $progress ): bool {
+
+		$ipv4_ranges = $progress['ipv4'];
+		$ipv6_ranges = $progress['ipv6'];
+
 		if ( empty( $ipv4_ranges ) && empty( $ipv6_ranges ) ) {
+			delete_option( self::PROGRESS_OPTION );
 			return false;
 		}
 
@@ -99,21 +199,23 @@ final class GeoIpLookup {
 		$ipv4_ranges = self::merge_ranges_ipv4( $ipv4_ranges );
 		$ipv6_ranges = self::merge_ranges_ipv6( $ipv6_ranges );
 
-		if ( ! self::write_ranges( $ipv4_ranges, $ipv6_ranges ) ) {
-			return false;
+		$ok = self::write_ranges( $ipv4_ranges, $ipv6_ranges );
+
+		delete_option( self::PROGRESS_OPTION );
+
+		if ( $ok ) {
+			update_option( self::LAST_REFRESH_OPTION, time(), false );
+			wp_cache_flush_group( self::CACHE_GROUP );
 		}
 
-		update_option( self::LAST_REFRESH_OPTION, time(), false );
-		wp_cache_flush_group( self::CACHE_GROUP );
-
-		return $all_ok;
+		return $ok && $progress['all_ok'];
 	}
 
 	private static function write_ranges( array $ipv4_ranges, array $ipv6_ranges ): bool {
 		global $wpdb;
 
-		$live   = SchemaManager::country_ip_ranges_table_name();
-		$shadow = $live . '_shadow';
+		$live = SchemaManager::country_ip_ranges_table_name();
+		$shadow = $live . '_shd' . getmypid() . str_replace( '.', '', (string) microtime( true ) );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
 		$wpdb->query( "CREATE TABLE {$shadow} LIKE {$live}" );
@@ -127,7 +229,7 @@ final class GeoIpLookup {
 			return false;
 		}
 
-		$tmp = $live . '_old_' . time();
+		$tmp = $live . '_old' . getmypid() . time();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Atomic RENAME TABLE swap.
 		$renamed = $wpdb->query( "RENAME TABLE {$live} TO {$tmp}, {$shadow} TO {$live}" );

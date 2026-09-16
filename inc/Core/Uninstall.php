@@ -27,7 +27,6 @@ final class Uninstall {
 		CronIpEntries::unschedule();
 		GeoIpLookup::unschedule();
 		SaltsRotation::unschedule();
-		AdminPage::remove_edit_options_custom_cap();
 		RestAccessCustomCap::remove_rest_api_access_custom_cap();
 
 		RoutesTreeRepository::delete_routes_list_transient();
@@ -54,7 +53,6 @@ final class Uninstall {
 		CronIpEntries::unschedule();
 		GeoIpLookup::unschedule();
 		SaltsRotation::unschedule();
-		AdminPage::remove_edit_options_custom_cap();
 		RestAccessCustomCap::remove_rest_api_access_custom_cap();
 
 		RoutesTreeRepository::delete_routes_list_transient();
