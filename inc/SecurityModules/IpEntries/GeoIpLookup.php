@@ -32,7 +32,7 @@ final class GeoIpLookup {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
 		}
 
-		if ( null === self::get_last_refresh() && false === get_option( self::PROGRESS_OPTION, false ) ) {
+		if ( self::needs_initial_refresh() ) {
 			wp_schedule_single_event( time(), self::CRON_HOOK );
 		}
 	}
@@ -45,12 +45,30 @@ final class GeoIpLookup {
 	}
 
 	public static function maybe_catch_up_after_cli_activation(): void {
-		if ( null !== self::get_last_refresh() && false === get_option( self::PROGRESS_OPTION, false ) ) {
-			return;
-		}
-		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+		if ( self::needs_initial_refresh() && ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_single_event( time(), self::CRON_HOOK );
 		}
+	}
+
+	private static function needs_initial_refresh(): bool {
+		if ( false !== get_option( self::PROGRESS_OPTION, false ) ) {
+			return false;
+		}
+		if ( null === self::get_last_refresh() ) {
+			return true;
+		}
+		return self::table_is_empty();
+	}
+
+	private static function table_is_empty(): bool {
+		global $wpdb;
+		$table = SchemaManager::country_ip_ranges_table_name();
+		$suppress = $wpdb->suppress_errors( true );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- static SQL, no user input
+		$row = $wpdb->get_var( "SELECT 1 FROM {$table} LIMIT 1" );
+		$wpdb->suppress_errors( $suppress );
+
+		return null === $row;
 	}
 
 	public static function get_refresh_status(): array {
@@ -72,27 +90,6 @@ final class GeoIpLookup {
 			'total'       => $total,
 			'percent'     => $total > 0 ? (int) round( ( $processed / $total ) * 100 ) : 0,
 		);
-	}
-
-	private static function needs_initial_refresh(): bool {
-		if ( false !== get_option( self::PROGRESS_OPTION, false ) ) {
-			return false;
-		}
-		if ( null === self::get_last_refresh() ) {
-			return true;
-		}
-		return self::table_is_empty();
-	}
-
-	private static function table_is_empty(): bool {
-		global $wpdb;
-		$table = SchemaManager::country_ip_ranges_table_name();
-
-		$suppress = $wpdb->suppress_errors( true );
-		$row      = $wpdb->get_var( "SELECT 1 FROM {$table} LIMIT 1" );
-		$wpdb->suppress_errors( $suppress );
-
-		return null === $row;
 	}
 
 	public static function refresh_data(): bool {
