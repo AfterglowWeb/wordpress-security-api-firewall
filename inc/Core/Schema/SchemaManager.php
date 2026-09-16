@@ -70,7 +70,7 @@ final class SchemaManager {
 				ip VARCHAR(45) NOT NULL,
 				list_type ENUM('whitelist','blacklist') NOT NULL DEFAULT 'blacklist',
 				entry_type ENUM('ip','cidr') NOT NULL DEFAULT 'ip',
-				entry_origin ENUM('manual','auth_user_ip','public_rate_limit','login_attempts_limit','auth_attempts_limit','country') NOT NULL DEFAULT 'manual',
+				entry_origin ENUM('manual','auth_user_ip','login_ip_restriction','public_rate_limit','login_attempts_limit','auth_attempts_limit','country') NOT NULL DEFAULT 'manual',
 				agent VARCHAR(255) NULL,
 				user_id BIGINT UNSIGNED NULL,
 				referrer VARCHAR(255) NULL,

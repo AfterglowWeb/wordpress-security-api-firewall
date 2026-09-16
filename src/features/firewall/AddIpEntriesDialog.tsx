@@ -21,9 +21,6 @@ interface AddIpEntriesDialogProps {
   defaultListType: ListType;
   onSave: (form: AddIpEntriesForm) => Promise<LineResult[]>;
   onClose: () => void;
-  wpUsers: AuthorizedUser[];
-  wpUsersLoading: boolean;
-  authorizedUserIds: number[];
 }
 
 export default function AddIpEntriesDialog({
