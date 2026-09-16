@@ -11,6 +11,9 @@ class RestAuthenticationAjaxController {
 	public static function register(): void {
 		$self = new self();
 
+		add_action( 'wp_ajax_bromate_get_authorized_wp_users', array( $self, 'ajax_get_authorized_wp_users' ) );
+		add_action( 'wp_ajax_bromate_search_wp_users', array( $self, 'ajax_search_wp_users' ) );
+
 		add_action( 'wp_ajax_bromate_authorized_users_options', array( $self, 'ajax_authorized_users_options' ) );
 		add_action( 'wp_ajax_bromate_authorized_roles_options', array( $self, 'ajax_authorized_roles_options' ) );
 		add_action( 'wp_ajax_bromate_get_authorized_users', array( $self, 'ajax_get_authorized_users' ) );
@@ -25,6 +28,35 @@ class RestAuthenticationAjaxController {
 		add_action( 'wp_ajax_bromate_delete_jwt_key', array( $self, 'ajax_delete_jwt_key' ) );
 		add_action( 'wp_ajax_bromate_generate_jwt_subclaim', array( $self, 'ajax_generate_jwt_subclaim' ) );
 		add_action( 'wp_ajax_bromate_refresh_jwt_subclaim', array( $self, 'ajax_refresh_jwt_subclaim' ) );
+	}
+
+	public function ajax_get_authorized_wp_users(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above.
+		$ids = isset( $_POST['ids'] ) ? json_decode( wp_unslash( $_POST['ids'] ), true ) : array();
+		if ( ! is_array( $ids ) ) {
+			$ids = array();
+		}
+
+		wp_send_json_success( RestAuthorizedUserRepository::get_users_by_ids( $ids ) );
+	}
+
+	public function ajax_search_wp_users(): void {
+		if ( false === SettingsAjaxController::ajax_validate_has_firewall_admin_caps() ) {
+			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'bromate-security-api-firewall' ) ), 401 );
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above.
+		$search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified above.
+		$page = isset( $_POST['page'] ) ? absint( wp_unslash( $_POST['page'] ) ) : 1;
+
+		wp_send_json_success( RestAuthorizedUserRepository::search_wp_users( $search, $page ) );
 	}
 
 	public function ajax_authorized_users_options(): void {

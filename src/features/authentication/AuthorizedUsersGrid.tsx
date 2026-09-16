@@ -110,8 +110,6 @@ export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUse
     onUsersChange?.({ count: authUsers.length, loading: authUsersLoading, users: authorizedUsers });
   }, [authUsers, authUsersLoading, authorizedUsers, onUsersChange]);
 
-  // A user whose WordPress role isn't in the authorized-roles list is disabled,
-  // regardless of their stored status, but stays visible in the grid.
   const isRoleAuthorized = useCallback((user: AuthorizedUser): boolean => {
     if (authorizedRoles.length === 0) return true;
     return (user.roles ?? []).some((role) => authorizedRoles.includes(role));
@@ -137,15 +135,21 @@ export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUse
     disabled: __('disabled (role not authorized)', 'bromate-security-api-firewall'),
   };
 
-  const fetchWordPressUsers = useCallback(async () => {
+  const fetchAuthorizedWpUsers = useCallback(async (ids: number[]) => {
+    if (ids.length === 0) {
+      setWpUsers([]);
+      return;
+    }
     setWpUsersLoading(true);
     try {
-      const users = await apiRequest<AuthorizedUser[]>('bromate_authorized_users_options');
-      setWpUsers(users);
+      const users = await apiRequest<AuthorizedUser[]>('bromate_get_authorized_wp_users', {
+        ids: JSON.stringify(ids),
+      });
+      setWpUsers(Array.isArray(users) ? users : []);
     } catch {
       setSnackbar({
         open: true,
-        message: __('Failed to load WordPress users', 'bromate-security-api-firewall'),
+        message: __('Failed to load authorized users\u2019 details', 'bromate-security-api-firewall'),
         severity: 'error',
       });
     } finally {
@@ -154,8 +158,8 @@ export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUse
   }, []);
 
   useEffect(() => {
-    fetchWordPressUsers();
-  }, [fetchWordPressUsers]);
+    fetchAuthorizedWpUsers(authUsers.map((u) => u.id));
+  }, [authUsers, fetchAuthorizedWpUsers]);
 
   useEffect(() => {
     const fetchAuthorizedUsers = async () => {
@@ -189,6 +193,8 @@ export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUse
 
     fetchAuthorizedUsers();
   }, []);
+
+  
 
   const applySavedUser = useCallback((user: AuthorizedUser) => {
     const meta: AuthorizedUserMeta = {
@@ -383,7 +389,7 @@ export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUse
         showToolbar
         checkboxSelection
         disableRowSelectionOnClick
-        loading={wpUsersLoading}
+        loading={authUsersLoading || wpUsersLoading}
         rowSelectionModel={rowSelectionModel}
         onRowSelectionModelChange={setRowSelectionModel}
         slots={toolbarSlots}
@@ -401,9 +407,6 @@ export default function AuthorizedUsersGrid({ authMethod, authorizedRoles, onUse
         onSave={handleSaveUser}
         onClose={() => setDialogOpen(false)}
         onDelete={handleDeleteUser}
-        wpUsers={wpUsers}
-        wpUsersLoading={wpUsersLoading}
-        fetchWordPressUsers={fetchWordPressUsers}
         authorizedUserIds={authorizedUserIds}
         authorizedUsers={authUsers}
         authMethod={authMethod}
