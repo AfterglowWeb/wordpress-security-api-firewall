@@ -39,7 +39,7 @@ cd wp-content/plugins/wordpress-security-api-firewall
 ```bash
 npm run build
 ```
-ou
+or
 ```bash
 yarn build
 ```
