@@ -30,9 +30,23 @@ cd wp-content/plugins/
 git clone https://github.com/AfterglowWeb/wordpress-security-api-firewall.git bromate-security-api-firewall
 ```
 
-### 2. Activate the plugin through the WordPress admin
+### 2. Build the UI
 
-### 3. Navigate to the **WP Security & API Firewall** admin page.
+```bash
+cd wp-content/plugins/wordpress-security-api-firewall
+```
+
+```bash
+npm run build
+```
+ou
+```bash
+yarn build
+```
+
+### 3. Activate the plugin through the WordPress admin
+
+### 4. Navigate to the **Bro. Security** admin page.
 
 ## Contributing
 
