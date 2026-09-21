@@ -2,7 +2,7 @@ import { apiRequest } from '@services/api';
 
 export type ListType = 'blacklist' | 'whitelist';
 export type EntryType = 'ip' | 'cidr';
-export type EntryOrigin = 'manual' | 'auth_user_ip' | 'public_rate_limit' | 'login_attempts_limit' | 'country';
+export type EntryOrigin = 'manual' | 'auth_user_ip' | 'login_ip_restriction' | 'public_rate_limit' | 'login_attempts_limit' | 'auth_attempts_limit' | 'country';
 
 export interface LineResult {
   value: string;
@@ -53,8 +53,11 @@ export const IpAPI = {
       ids: JSON.stringify(ids),
     }),
 
-  getUserEntries: (user_id: number) =>
-    apiRequest<{ entries: IpEntry[] }>('bromate_get_user_ip_entries', { user_id }),
+  getUserEntries: (user_id: number, entry_origin?: string) =>
+    apiRequest<{ entries: IpEntry[] }>('bromate_get_user_ip_entries', {
+      user_id,
+      ...(entry_origin ? { entry_origin } : {}),
+    }),
 
   getCountries: (list_type: ListType) =>
     apiRequest<{
