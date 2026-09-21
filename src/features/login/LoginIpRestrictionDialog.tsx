@@ -9,7 +9,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { apiRequest } from '@services/api';
 import { usePortalContainer } from '@contexts/PortalContainerContext';
 import type { AuthorizedUser } from '@app-types/auth';
-import type { IpEntry } from '@services/ip';
+import { IpAPI, type IpEntry } from '@services/ip';
 import { computeIpEntriesDiff, syncUserIpEntries } from '@services/ip-entries-sync';
 import AddIpEntriesRepeater, { type IpOriginRow } from '@components/AddIpEntriesRepeater';
 
@@ -63,10 +63,7 @@ export default function LoginIpRestrictionDialog({
       setPickerLoading(true);
       Promise.all([
         apiRequest<AuthorizedUser[]>('bromate_get_authorized_wp_users', { ids: JSON.stringify([userId]) }),
-        apiRequest<{ entries: IpEntry[] }>('bromate_get_ip_entries', {
-          user_id: userId,
-          entry_origin: 'login_ip_restriction',
-        }),
+        IpAPI.getUserEntries(userId, 'login_ip_restriction'),
       ])
         .then(([users, entriesRes]) => {
           setSelectedUser(users[0] ?? null);
