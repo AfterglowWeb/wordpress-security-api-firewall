@@ -23,6 +23,7 @@ import SaveButton from '@components/SaveButton';
 import SaltsRotationSection from '@features/login/SaltsRotationSection';
 import RevokeTotpEnrollments from '@features/login/RevokeTotpEnrollments';
 import AttemptsLimitingSection from '@components/AttemptsLimitingSection';
+import LoginIpRestrictions from '@features/login/LoginIpRestrictions';
 
 export default function LoginSecurity(): JSX.Element {  
   const [settings, setSettings] = useState<LoginSettings>(DEFAULT_SETTINGS);
@@ -334,6 +335,8 @@ export default function LoginSecurity(): JSX.Element {
      
         </Stack>
       </Paper>
+
+      <LoginIpRestrictions />
 
       <SaltsRotationSection
       enabled={settings.salts_rotation_enabled}
