@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsMigrate;
 use Bromate\SecurityApiFirewall\Core\Schema\SchemaManager;
+use WP_Filesystem_Base;
 
 final class NotificationMailer {
 
@@ -11,6 +12,11 @@ final class NotificationMailer {
 		if ( ! $model->enabled || ! $model->has_recipients() ) {
 			return false;
 		}
+		global $wp_filesystem;
+
+if ( $wp_filesystem instanceof WP_Filesystem_Base && $wp_filesystem->exists( __DIR__ . '/vendor/autoload.php' ) ) {
+	require_once __DIR__ . '/vendor/autoload.php';
+}
 
 		$is_html = 'html' === $model->format;
 
@@ -44,7 +50,7 @@ final class NotificationMailer {
 
 		$sent = wp_mail( $model->to, $model->subject, $body, $headers, $attachments );
 
-		if ( $attachment_path && file_exists( $attachment_path ) ) {
+		if ( $attachment_path && $wp_filesystem instanceof WP_Filesystem_Base && $wp_filesystem->exists( $attachment_path ) ) {
 			wp_delete_file( $attachment_path );
 		}
 

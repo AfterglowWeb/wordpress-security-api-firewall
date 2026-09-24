@@ -3,6 +3,7 @@
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsRepository;
 use Bromate\SecurityApiFirewall\Utils\FileUtils;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
+use WP_Filesystem_Base;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -65,7 +66,7 @@ class FilePermissions {
 		$uploads_dir           = wp_upload_dir();
 		$uploads_htaccess_path = self::get_uploads_htaccess_path();
 
-		$htaccess_content  = $uploads_htaccess_path ? FileUtils::read_file( $uploads_htaccess_path ) : '';
+		$htaccess_content  = $uploads_htaccess_path ? self::read_file( $uploads_htaccess_path ) : '';
 		$uploads_protected = false !== strpos( $htaccess_content, '# WP Security & API Firewall' );
 
 		wp_send_json_success(
@@ -89,7 +90,7 @@ class FilePermissions {
 		$is_protected = false;
 
 		$htaccess_path        = self::get_uploads_htaccess_path();
-		$htaccess_content     = $htaccess_path ? FileUtils::read_file( $htaccess_path ) : '';
+		$htaccess_content     = $htaccess_path ? self::read_file( $htaccess_path ) : '';
 		$new_htaccess_content = self::get_uploads_htaccess();
 
 		if ( false !== strpos( $htaccess_content, '# WP Security & API Firewall' ) ) {
@@ -119,32 +120,36 @@ class FilePermissions {
 		);
 	}
 
-	private function read_file_permissions( string $file_path ) {
-		FileUtils::wp_filesystem();
-		$perms = FileUtils::get_file_permissions( $file_path );
-		return false === $perms ? false : ltrim( $perms, '0' );
+	public static function read_file_permissions( string $file_path ) {
+		global $wp_filesystem;
+
+		if ( $wp_filesystem instanceof WP_Filesystem_Base && $wp_filesystem->exists( $file_path ) ) {
+			return ltrim( $wp_filesystem->getchmod( $file_path ), 0);
+		}
+
+		return false;
 	}
 
-	private function change_file_permissions( string $file_path ): bool {
-		FileUtils::wp_filesystem();
-		if ( ! FileUtils::is_readable( $file_path ) ) {
-			return false;
+	private function change_file_permissions( string $file_path, int $permissions = 0440 ): bool {
+		global $wp_filesystem;
+
+		if ( $wp_filesystem instanceof WP_Filesystem_Base && $wp_filesystem->exists( $file_path ) ) {
+			if ( $wp_filesystem->chmod( $file_path, $permissions ) ) {
+				SettingsRepository::update_option( 'harden_wpconfig_file_permissions', true );
+				return true;
+			}
 		}
 
-		$success = FileUtils::change_file_permissions( $file_path, 0440 );
-
-		if ( $success ) {
-			SettingsRepository::update_option( 'harden_wpconfig_file_permissions', true );
-		}
-		return $success;
+		return false;
 	}
 
 	private static function get_uploads_htaccess_path(): string {
+		global $wp_filesystem;
 		$uploads_dir   = wp_upload_dir();
 		$uploads_path  = trailingslashit( $uploads_dir['basedir'] );
 		$htaccess_path = realpath( $uploads_path . '.htaccess' );
 
-		return FileUtils::exists( $htaccess_path ) ? $htaccess_path : '';
+		return $wp_filesystem->exists( $htaccess_path ) ? $htaccess_path : '';
 	}
 
 	private static function get_uploads_htaccess(): string {
@@ -177,5 +182,16 @@ class FilePermissions {
 
 	private function theme_editor_disabled(): bool {
 		return defined( 'DISALLOW_FILE_EDIT' ) && true === DISALLOW_FILE_EDIT;
+	}
+
+
+	private static function read_file( string $file_path ) {
+		global $wp_filesystem;
+
+		if ( $wp_filesystem instanceof WP_Filesystem_Base && $wp_filesystem->is_readable( $file_path ) ) {
+			return $wp_filesystem->get_contents( $file_path );
+		}
+
+		return false;
 	}
 }

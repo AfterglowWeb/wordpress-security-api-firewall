@@ -6,6 +6,7 @@ use Bromate\SecurityApiFirewall\Logs\Logger;
 use Bromate\SecurityApiFirewall\SecurityModules\IpEntries\IpEntriesRepository;
 use Bromate\SecurityApiFirewall\Logs\LogsRepository;
 use Bromate\SecurityApiFirewall\Utils\FileUtils;
+use WP_Filesystem_Base;
 use ZipArchive;
 
 class SettingsMigrate {
@@ -128,8 +129,8 @@ class SettingsMigrate {
 		$upload_dir = wp_upload_dir();
 		$export_dir = $upload_dir['basedir'] . '/bromate-exports/';
 
-		if ( ! FileUtils::exists( $export_dir ) ) {
-			FileUtils::mkdir_p( $export_dir );
+		if ( ! self::exists( $export_dir ) ) {
+			wp_mkdir_p( $export_dir );
 		}
 
 		$zip_filename = 'bromate-export_' . gmdate( 'Y-m-d_H-i-s' ) . '.zip';
@@ -141,14 +142,14 @@ class SettingsMigrate {
 		}
 
 		foreach ( $files as $file ) {
-			if ( FileUtils::exists( $file['path'] ) ) {
+			if ( self::exists( $file['path'] ) ) {
 				$zip->addFile( $file['path'], $file['name'] );
 			}
 		}
 
 		$zip->close();
 
-		if ( ! FileUtils::exists( $zip_path ) ) {
+		if ( ! self::exists( $zip_path ) ) {
 			return array();
 		}
 
@@ -160,12 +161,152 @@ class SettingsMigrate {
 		);
 	}
 
+	public function zip_import( $binary ) {
+		$upload_dir = wp_upload_dir();
+		$tmp_dir    = $upload_dir['basedir'] . '/bromate-exports/';
+
+		if ( ! self::exists( $tmp_dir ) ) {
+			wp_mkdir_p( $tmp_dir );
+		}
+
+		$tmp_zip_path = $tmp_dir . 'import_' . gmdate( 'Y-m-d_H-i-s' ) . '_' . wp_generate_password( 6, false ) . '.zip';
+
+		if ( false === FileUtils::write_file( $tmp_zip_path, $binary ) ) {
+			Logger::log(
+				'import_fail',
+				'warning',
+				array(
+					'reason' => esc_html__( 'Unable to store the uploaded archive.', 'bromate-security-api-firewall' ),
+				)
+			);
+
+			return false;
+		}
+
+		$zip_object = new ZipArchive();
+		if ( true !== $zip_object->open( $tmp_zip_path ) ) {
+			wp_delete_file( $tmp_zip_path );
+			Logger::log(
+				'import_fail',
+				'warning',
+				array(
+					'reason' => esc_html__( 'The archive is invalid or corrupted.', 'bromate-security-api-firewall' ),
+				)
+			);
+
+			return false;
+		}
+
+		$any_recognized = false;
+		$all_succeeded  = true;
+		$failed_files   = array();
+
+		for ( $i = 0; $i < $zip_object->numFiles; $i++ ) {
+			$entry_name = $zip_object->getNameIndex( $i );
+
+			if ( false === $entry_name || '/' === substr( $entry_name, -1 ) ) {
+				continue;
+			}
+
+			$basename = basename( $entry_name );
+			$ext      = strtolower( pathinfo( $basename, PATHINFO_EXTENSION ) );
+
+			if ( ! in_array( $ext, array( 'json', 'csv' ), true ) ) {
+				continue;
+			}
+
+			$content = $zip_object->getFromIndex( $i );
+
+			if ( false === $content ) {
+				Logger::log(
+					'import_fail',
+					'warning',
+					array(
+						/* translators: %s is the filename in the archive */
+						'reason' => sprintf( esc_html__( 'Could not read %s from the archive.', 'bromate-security-api-firewall' ), $basename ),
+					)
+				);
+
+				$all_succeeded  = false;
+				$failed_files[] = $basename;
+				continue;
+			}
+
+			$data_type = SettingsMigrate::get_instance()->detect_data_type_from_file( $basename );
+			$result    = false;
+
+			if ( 'json' === $ext && 'settings' === $data_type ) {
+				$any_recognized = true;
+				$result         = SettingsMigrate::get_instance()->import_settings_json( $content );
+			} elseif ( 'csv' === $ext && in_array( $data_type, array( 'ip_entries', 'log_entries' ), true ) ) {
+				$any_recognized = true;
+				$result         = SettingsMigrate::get_instance()->import_csv_file( $basename, $content );
+			} elseif ( 'json' === $ext && in_array( $data_type, array( 'ip_entries', 'log_entries' ), true ) ) {
+				$any_recognized = true;
+				$decoded        = json_decode( $content, true );
+				if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $decoded ) ) {
+					Logger::log(
+						'import_fail',
+						'warning',
+						array(
+							/* translators: %s is the filename */
+							'reason' => sprintf( esc_html__( '%s is not valid JSON.', 'bromate-security-api-firewall' ), $basename ),
+						)
+					);
+					$result = false;
+				} else {
+					$result = SettingsMigrate::get_instance()->import_table_rows( $data_type, $decoded );
+				}
+			} else {
+				continue;
+			}
+
+			if ( false === $result ) {
+				$all_succeeded  = false;
+				$failed_files[] = $basename;
+			}
+		}
+
+		$zip_object->close();
+		wp_delete_file( $tmp_zip_path );
+
+		if ( ! $any_recognized ) {
+			Logger::log(
+				'import_fail',
+				'warning',
+				array(
+					'reason' => esc_html__( 'No recognizable settings or data files were found in the archive.', 'bromate-security-api-firewall' ),
+				)
+			);
+
+			return false;
+		}
+
+		if ( ! $all_succeeded ) {
+			Logger::log(
+				'import_fail',
+				'warning',
+				array(
+					'reason' => sprintf(
+						/* translators: %s: comma-separated list of file names that failed to import */
+						esc_html__( 'Import completed with errors on: %s', 'bromate-security-api-firewall' ),
+						implode( ', ', $failed_files )
+					),
+				)
+			);
+
+			return false;
+		}
+
+		return true;
+	}
+
 	public function create_export_file( string $filename, string $content ): array {
 		$upload_dir = wp_upload_dir();
 		$export_dir = $upload_dir['basedir'] . '/bromate-exports/';
 
-		if ( ! FileUtils::exists( $export_dir ) ) {
-			FileUtils::mkdir_p( $export_dir );
+		if ( ! self::exists( $export_dir ) ) {
+			wp_mkdir_p( $export_dir );
 		}
 
 		$timestamp       = gmdate( 'Y-m-d_H-i-s' );
@@ -444,5 +585,15 @@ class SettingsMigrate {
 		fclose( $stream );
 
 		return $rows;
+	}
+
+	private function exists( string $path ): bool {
+		global $wp_filesystem;
+
+		if ( $wp_filesystem instanceof WP_Filesystem_Base ) {
+			return $wp_filesystem->exists( $path );
+		}
+
+		return false;
 	}
 }

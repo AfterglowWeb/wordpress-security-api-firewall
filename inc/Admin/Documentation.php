@@ -1,8 +1,8 @@
 <?php
 namespace Bromate\SecurityApiFirewall\Admin;
 
-use Bromate\SecurityApiFirewall\Utils\FileUtils;
 use Bromate\SecurityApiFirewall\Core\Settings\SettingsAjaxController;
+use WP_Filesystem_Base;
 
 use League\CommonMark\MarkdownConverter;
 use League\CommonMark\Environment\Environment;
@@ -30,10 +30,15 @@ class Documentation {
 
 	public static function read_pages() {
 
+		global $wp_filesystem;
 		$docs_dir = BROMATE_SECURITY_API_FIREWALL_DIR . 'docs';
+		
+		if ( false === $wp_filesystem instanceof WP_Filesystem_Base ) {
+			return [];
+		}
 
-		if ( ! FileUtils::is_dir( $docs_dir ) ) {
-			return array();
+		if ( false === $wp_filesystem->is_dir( $docs_dir ) ) {
+			return [];
 		}
 
 		$pages = array(
@@ -119,11 +124,11 @@ class Documentation {
 				$file = realpath( $docs_dir . '/' . $page['slug'] . '/' . $page['slug'] . '.md' );
 			}
 
-			if ( false === FileUtils::is_readable( $file ) ) {
+			if ( false === $wp_filesystem->is_readable( $file ) ) {
 				continue;
 			}
 
-			$markdown = FileUtils::read_file( $file );
+			$markdown = $wp_filesystem->get_contents( $file );
 			if ( ! $markdown ) {
 				continue;
 			}

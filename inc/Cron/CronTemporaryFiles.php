@@ -1,6 +1,6 @@
 <?php namespace Bromate\SecurityApiFirewall\Cron;
 
-use Bromate\SecurityApiFirewall\Utils\FileUtils;
+use WP_Filesystem_Base;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -17,10 +17,15 @@ final class CronTemporaryFiles {
 	}
 
 	public static function cleanup_stale_exports(): void {
+		global $wp_filesystem;
 		$upload_dir = wp_upload_dir();
 		$export_dir = $upload_dir['basedir'] . '/bromate-exports/';
 
-		if ( ! FileUtils::exists( $export_dir ) ) {
+		if ( false === $wp_filesystem instanceof WP_Filesystem_Base ) {
+			return;
+		}
+
+		if ( false === $wp_filesystem->exists( $export_dir ) ) {
 			return;
 		}
 
@@ -28,7 +33,7 @@ final class CronTemporaryFiles {
 		$now     = time();
 
 		foreach ( glob( $export_dir . '*' ) as $file ) {
-			if ( FileUtils::is_file( $file ) && ( $now - FileUtils::mtime( $file ) ) > $max_age ) {
+			if ( $wp_filesystem->is_file( $file ) && ( $now - $wp_filesystem->mtime( $file ) ) > $max_age ) {
 				wp_delete_file( $file );
 			}
 		}

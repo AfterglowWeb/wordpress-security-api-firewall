@@ -1,6 +1,8 @@
 <?php defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
-if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+global $wp_filesystem;
+
+if ( $wp_filesystem instanceof WP_Filesystem_Base && $wp_filesystem->exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
 
