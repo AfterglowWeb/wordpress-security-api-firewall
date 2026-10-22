@@ -6,7 +6,7 @@ Bromate Security & API Firewall is a complete security suite for WordPress, hard
 
 | Feature | Description |
 |---|---|
-| **Firewall** | Rate limiting, IPv4/IPv6 blacklisting, CIDR ranges, country blocking (GeoIP) |
+| **Firewall** | Rate limiting, IPv4/IPv6 blacklisting, CIDR ranges, country blocking (GeoIP), 7G blacklist by Perishable Press |
 | **Login Hardening** | Login rate limiting, Recaptcha, 2FA, auth cookie protection, salt rotation schedule, sessions manager |
 | **Global Security** | Disable XML-RPC, comments, pingbacks, RSS/Atom, sitemap; security HTTP headers; secure file permissions |
 | **Application Authentication** | JWT and Application Passwords hardening, whitelist IPs and origins |
